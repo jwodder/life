@@ -1,5 +1,7 @@
 use std::fmt::{self, Write};
 use std::ops::{Index, IndexMut};
+use std::str::FromStr;
+use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LifeState {
@@ -139,6 +141,28 @@ impl Edges {
         }
     }
 }
+
+impl FromStr for Edges {
+    type Err = ParseEdgesError;
+
+    fn from_str(s: &str) -> Result<Edges, ParseEdgesError> {
+        if s.eq_ignore_ascii_case("dead") {
+            Ok(Edges::Dead)
+        } else if s.eq_ignore_ascii_case("wrapx") {
+            Ok(Edges::WrapX)
+        } else if s.eq_ignore_ascii_case("wrapy") {
+            Ok(Edges::WrapY)
+        } else if s.eq_ignore_ascii_case("wrapxy") {
+            Ok(Edges::WrapXY)
+        } else {
+            Err(ParseEdgesError)
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
+#[error("invalid Edges string")]
+pub struct ParseEdgesError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Enumerate<'a> {
