@@ -473,6 +473,7 @@ fn wrap_about(i: usize, limit: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_enumerate() {
@@ -629,6 +630,43 @@ mod tests {
             life2.draw('.', '#').to_string(),
             ".....\n.....\n.#.#.\n..##.\n..#.."
         );
+    }
+
+    #[rstest]
+    #[case(Edges::Dead, "..")]
+    #[case(Edges::WrapX, "..")]
+    #[case(Edges::WrapY, ".#")]
+    #[case(Edges::WrapXY, "..")]
+    fn test_advance_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
+        let mut life = LifeState::new(1, 2, edges);
+        life[(0, 0)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), after);
+    }
+
+    #[rstest]
+    #[case(Edges::Dead, ".\n.")]
+    #[case(Edges::WrapX, ".\n#")]
+    #[case(Edges::WrapY, ".\n.")]
+    #[case(Edges::WrapXY, ".\n.")]
+    fn test_advance_vert_domino(#[case] edges: Edges, #[case] after: &str) {
+        let mut life = LifeState::new(2, 1, edges);
+        life[(0, 0)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), after);
+    }
+
+    #[rstest]
+    #[case(Edges::Dead, "..\n..")]
+    #[case(Edges::WrapX, "##\n##")]
+    #[case(Edges::WrapY, "##\n##")]
+    #[case(Edges::WrapXY, "..\n..")]
+    fn test_advance_square_diag(#[case] edges: Edges, #[case] after: &str) {
+        let mut life = LifeState::new(2, 2, edges);
+        life[(0, 0)] = true;
+        life[(1, 1)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), after);
     }
 
     #[test]
