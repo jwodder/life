@@ -214,6 +214,102 @@ impl fmt::Display for Draw<'_> {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum CellParser<'a> {
+    DeadChars(&'a str),
+    AliveChars(&'a str),
+}
+
+impl CellParser<'_> {
+    fn parse(&self, c: char) -> bool {
+        match self {
+            CellParser::DeadChars(s) => !s.contains(c),
+            CellParser::AliveChars(s) => s.contains(c),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct LifeParser<'a> {
+    cell_parser: CellParser<'a>,
+    min_width: usize,
+    min_height: usize,
+    max_width: Option<usize>,
+    max_height: Option<usize>,
+}
+
+impl<'a> LifeParser<'a> {
+    pub fn alive_chars(s: &'a str) -> LifeParser<'a> {
+        LifeParser {
+            cell_parser: CellParser::AliveChars(s),
+            min_width: 0,
+            min_height: 0,
+            max_width: None,
+            max_height: None,
+        }
+    }
+
+    pub fn dead_chars(s: &'a str) -> LifeParser<'a> {
+        LifeParser {
+            cell_parser: CellParser::DeadChars(s),
+            min_width: 0,
+            min_height: 0,
+            max_width: None,
+            max_height: None,
+        }
+    }
+
+    pub fn min_width(mut self, width: usize) -> Self {
+        self.min_width = width;
+        self
+    }
+
+    pub fn min_height(mut self, height: usize) -> Self {
+        self.min_height = height;
+        self
+    }
+
+    pub fn max_width(mut self, width: usize) -> Self {
+        self.max_width = Some(width);
+        self
+    }
+
+    pub fn max_height(mut self, height: usize) -> Self {
+        self.max_height = Some(height);
+        self
+    }
+
+    pub fn parse(&self, s: &str) -> Life {
+        let mut live_points = Vec::new();
+        let mut width = self.min_width;
+        let mut height = self.min_height;
+        for (y, line) in s.lines().enumerate() {
+            if self.max_height.is_some_and(|h| y >= h) {
+                break;
+            }
+            if y >= height {
+                height = y + 1;
+            }
+            for (x, ch) in line.chars().enumerate() {
+                if self.max_width.is_some_and(|w| x >= w) {
+                    break;
+                }
+                if x >= width {
+                    width = x + 1;
+                }
+                if self.cell_parser.parse(ch) {
+                    live_points.push((y, x));
+                }
+            }
+        }
+        let mut life = Life::new(height, width);
+        for yx in live_points {
+            life[yx] = true;
+        }
+        life
+    }
+}
+
 fn range_about(i: usize, limit: usize) -> Vec<usize> {
     let mut vals = Vec::with_capacity(3);
     if let Some(a) = i.checked_sub(1) {
@@ -337,6 +433,82 @@ mod tests {
         assert_eq!(
             life2.draw('.', '#').to_string(),
             ".....\n.....\n.#.#.\n..##.\n..#.."
+        );
+    }
+
+    #[test]
+    fn test_parse1() {
+        let parser = LifeParser::dead_chars(" .");
+        let life = parser.parse(".#.\n..#\n###\n");
+        assert_eq!(life.height(), 3);
+        assert_eq!(life.width(), 3);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+        );
+    }
+
+    #[test]
+    fn test_parse1_alive_chars() {
+        let parser = LifeParser::alive_chars("+#");
+        let life = parser.parse(".#.\n..#\n###\n");
+        assert_eq!(life.height(), 3);
+        assert_eq!(life.width(), 3);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+        );
+    }
+
+    #[test]
+    fn test_parse2() {
+        let parser = LifeParser::dead_chars(" .");
+        let life = parser.parse(".....\n..#..\n...#.\n.###.\n.....");
+        assert_eq!(life.height(), 5);
+        assert_eq!(life.width(), 5);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(1, 2), (2, 3), (3, 1), (3, 2), (3, 3)]
+        );
+    }
+
+    #[test]
+    fn test_parse2_ragged() {
+        let parser = LifeParser::dead_chars(" .");
+        let life = parser.parse("\n..#\n...#\n.###\n");
+        assert_eq!(life.height(), 4);
+        assert_eq!(life.width(), 4);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(1, 2), (2, 3), (3, 1), (3, 2), (3, 3)]
+        );
+    }
+
+    #[test]
+    fn test_parse2_ragged_min_size() {
+        let parser = LifeParser::dead_chars(" .").min_width(5).min_height(5);
+        let life = parser.parse("\n..#\n...#\n.###\n");
+        assert_eq!(life.height(), 5);
+        assert_eq!(life.width(), 5);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(1, 2), (2, 3), (3, 1), (3, 2), (3, 3)]
+        );
+    }
+
+    #[test]
+    fn test_parse3() {
+        let parser = LifeParser::dead_chars(" .")
+            .min_width(5)
+            .min_height(5)
+            .max_height(5)
+            .max_width(5);
+        let life = parser.parse(" +\n   +\n++  +++\n");
+        assert_eq!(life.height(), 5);
+        assert_eq!(life.width(), 5);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(0, 1), (1, 3), (2, 0), (2, 1), (2, 4)],
         );
     }
 }
