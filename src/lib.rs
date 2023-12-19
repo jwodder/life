@@ -756,4 +756,14 @@ mod tests {
             [(0, 1), (1, 3), (2, 0), (2, 1), (2, 4), (2, 5), (2, 6)],
         );
     }
+
+    #[test]
+    fn test_zero_size() {
+        let life = LifeState::new(0, 0, Edges::Dead);
+        assert_eq!(life.get(0, 0), None);
+        assert_eq!(life.draw('.', '#').to_string(), "");
+        assert_eq!(life.advance(), life);
+        assert_eq!(life.enumerate().collect::<Vec<_>>(), Vec::new());
+        assert_eq!(life.iter_alive().collect::<Vec<_>>(), Vec::new());
+    }
 }
