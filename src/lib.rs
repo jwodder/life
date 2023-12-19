@@ -1,4 +1,5 @@
 use std::fmt::{self, Write};
+use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 use thiserror::Error;
@@ -94,6 +95,10 @@ impl Pattern {
             }
         }
         next_state
+    }
+
+    pub fn into_generations(self) -> Generations {
+        Generations(self)
     }
 }
 
@@ -209,7 +214,7 @@ impl Iterator for Enumerate<'_> {
 
 impl ExactSizeIterator for Enumerate<'_> {}
 
-impl std::iter::FusedIterator for Enumerate<'_> {}
+impl FusedIterator for Enumerate<'_> {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IterLive<'a> {
@@ -242,7 +247,22 @@ impl Iterator for IterLive<'_> {
     }
 }
 
-impl std::iter::FusedIterator for IterLive<'_> {}
+impl FusedIterator for IterLive<'_> {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Generations(Pattern);
+
+impl Iterator for Generations {
+    type Item = Pattern;
+
+    fn next(&mut self) -> Option<Pattern> {
+        let mut life = self.0.advance();
+        std::mem::swap(&mut self.0, &mut life);
+        Some(life)
+    }
+}
+
+impl FusedIterator for Generations {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Draw<'a> {
