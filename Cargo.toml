@@ -1,11 +1,11 @@
 [package]
-name = "conway"
+name = "life"
 version = "0.1.0-dev"
 edition = "2021"
 rust-version = "1.70"
 description = "Conway's Game of Life in Rust"
-authors = ["John Thorvald Wodder II <conway@varonathe.org>"]
-repository = "https://github.com/jwodder/conway"
+authors = ["John Thorvald Wodder II <life-rust@varonathe.org>"]
+repository = "https://github.com/jwodder/life"
 license = "MIT"
 keywords = []
 # See <https://crates.io/category_slugs> for a list of categories

@@ -254,7 +254,7 @@ impl<'a> LifeParser<'a> {
     /// # Example
     ///
     /// ```
-    /// use conway::LifeParser;
+    /// use life::LifeParser;
     ///
     /// let parser = LifeParser::dead_chars(" .");
     /// let life = parser.parse(".#?\n..#\n###\n");
@@ -279,7 +279,7 @@ impl<'a> LifeParser<'a> {
     /// # Example
     ///
     /// ```
-    /// use conway::LifeParser;
+    /// use life::LifeParser;
     ///
     /// let parser = LifeParser::alive_chars("+#");
     /// let life = parser.parse(".#?\n..#\n###\n");
