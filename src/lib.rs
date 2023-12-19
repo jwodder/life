@@ -2,26 +2,26 @@ use std::fmt::{self, Write};
 use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Life {
+pub struct LifeState {
     height: usize,
     width: usize,
     cells: Vec<bool>,
 }
 
-impl Life {
+impl LifeState {
     /// # Panics
     ///
     /// Panics if ``width * height`` exceeds the maximum capacity of a [`Vec`].
-    pub fn new(mut height: usize, mut width: usize) -> Life {
+    pub fn new(mut height: usize, mut width: usize) -> LifeState {
         if height == 0 || width == 0 {
             height = 0;
             width = 0;
         }
         let area = width
             .checked_mul(height)
-            .expect("width * height for new Life exceeds usize::MAX");
+            .expect("width * height for new LifeState exceeds usize::MAX");
         let cells = vec![false; area];
-        Life {
+        LifeState {
             height,
             width,
             cells,
@@ -64,7 +64,7 @@ impl Life {
         Draw::new(self, dead, alive)
     }
 
-    pub fn advance(&self) -> Life {
+    pub fn advance(&self) -> LifeState {
         let mut next_state = self.clone();
         for y in 0..self.height {
             let yrange = range_about(y, self.height);
@@ -89,22 +89,22 @@ impl Life {
     }
 }
 
-impl Index<(usize, usize)> for Life {
+impl Index<(usize, usize)> for LifeState {
     type Output = bool;
 
     fn index(&self, (y, x): (usize, usize)) -> &bool {
         let i = self
             .get_index(y, x)
-            .expect("(y, x) index should be in bounds for Life");
+            .expect("(y, x) index should be in bounds for LifeState");
         &self.cells[i]
     }
 }
 
-impl IndexMut<(usize, usize)> for Life {
+impl IndexMut<(usize, usize)> for LifeState {
     fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut bool {
         let i = self
             .get_index(y, x)
-            .expect("(y, x) index should be in bounds for Life");
+            .expect("(y, x) index should be in bounds for LifeState");
         &mut self.cells[i]
     }
 }
@@ -114,11 +114,11 @@ pub struct Enumerate<'a> {
     y: usize,
     x: usize,
     i: usize,
-    life: &'a Life,
+    life: &'a LifeState,
 }
 
 impl<'a> Enumerate<'a> {
-    fn new(life: &'a Life) -> Enumerate<'a> {
+    fn new(life: &'a LifeState) -> Enumerate<'a> {
         Enumerate {
             y: 0,
             x: 0,
@@ -162,7 +162,7 @@ pub struct IterAlive<'a> {
 }
 
 impl<'a> IterAlive<'a> {
-    fn new(life: &'a Life) -> IterAlive<'a> {
+    fn new(life: &'a LifeState) -> IterAlive<'a> {
         IterAlive {
             inner: Enumerate::new(life),
         }
@@ -191,13 +191,13 @@ impl std::iter::FusedIterator for IterAlive<'_> {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Draw<'a> {
-    life: &'a Life,
+    life: &'a LifeState,
     dead: char,
     alive: char,
 }
 
 impl<'a> Draw<'a> {
-    fn new(life: &'a Life, dead: char, alive: char) -> Draw<'a> {
+    fn new(life: &'a LifeState, dead: char, alive: char) -> Draw<'a> {
         Draw { life, dead, alive }
     }
 }
@@ -231,9 +231,10 @@ impl CellParser<'_> {
 
 /// Parser for Game of Life drawings.
 ///
-/// [`LifeParser`] parses [`Life`] instances from Game of Life states expressed
-/// as simple drawings, such as produced by [`Life::draw()`].  Construct a
-/// [`LifeParser`] with either [`dead_chars()`][LifeParser::dead_chars] or
+/// [`LifeParser`] parses [`LifeState`] instances from Game of Life states
+/// expressed as simple drawings, such as produced by [`LifeState::draw()`].
+/// Construct a [`LifeParser`] with either
+/// [`dead_chars()`][LifeParser::dead_chars] or
 /// [`alive_chars()`][LifeParser::alive_chars], optionally set the minimum
 /// and/or maximum dimensions for the output, and parse strings with
 /// [`parse()`][LifeParser::parse].
@@ -297,7 +298,7 @@ impl<'a> LifeParser<'a> {
         }
     }
 
-    /// Set the minimum width of parsed [`Life`] instances.
+    /// Set the minimum width of parsed [`LifeState`] instances.
     ///
     /// If the input to [`LifeParser::parse()`] contains any lines with fewer
     /// than `width` characters, such lines will be padded with dead cells on
@@ -307,7 +308,7 @@ impl<'a> LifeParser<'a> {
         self
     }
 
-    /// Set the minimum height of parsed [`Life`] instances.
+    /// Set the minimum height of parsed [`LifeState`] instances.
     ///
     /// If the input to [`LifeParser::parse()`] contains fewer than
     /// `height` lines, the output structure will be padded with rows of dead
@@ -317,7 +318,7 @@ impl<'a> LifeParser<'a> {
         self
     }
 
-    /// Set the maximum width of parsed [`Life`] instances.
+    /// Set the maximum width of parsed [`LifeState`] instances.
     ///
     /// If the input to [`LifeParser::parse()`] contains any lines with more
     /// than `width` characters, characters after the first `width` will be
@@ -327,7 +328,7 @@ impl<'a> LifeParser<'a> {
         self
     }
 
-    /// Set the maximum height of parsed [`Life`] instances.
+    /// Set the maximum height of parsed [`LifeState`] instances.
     ///
     /// If the input to [`LifeParser::parse()`] contains more than
     /// `height` lines, lines after the first `height` will be ignored.
@@ -336,7 +337,7 @@ impl<'a> LifeParser<'a> {
         self
     }
 
-    /// Parse a [`Life`] instance from a string.
+    /// Parse a [`LifeState`] instance from a string.
     ///
     /// Each line of the input defines a row of the output, with the first line
     /// corresponding to row 0.  Each character of each line defines a cell in
@@ -349,7 +350,7 @@ impl<'a> LifeParser<'a> {
     /// longest input line (stopping after `max_height` lines, if set) or the
     /// value passed to [`LifeParser::max_width()`] (if any), whichever is
     /// smaller.
-    pub fn parse(&self, s: &str) -> Life {
+    pub fn parse(&self, s: &str) -> LifeState {
         let mut live_points = Vec::new();
         let mut width = self.min_width;
         let mut height = self.min_height;
@@ -372,7 +373,7 @@ impl<'a> LifeParser<'a> {
                 }
             }
         }
-        let mut life = Life::new(height, width);
+        let mut life = LifeState::new(height, width);
         for yx in live_points {
             life[yx] = true;
         }
@@ -403,7 +404,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Life::new(3, 3);
+        let mut life = LifeState::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -439,7 +440,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Life::new(3, 3);
+        let mut life = LifeState::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -467,7 +468,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Life::new(3, 3);
+        let mut life = LifeState::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -481,7 +482,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Life::new(3, 3);
+        let mut life = LifeState::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -493,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_advance2() {
-        let mut life = Life::new(5, 5);
+        let mut life = LifeState::new(5, 5);
         life[(1, 2)] = true;
         life[(2, 3)] = true;
         life[(3, 1)] = true;
