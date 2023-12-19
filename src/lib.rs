@@ -229,6 +229,14 @@ impl CellParser<'_> {
     }
 }
 
+/// Parser for Game of Life drawings.
+///
+/// [`LifeParser`] parses [`Life`] instances from Game of Life states expressed
+/// as simple drawings, such as produced by [`Life::draw()`].  Construct a
+/// [`LifeParser`] with either [`dead_chars()`][LifeParser::dead_chars] or
+/// [`alive_chars()`][LifeParser::alive_chars], optionally set the minimum
+/// and/or maximum dimensions for the output, and parse strings with
+/// [`parse()`][LifeParser::parse].
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct LifeParser<'a> {
     cell_parser: CellParser<'a>,
@@ -239,16 +247,21 @@ pub struct LifeParser<'a> {
 }
 
 impl<'a> LifeParser<'a> {
-    pub fn alive_chars(s: &'a str) -> LifeParser<'a> {
-        LifeParser {
-            cell_parser: CellParser::AliveChars(s),
-            min_width: 0,
-            min_height: 0,
-            max_width: None,
-            max_height: None,
-        }
-    }
-
+    /// Create a [`LifeParser`] that treats the characters in `s` as denoting
+    /// dead cells and treats all other non-newline characters as denoting
+    /// alive cells.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use conway::LifeParser;
+    ///
+    /// let parser = LifeParser::dead_chars(" .");
+    /// let life = parser.parse(".#?\n..#\n###\n");
+    /// assert!(!life[(0, 0)]);
+    /// assert!(life[(0, 1)]);
+    /// assert!(life[(0, 2)]);
+    /// ```
     pub fn dead_chars(s: &'a str) -> LifeParser<'a> {
         LifeParser {
             cell_parser: CellParser::DeadChars(s),
@@ -259,26 +272,83 @@ impl<'a> LifeParser<'a> {
         }
     }
 
+    /// Create a [`LifeParser`] that treats the characters in `s` as denoting
+    /// alive cells and treats all other non-newline characters as denoting
+    /// dead cells.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use conway::LifeParser;
+    ///
+    /// let parser = LifeParser::alive_chars("+#");
+    /// let life = parser.parse(".#?\n..#\n###\n");
+    /// assert!(!life[(0, 0)]);
+    /// assert!(life[(0, 1)]);
+    /// assert!(!life[(0, 2)]);
+    /// ```
+    pub fn alive_chars(s: &'a str) -> LifeParser<'a> {
+        LifeParser {
+            cell_parser: CellParser::AliveChars(s),
+            min_width: 0,
+            min_height: 0,
+            max_width: None,
+            max_height: None,
+        }
+    }
+
+    /// Set the minimum width of parsed [`Life`] instances.
+    ///
+    /// If the input to [`LifeParser::parse()`] contains any lines with fewer
+    /// than `width` characters, such lines will be padded with dead cells on
+    /// the right.
     pub fn min_width(mut self, width: usize) -> Self {
         self.min_width = width;
         self
     }
 
+    /// Set the minimum height of parsed [`Life`] instances.
+    ///
+    /// If the input to [`LifeParser::parse()`] contains fewer than
+    /// `height` lines, the output structure will be padded with rows of dead
+    /// cells on the bottom.
     pub fn min_height(mut self, height: usize) -> Self {
         self.min_height = height;
         self
     }
 
+    /// Set the maximum width of parsed [`Life`] instances.
+    ///
+    /// If the input to [`LifeParser::parse()`] contains any lines with more
+    /// than `width` characters, characters after the first `width` will be
+    /// ignored.
     pub fn max_width(mut self, width: usize) -> Self {
         self.max_width = Some(width);
         self
     }
 
+    /// Set the maximum height of parsed [`Life`] instances.
+    ///
+    /// If the input to [`LifeParser::parse()`] contains more than
+    /// `height` lines, lines after the first `height` will be ignored.
     pub fn max_height(mut self, height: usize) -> Self {
         self.max_height = Some(height);
         self
     }
 
+    /// Parse a [`Life`] instance from a string.
+    ///
+    /// Each line of the input defines a row of the output, with the first line
+    /// corresponding to row 0.  Each character of each line defines a cell in
+    /// that row, with the first character of each line corresponding to column
+    /// 0.
+    ///
+    /// The height of the output will be the number of lines in the input or
+    /// the value passed to [`LifeParser::max_height()`] (if any), whichever is
+    /// smaller.  The width of the output will be the character-width of the
+    /// longest input line (stopping after `max_height` lines, if set) or the
+    /// value passed to [`LifeParser::max_width()`] (if any), whichever is
+    /// smaller.
     pub fn parse(&self, s: &str) -> Life {
         let mut live_points = Vec::new();
         let mut width = self.min_width;
@@ -509,6 +579,18 @@ mod tests {
         assert_eq!(
             life.iter_alive().collect::<Vec<_>>(),
             [(0, 1), (1, 3), (2, 0), (2, 1), (2, 4)],
+        );
+    }
+
+    #[test]
+    fn test_parse4() {
+        let parser = LifeParser::dead_chars(" .").max_height(3);
+        let life = parser.parse(" +\n   +\n++  +++\n+ + + + + + +\n");
+        assert_eq!(life.height(), 3);
+        assert_eq!(life.width(), 7);
+        assert_eq!(
+            life.iter_alive().collect::<Vec<_>>(),
+            [(0, 1), (1, 3), (2, 0), (2, 1), (2, 4), (2, 5), (2, 6)],
         );
     }
 }
