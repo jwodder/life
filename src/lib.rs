@@ -1,3 +1,4 @@
+use std::fmt::{self, Write};
 use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -51,8 +52,40 @@ impl Life {
         self.get_index(y, x).map(|i| &mut self.cells[i])
     }
 
+    pub fn enumerate(&self) -> Enumerate<'_> {
+        Enumerate::new(self)
+    }
+
     pub fn iter_alive(&self) -> IterAlive<'_> {
         IterAlive::new(self)
+    }
+
+    pub fn draw(&self, dead: char, alive: char) -> Draw<'_> {
+        Draw::new(self, dead, alive)
+    }
+
+    pub fn advance(&self) -> Life {
+        let mut next_state = self.clone();
+        for y in 0..self.height {
+            let yrange = range_about(y, self.height);
+            for x in 0..self.width {
+                let mut live_neighbors = 0;
+                for x2 in range_about(x, self.width) {
+                    for &y2 in &yrange {
+                        if (y2, x2) != (y, x) && self[(y2, x2)] {
+                            live_neighbors += 1;
+                        }
+                    }
+                }
+                match (live_neighbors, self[(y, x)]) {
+                    (2 | 3, true) => (),                     // Remain alive
+                    (3, false) => next_state[(y, x)] = true, // Be born
+                    (_, true) => next_state[(y, x)] = false, // Die
+                    (_, false) => (),                        // Stay dead
+                }
+            }
+        }
+        next_state
     }
 }
 
@@ -77,16 +110,16 @@ impl IndexMut<(usize, usize)> for Life {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct IterAlive<'a> {
+pub struct Enumerate<'a> {
     y: usize,
     x: usize,
     i: usize,
     life: &'a Life,
 }
 
-impl<'a> IterAlive<'a> {
-    fn new(life: &'a Life) -> IterAlive<'a> {
-        IterAlive {
+impl<'a> Enumerate<'a> {
+    fn new(life: &'a Life) -> Enumerate<'a> {
+        Enumerate {
             y: 0,
             x: 0,
             i: 0,
@@ -95,38 +128,145 @@ impl<'a> IterAlive<'a> {
     }
 }
 
+impl Iterator for Enumerate<'_> {
+    type Item = ((usize, usize), bool);
+
+    fn next(&mut self) -> Option<((usize, usize), bool)> {
+        let &b = self.life.cells.get(self.i)?;
+        let old_y = self.y;
+        let old_x = self.x;
+        // These operations won't overflow, as none of x, y, i will get
+        // past isize::MAX, the maximum capacity of a Vec.
+        self.i += 1;
+        self.x += 1;
+        if self.x >= self.life.width {
+            self.x = 0;
+            self.y += 1;
+        }
+        Some(((old_y, old_x), b))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let left = self.life.cells.len().saturating_sub(self.i);
+        (left, Some(left))
+    }
+}
+
+impl ExactSizeIterator for Enumerate<'_> {}
+
+impl std::iter::FusedIterator for Enumerate<'_> {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IterAlive<'a> {
+    inner: Enumerate<'a>,
+}
+
+impl<'a> IterAlive<'a> {
+    fn new(life: &'a Life) -> IterAlive<'a> {
+        IterAlive {
+            inner: Enumerate::new(life),
+        }
+    }
+}
+
 impl Iterator for IterAlive<'_> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<(usize, usize)> {
-        while let Some(&b) = self.life.cells.get(self.i) {
-            let old_y = self.y;
-            let old_x = self.x;
-            // These operations won't overflow, as none of x, y, i will get
-            // past isize::MAX, the maximum capacity of a Vec.
-            self.i += 1;
-            self.x += 1;
-            if self.x >= self.life.width {
-                self.x = 0;
-                self.y += 1;
-            }
+        for (yx, b) in self.inner.by_ref() {
             if b {
-                return Some((old_y, old_x));
+                return Some(yx);
             }
         }
         None
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, Some(self.life.cells.len().saturating_sub(self.i)))
+        let (_, upper) = self.inner.size_hint();
+        (0, upper)
     }
 }
 
 impl std::iter::FusedIterator for IterAlive<'_> {}
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Draw<'a> {
+    life: &'a Life,
+    dead: char,
+    alive: char,
+}
+
+impl<'a> Draw<'a> {
+    fn new(life: &'a Life, dead: char, alive: char) -> Draw<'a> {
+        Draw { life, dead, alive }
+    }
+}
+
+impl fmt::Display for Draw<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for ((y, x), b) in self.life.enumerate() {
+            if x == 0 && y > 0 {
+                f.write_char('\n')?;
+            }
+            f.write_char(if b { self.alive } else { self.dead })?;
+        }
+        Ok(())
+    }
+}
+
+fn range_about(i: usize, limit: usize) -> Vec<usize> {
+    let mut vals = Vec::with_capacity(3);
+    if let Some(a) = i.checked_sub(1) {
+        vals.push(a);
+    }
+    vals.push(i);
+    if let Some(b) = i.checked_add(1) {
+        if b < limit {
+            vals.push(b);
+        }
+    }
+    vals
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_enumerate() {
+        // .#.
+        // ..#
+        // ###
+        let mut life = Life::new(3, 3);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        let mut iter = life.enumerate();
+        assert_eq!(iter.size_hint(), (9, Some(9)));
+        assert_eq!(iter.next(), Some(((0, 0), false)));
+        assert_eq!(iter.size_hint(), (8, Some(8)));
+        assert_eq!(iter.next(), Some(((0, 1), true)));
+        assert_eq!(iter.size_hint(), (7, Some(7)));
+        assert_eq!(iter.next(), Some(((0, 2), false)));
+        assert_eq!(iter.size_hint(), (6, Some(6)));
+        assert_eq!(iter.next(), Some(((1, 0), false)));
+        assert_eq!(iter.size_hint(), (5, Some(5)));
+        assert_eq!(iter.next(), Some(((1, 1), false)));
+        assert_eq!(iter.size_hint(), (4, Some(4)));
+        assert_eq!(iter.next(), Some(((1, 2), true)));
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert_eq!(iter.next(), Some(((2, 0), true)));
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+        assert_eq!(iter.next(), Some(((2, 1), true)));
+        assert_eq!(iter.size_hint(), (1, Some(1)));
+        assert_eq!(iter.next(), Some(((2, 2), true)));
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+    }
 
     #[test]
     fn test_iter_alive() {
@@ -154,5 +294,49 @@ mod tests {
         assert_eq!(iter.next(), None);
         assert_eq!(iter.size_hint(), (0, Some(0)));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_draw() {
+        // .#.
+        // ..#
+        // ###
+        let mut life = Life::new(3, 3);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        assert_eq!(life.draw('.', '#').to_string(), ".#.\n..#\n###");
+    }
+
+    #[test]
+    fn test_advance1() {
+        // .#.
+        // ..#
+        // ###
+        let mut life = Life::new(3, 3);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
+    }
+
+    #[test]
+    fn test_advance2() {
+        let mut life = Life::new(5, 5);
+        life[(1, 2)] = true;
+        life[(2, 3)] = true;
+        life[(3, 1)] = true;
+        life[(3, 2)] = true;
+        life[(3, 3)] = true;
+        let life2 = life.advance();
+        assert_eq!(
+            life2.draw('.', '#').to_string(),
+            ".....\n.....\n.#.#.\n..##.\n..#.."
+        );
     }
 }
