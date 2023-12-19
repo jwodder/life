@@ -5,6 +5,7 @@ use std::ops::{Index, IndexMut};
 pub struct LifeState {
     height: usize,
     width: usize,
+    edges: Edges,
     cells: Vec<bool>,
 }
 
@@ -12,7 +13,7 @@ impl LifeState {
     /// # Panics
     ///
     /// Panics if ``width * height`` exceeds the maximum capacity of a [`Vec`].
-    pub fn new(mut height: usize, mut width: usize) -> LifeState {
+    pub fn new(mut height: usize, mut width: usize, edges: Edges) -> LifeState {
         if height == 0 || width == 0 {
             height = 0;
             width = 0;
@@ -24,6 +25,7 @@ impl LifeState {
         LifeState {
             height,
             width,
+            edges,
             cells,
         }
     }
@@ -34,6 +36,10 @@ impl LifeState {
 
     pub fn width(&self) -> usize {
         self.width
+    }
+
+    pub fn edges(&self) -> Edges {
+        self.edges
     }
 
     fn get_index(&self, y: usize, x: usize) -> Option<usize> {
@@ -67,10 +73,10 @@ impl LifeState {
     pub fn advance(&self) -> LifeState {
         let mut next_state = self.clone();
         for y in 0..self.height {
-            let yrange = range_about(y, self.height);
+            let yrange = self.edges.about_y(y, self.height);
             for x in 0..self.width {
                 let mut live_neighbors = 0;
-                for x2 in range_about(x, self.width) {
+                for x2 in self.edges.about_x(x, self.width) {
                     for &y2 in &yrange {
                         if (y2, x2) != (y, x) && self[(y2, x2)] {
                             live_neighbors += 1;
@@ -106,6 +112,31 @@ impl IndexMut<(usize, usize)> for LifeState {
             .get_index(y, x)
             .expect("(y, x) index should be in bounds for LifeState");
         &mut self.cells[i]
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
+pub enum Edges {
+    #[default]
+    Dead,
+    WrapX,
+    WrapY,
+    WrapXY,
+}
+
+impl Edges {
+    fn about_x(&self, x: usize, limit: usize) -> Vec<usize> {
+        match self {
+            Edges::Dead | Edges::WrapY => range_about(x, limit),
+            Edges::WrapX | Edges::WrapXY => wrap_about(x, limit),
+        }
+    }
+
+    fn about_y(&self, y: usize, limit: usize) -> Vec<usize> {
+        match self {
+            Edges::Dead | Edges::WrapX => range_about(y, limit),
+            Edges::WrapY | Edges::WrapXY => wrap_about(y, limit),
+        }
     }
 }
 
@@ -241,6 +272,7 @@ impl CellParser<'_> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct LifeParser<'a> {
     cell_parser: CellParser<'a>,
+    edges: Edges,
     min_width: usize,
     min_height: usize,
     max_width: Option<usize>,
@@ -266,6 +298,7 @@ impl<'a> LifeParser<'a> {
     pub fn dead_chars(s: &'a str) -> LifeParser<'a> {
         LifeParser {
             cell_parser: CellParser::DeadChars(s),
+            edges: Edges::default(),
             min_width: 0,
             min_height: 0,
             max_width: None,
@@ -291,11 +324,17 @@ impl<'a> LifeParser<'a> {
     pub fn alive_chars(s: &'a str) -> LifeParser<'a> {
         LifeParser {
             cell_parser: CellParser::AliveChars(s),
+            edges: Edges::default(),
             min_width: 0,
             min_height: 0,
             max_width: None,
             max_height: None,
         }
+    }
+
+    pub fn edges(mut self, edges: Edges) -> Self {
+        self.edges = edges;
+        self
     }
 
     /// Set the minimum width of parsed [`LifeState`] instances.
@@ -373,7 +412,7 @@ impl<'a> LifeParser<'a> {
                 }
             }
         }
-        let mut life = LifeState::new(height, width);
+        let mut life = LifeState::new(height, width, self.edges);
         for yx in live_points {
             life[yx] = true;
         }
@@ -395,6 +434,18 @@ fn range_about(i: usize, limit: usize) -> Vec<usize> {
     vals
 }
 
+fn wrap_about(i: usize, limit: usize) -> Vec<usize> {
+    let mut vals = Vec::with_capacity(3);
+    debug_assert!(limit > 0, "limit should be > 0");
+    vals.push(i.checked_sub(1).unwrap_or(limit - 1));
+    vals.push(i);
+    match i.checked_add(1) {
+        Some(b) if b < limit => vals.push(b),
+        _ => vals.push(0),
+    }
+    vals
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -404,7 +455,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = LifeState::new(3, 3);
+        let mut life = LifeState::new(3, 3, Edges::Dead);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -440,7 +491,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = LifeState::new(3, 3);
+        let mut life = LifeState::new(3, 3, Edges::Dead);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -468,7 +519,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = LifeState::new(3, 3);
+        let mut life = LifeState::new(3, 3, Edges::Dead);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -482,7 +533,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = LifeState::new(3, 3);
+        let mut life = LifeState::new(3, 3, Edges::Dead);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -493,8 +544,57 @@ mod tests {
     }
 
     #[test]
+    fn test_advance1_wrapx() {
+        // ..#..
+        // +..#.
+        // +###+
+        let mut life = LifeState::new(3, 3, Edges::WrapX);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
+    }
+
+    #[test]
+    fn test_advance1_wrapy() {
+        // +++
+        // .#.
+        // ..#
+        // ###
+        // .+.
+        let mut life = LifeState::new(3, 3, Edges::WrapY);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
+    }
+
+    #[test]
+    fn test_advance1_wrapxy() {
+        // +++++
+        // ..#..
+        // +..#.
+        // +###+
+        // ..+..
+        let mut life = LifeState::new(3, 3, Edges::WrapXY);
+        life[(0, 1)] = true;
+        life[(1, 2)] = true;
+        life[(2, 0)] = true;
+        life[(2, 1)] = true;
+        life[(2, 2)] = true;
+        let life2 = life.advance();
+        assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
+    }
+
+    #[test]
     fn test_advance2() {
-        let mut life = LifeState::new(5, 5);
+        let mut life = LifeState::new(5, 5, Edges::Dead);
         life[(1, 2)] = true;
         life[(2, 3)] = true;
         life[(3, 1)] = true;
