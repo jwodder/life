@@ -223,18 +223,20 @@ impl<'a> Runs<'a> {
         self.row.map_or(true, <[bool]>::is_empty)
     }
 
-    fn eol_run(&mut self) -> RleItem {
+    fn eol_run(&mut self) -> Option<RleItem> {
         let mut count = 1;
+        let mut rows_left = false;
         while let Some(row) = self.next_row() {
+            rows_left = true;
             if row.iter().any(|&b| b) {
                 break;
             }
             count += 1;
         }
-        RleItem {
+        rows_left.then_some(RleItem {
             count,
             tag: Tag::Eol,
-        }
+        })
     }
 }
 
@@ -244,7 +246,7 @@ impl Iterator for Runs<'_> {
     fn next(&mut self) -> Option<RleItem> {
         if let Some(item) = self.next_run_in_row() {
             if self.at_eol() && item.tag == Tag::Dead {
-                Some(self.eol_run())
+                self.eol_run()
             } else {
                 Some(item)
             }
@@ -252,7 +254,7 @@ impl Iterator for Runs<'_> {
             None
         } else {
             // At EOL
-            Some(self.eol_run())
+            self.eol_run()
         }
     }
 }

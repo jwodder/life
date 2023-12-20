@@ -368,10 +368,7 @@ mod tests {
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(rle.comments, [('C', String::from("This is a glider."))]);
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
-        assert_eq!(
-            rle.to_string(),
-            "#C This is a glider.\nx = 3, y = 3\nbo$2bo$3o$!\n"
-        );
+        assert_eq!(rle.to_string(), s);
     }
 
     #[test]
@@ -409,7 +406,7 @@ mod tests {
                 "#C https://conwaylife.com/wiki/Beehive_on_cap\n",
                 "#C https://www.conwaylife.com/patterns/beehiveoncap.rle\n",
                 "x = 5, y = 7\n",
-                "b2o$o2bo$4o2$2b2o$bo2bo$2b2o$!\n",
+                "b2o$o2bo$4o2$2b2o$bo2bo$2b2o!\n",
             )
         );
     }
@@ -461,7 +458,7 @@ mod tests {
                 "x = 27, y = 21\n",
                 "2b2o$2bo$4bo2bo2bo2bo2bo2bo2bo$3b20o$2bo$3b18o$21bo$b20o$o$b22o$23bob\n",
                 "2o$b20o2bob2o$o20bobo$b20o2bo$23b2o$3b18o$2bo18bo$3b18o2$5b2o2b2obob4o\n",
-                "b2o$5b2o2bob2obo2bob2o$!\n",
+                "b2o$5b2o2bob2obo2bob2o!\n",
             )
         );
     }
