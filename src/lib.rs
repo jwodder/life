@@ -78,19 +78,18 @@ impl Pattern {
         for y in 0..self.height {
             let yrange = self.edges.about_y(y, self.height);
             for x in 0..self.width {
-                let mut live_neighbors = 0;
+                let mut alive = 0;
                 for x2 in self.edges.about_x(x, self.width) {
                     for &y2 in &yrange {
-                        if (y2, x2) != (y, x) && self[(y2, x2)] {
-                            live_neighbors += 1;
+                        if self[(y2, x2)] {
+                            alive += 1;
                         }
                     }
                 }
-                match (live_neighbors, self[(y, x)]) {
-                    (2 | 3, true) => (),                     // Remain alive
-                    (3, false) => next_state[(y, x)] = true, // Be born
-                    (_, true) => next_state[(y, x)] = false, // Die
-                    (_, false) => (),                        // Stay dead
+                match alive {
+                    3 => next_state[(y, x)] = true,
+                    4 => (),
+                    _ => next_state[(y, x)] = false,
                 }
             }
         }
@@ -728,10 +727,22 @@ mod tests {
     }
 
     #[rstest]
+    #[case(Edges::Dead, ".")]
+    #[case(Edges::WrapX, "#")]
+    #[case(Edges::WrapY, "#")]
+    #[case(Edges::WrapXY, ".")]
+    fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
+        let mut life = Pattern::new(1, 1, edges);
+        life[(0, 0)] = true;
+        let life2 = life.step();
+        assert_eq!(life2.draw('.', '#').to_string(), after);
+    }
+
+    #[rstest]
     #[case(Edges::Dead, "..")]
     #[case(Edges::WrapX, "..")]
-    #[case(Edges::WrapY, ".#")]
-    #[case(Edges::WrapXY, "..")]
+    #[case(Edges::WrapY, "##")]
+    #[case(Edges::WrapXY, "#.")]
     fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 2, edges);
         life[(0, 0)] = true;
@@ -741,9 +752,9 @@ mod tests {
 
     #[rstest]
     #[case(Edges::Dead, ".\n.")]
-    #[case(Edges::WrapX, ".\n#")]
+    #[case(Edges::WrapX, "#\n#")]
     #[case(Edges::WrapY, ".\n.")]
-    #[case(Edges::WrapXY, ".\n.")]
+    #[case(Edges::WrapXY, "#\n.")]
     fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 1, edges);
         life[(0, 0)] = true;
