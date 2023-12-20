@@ -155,7 +155,7 @@ pub enum PlaintextError {
 
     /// Returned if the pattern drawing contains any characters other than `.`,
     /// `O`, and newline sequences
-    #[error("plaintext pattern contains invalid charater {0:?}")]
+    #[error("plaintext drawing contains invalid character {0:?}")]
     InvalidChar(char),
 }
 
@@ -287,6 +287,16 @@ mod tests {
             "O....O\n",
             "OO..OO\n",
         ));
+    }
+
+    #[test]
+    fn embedded_comment() {
+        let s = "!Name: Glider\n.O.\n..O\n!Oh!\nOOO\n";
+        let e = s.parse::<Plaintext>().unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "plaintext drawing contains invalid character '!'"
+        );
     }
 
     #[test]
