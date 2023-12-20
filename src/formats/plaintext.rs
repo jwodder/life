@@ -235,6 +235,61 @@ mod tests {
     }
 
     #[test]
+    fn leading_trailing_blank_lines() {
+        let s = "!Name: Glider\n\n.O.\n..O\nOOO\n\n";
+        let pt = s.parse::<Plaintext>().unwrap();
+        assert_eq!(pt.name, "Glider");
+        assert!(pt.comments.is_empty());
+        assert_eq!(
+            pt.pattern.draw('.', 'O').to_string(),
+            "...\n.O.\n..O\nOOO\n..."
+        );
+        assert_eq!(pt.to_string(), "!Name: Glider\n...\n.O.\n..O\nOOO\n...\n");
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn middle_blank_line() {
+        let s = concat!(
+            "!Name: Beehive and dock\n",
+            "!https://conwaylife.com/ref/lexicon/lex_b.htm#beehiveanddock\n",
+            "...OO\n",
+            "..O..O\n",
+            "...OO\n",
+            "\n",
+            ".OOOO\n",
+            "O....O\n",
+            "OO..OO\n",
+        );
+        let pt = s.parse::<Plaintext>().unwrap();
+        assert_eq!(pt.name, "Beehive and dock");
+        assert_eq!(pt.comments, ["https://conwaylife.com/ref/lexicon/lex_b.htm#beehiveanddock"]);
+        assert_eq!(
+            pt.pattern.draw('.', 'O').to_string(),
+            concat!(
+                "...OO.\n",
+                "..O..O\n",
+                "...OO.\n",
+                "......\n",
+                ".OOOO.\n",
+                "O....O\n",
+                "OO..OO",
+            )
+        );
+        assert_eq!(pt.to_string(), concat!(
+            "!Name: Beehive and dock\n",
+            "!https://conwaylife.com/ref/lexicon/lex_b.htm#beehiveanddock\n",
+            "...OO.\n",
+            "..O..O\n",
+            "...OO.\n",
+            "......\n",
+            ".OOOO.\n",
+            "O....O\n",
+            "OO..OO\n",
+        ));
+    }
+
+    #[test]
     fn one_blank_line() {
         let s = "!Name: Blank line\n\n";
         let pt = s.parse::<Plaintext>().unwrap();

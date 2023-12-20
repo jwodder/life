@@ -873,6 +873,32 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
+    fn test_parse_middle_blank_line() {
+        let parser = PatternParser::dead_chars(" .");
+        let life = parser.parse(concat!(
+            "...OO\n",
+            "..O..O\n",
+            "...OO\n",
+            "\n",
+            ".OOOO\n",
+            "O....O\n",
+            "OO..OO\n",
+        ));
+        assert_eq!(life.height(), 7);
+        assert_eq!(life.width(), 6);
+        assert_eq!(life.draw('.', 'O').to_string(), concat!(
+            "...OO.\n",
+            "..O..O\n",
+            "...OO.\n",
+            "......\n",
+            ".OOOO.\n",
+            "O....O\n",
+            "OO..OO",
+        ));
+    }
+
+    #[test]
     fn test_zero_size() {
         let life = Pattern::new(0, 0, Edges::Dead);
         assert_eq!(life.get(0, 0), None);
