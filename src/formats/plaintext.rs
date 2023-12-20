@@ -1,3 +1,4 @@
+use super::newlines::ascii_lines;
 use crate::{Pattern, PatternBuilder};
 use std::fmt;
 use std::str::FromStr;
@@ -40,7 +41,8 @@ use thiserror::Error;
 ///     and newlines in a drawing.  In particular, comments may not occur in
 ///     the middle of a drawing.
 ///
-/// - This implementation recognizes only LF and CR LF as newline sequences.
+/// - This implementation recognizes only LF, CR, and CR LF as newline
+///   sequences.
 ///
 /// A plaintext encoding of the [glider](https://conwaylife.com/wiki/Glider):
 ///
@@ -75,20 +77,17 @@ pub struct Plaintext {
 
 impl fmt::Display for Plaintext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut namelines = self.name.lines();
-        writeln!(f, "!Name: {}", namelines.next().unwrap_or_default())?;
+        let mut namelines = ascii_lines(&self.name);
+        let Some(name) = namelines.next() else {
+            unreachable!("ascii_lines() should yield at least one element");
+        };
+        writeln!(f, "!Name: {name}")?;
         for ln in namelines {
             writeln!(f, "!{ln}")?;
         }
         for c in &self.comments {
-            if c.is_empty() {
-                // c.lines() would produce an empty iterator, so we need to
-                // explicitly write the empty comment.
-                writeln!(f, "!")?;
-            } else {
-                for ln in c.lines() {
-                    writeln!(f, "!{ln}")?;
-                }
+            for ln in ascii_lines(c) {
+                writeln!(f, "!{ln}")?;
             }
         }
         writeln!(f, "{}", self.pattern.draw('.', 'O'))?;
@@ -107,7 +106,7 @@ impl FromStr for Plaintext {
     /// the pattern drawing contains any characters other than `.`, `O`, and
     /// newline sequences.
     fn from_str(s: &str) -> Result<Plaintext, PlaintextError> {
-        let mut lines = s.lines();
+        let mut lines = ascii_lines(s);
         let name = lines
             .next()
             .and_then(|ln| ln.strip_prefix("!Name: "))
