@@ -462,4 +462,31 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn all_dead() {
+        let s = "x = 5, y = 5\n!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            ".....\n.....\n.....\n.....\n....."
+        );
+        assert_eq!(rle.to_string(), s);
+    }
+
+    #[test]
+    fn empty() {
+        let s = "x = 0, y = 0\n!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), "");
+        assert_eq!(rle.to_string(), s);
+    }
+
+    #[test]
+    fn dot() {
+        let s = "x = 1, y = 1\no!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), "O");
+        assert_eq!(rle.to_string(), s);
+    }
 }

@@ -192,18 +192,38 @@ impl FromStr for Edges {
 pub struct ParseEdgesError;
 
 #[derive(Clone, Debug)]
-struct Runs<'a> {
+enum Runs<'a> {
+    Inner(InnerRuns<'a>),
+    Empty,
+}
+
+#[derive(Clone, Debug)]
+struct InnerRuns<'a> {
     chunks: std::slice::ChunksExact<'a, bool>,
     row: Option<&'a [bool]>,
 }
 
 impl<'a> Runs<'a> {
     fn new(life: &'a Pattern) -> Runs<'a> {
-        let mut chunks = life.cells.chunks_exact(life.width);
-        let row = chunks.next();
-        Runs { chunks, row }
+        if life.width == 0 {
+            // Chunk size must be nonzero
+            Runs::Empty
+        } else {
+            let mut chunks = life.cells.chunks_exact(life.width);
+            let row = chunks.next();
+            Runs::Inner(InnerRuns { chunks, row })
+        }
     }
 
+    fn inner(&mut self) -> Option<&mut InnerRuns<'a>> {
+        match self {
+            Runs::Inner(inner) => Some(inner),
+            Runs::Empty => None,
+        }
+    }
+}
+
+impl<'a> InnerRuns<'a> {
     fn next_row(&mut self) -> Option<&'a [bool]> {
         self.row = self.chunks.next();
         self.row
@@ -225,15 +245,10 @@ impl<'a> Runs<'a> {
 
     fn eol_run(&mut self) -> Option<RleItem> {
         let mut count = 1;
-        let mut rows_left = false;
-        while let Some(row) = self.next_row() {
-            rows_left = true;
-            if row.iter().any(|&b| b) {
-                break;
-            }
+        while self.next_row()?.iter().all(|&b| !b) {
             count += 1;
         }
-        rows_left.then_some(RleItem {
+        Some(RleItem {
             count,
             tag: Tag::Eol,
         })
@@ -244,17 +259,18 @@ impl Iterator for Runs<'_> {
     type Item = RleItem;
 
     fn next(&mut self) -> Option<RleItem> {
-        if let Some(item) = self.next_run_in_row() {
-            if self.at_eol() && item.tag == Tag::Dead {
-                self.eol_run()
+        let inner = self.inner()?;
+        if let Some(item) = inner.next_run_in_row() {
+            if inner.at_eol() && item.tag == Tag::Dead {
+                inner.eol_run()
             } else {
                 Some(item)
             }
-        } else if self.row.is_none() {
+        } else if inner.row.is_none() {
             None
         } else {
             // At EOL
-            self.eol_run()
+            inner.eol_run()
         }
     }
 }
