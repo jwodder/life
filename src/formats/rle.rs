@@ -361,6 +361,7 @@ impl<'a> Scanner<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::PatternParser;
 
     #[test]
     fn glider() {
@@ -488,5 +489,78 @@ mod tests {
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), "O");
         assert_eq!(rle.to_string(), s);
+    }
+
+    #[test]
+    fn out_of_bounds() {
+        let s = "x = 3, y = 3\nbo3b2o$2b3o$3o$2ob!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn spaced_data() {
+        let s = "x = 3, y = 3\n b  o  $ 2b o \n $ 3o\n!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn leading_trailing_blank_lines() {
+        let s = "x = 3, y = 5\n$bo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            "...\n.O.\n..O\nOOO\n..."
+        );
+        assert_eq!(rle.to_string(), s);
+    }
+
+    #[test]
+    fn alternative_letters() {
+        let s = "x = 3, y = 3\nBO$2bq\n$3L\n!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn empty_comment() {
+        let s = "#C \nx = 3, y = 3\nbo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.comments, [('C', String::new())]);
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn whitespace_comment() {
+        let s = "#C  \nx = 3, y = 3\nbo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.comments, [('C', String::new())]);
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn textless_comment() {
+        let s = "#C\nx = 3, y = 3\nbo$2bo$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::NoSpaceAfterCode('C'));
+        assert_eq!(e.to_string(), "no space after 'C' code in '#' line");
+    }
+
+    #[test]
+    fn multiline_comment() {
+        let rle = Rle {
+            comments: vec![('C', String::from("Line 1\nLine 2\n"))],
+            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
+        };
+        assert_eq!(
+            rle.to_string(),
+            "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
+        );
     }
 }

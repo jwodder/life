@@ -292,6 +292,7 @@ mod tests {
     fn embedded_comment() {
         let s = "!Name: Glider\n.O.\n..O\n!Oh!\nOOO\n";
         let e = s.parse::<Plaintext>().unwrap_err();
+        assert_eq!(e, PlaintextError::InvalidChar('!'));
         assert_eq!(
             e.to_string(),
             "plaintext drawing contains invalid character '!'"
