@@ -1,4 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+mod formats;
+pub use crate::formats::*;
 
 #[cfg(feature = "image")]
 mod images;
@@ -947,5 +949,25 @@ mod tests {
             "...##.\n",
             "...#..",
         ));
+    }
+
+    #[test]
+    fn test_empty_builder() {
+        let builder = PatternBuilder::new();
+        let life = builder.build();
+        assert_eq!(life.height(), 0);
+        assert_eq!(life.width(), 0);
+        assert_eq!(life.draw('.', '#').to_string(), "");
+    }
+
+    #[test]
+    fn test_empty_builder_min_height() {
+        let builder = PatternBuilder::new().min_height(1);
+        let life = builder.build();
+        // The height is zero because the width was zero, so both dimensions
+        // are zeroed.
+        assert_eq!(life.height(), 0);
+        assert_eq!(life.width(), 0);
+        assert_eq!(life.draw('.', '#').to_string(), "");
     }
 }
