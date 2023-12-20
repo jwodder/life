@@ -245,4 +245,5 @@ wildcard_dependencies = "deny"
 zero_sized_map_values = "deny"
 
 [dev-dependencies]
+pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }

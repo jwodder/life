@@ -1,6 +1,10 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+
+#[cfg(feature = "image")]
 mod images;
+#[cfg(feature = "image")]
 pub use crate::images::*;
+
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut};

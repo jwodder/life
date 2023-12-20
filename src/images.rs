@@ -49,7 +49,7 @@ impl ImageBuilder {
             .checked_mul(pat_height)
             .and_then(|h| h.checked_sub(self.gutter))
             .expect("image size should not overflow u32");
-        let mut img = RgbImage::new(img_width, img_height);
+        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| [0xFF, 0xFF, 0xFF].into());
         for (y, x) in life.iter_live() {
             let xstart = match u32::try_from(x) {
                 Ok(x) => x * guttered_size,
@@ -66,5 +66,39 @@ impl ImageBuilder {
             }
         }
         img
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::PatternParser;
+    use image::{
+        codecs::pnm::{PnmSubtype, SampleEncoding},
+        ImageOutputFormat,
+    };
+    use pretty_assertions::assert_eq;
+    use std::io::Cursor;
+
+    fn img2bytes(img: RgbImage, fmt: ImageOutputFormat) -> Vec<u8> {
+        let mut buf = Cursor::new(Vec::<u8>::new());
+        img.write_to(&mut buf, fmt).unwrap();
+        buf.into_inner()
+    }
+
+    #[test]
+    fn test_image1() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap());
+        let img = painter.pattern_to_image(&life);
+        let imgdata = String::from_utf8(img2bytes(
+            img,
+            ImageOutputFormat::Pnm(PnmSubtype::Pixmap(SampleEncoding::Ascii)),
+        ))
+        .unwrap();
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/test_image1.ppm").trim_end_matches('\n')
+        );
     }
 }
