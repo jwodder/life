@@ -101,4 +101,21 @@ mod tests {
             include_str!("testdata/test_image1.ppm").trim_end_matches('\n')
         );
     }
+
+    #[test]
+    fn test_image_color() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter =
+            ImageBuilder::new(NonZeroU32::new(5).unwrap()).live_color([0xFF, 0, 0].into());
+        let img = painter.pattern_to_image(&life);
+        let imgdata = String::from_utf8(img2bytes(
+            img,
+            ImageOutputFormat::Pnm(PnmSubtype::Pixmap(SampleEncoding::Ascii)),
+        ))
+        .unwrap();
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/test_image_color.ppm").trim_end_matches('\n')
+        );
+    }
 }
