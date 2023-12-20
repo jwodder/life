@@ -6,27 +6,24 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 use thiserror::Error;
 
-// # Implementation-Specific Parsing Details
-//
-// - Specifications of cells outside the given width & height are accepted
-//   but ignored.
-//
-// - A '#' line must consist of, in order, a '#', any single non-newline
-//   character, one or more space (U+0020) characters (discarded when parsing),
-//   and freeform text.
-//
-// - Tokens in the header line may be separated by zero or more Unicode
-//   whitespace characters.
-//
-// - Tokens in the pattern data may be separated by zero or more Unicode
-//   whitespace characters.
-//
-// - 'b' and 'B' are parsed as dead cells.  All other ASCII letters are parsed
-//   as live cells.
-
+/// A pattern represented in the [run length encoded file
+/// format](https://conwaylife.com/wiki/Run_Length_Encoded)
+///
+/// An `Rle` instance can be constructed from an RLE string via [`FromStr`] and
+/// converted to the RLE format via [`Display`][fmt::Display] (which includes a
+/// trailing newline).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rle {
+    /// A list of `#` lines present in the RLE encoding, represented as pairs
+    /// of a type letter and text
+    ///
+    /// When displaying an `Rle` instance, if the text in an element of
+    /// `comments` contains one or more non-final newlines, each line in the
+    /// text will be converted to a separate `#` line with the same type
+    /// letter.  If the text ends in a newline, that newline is ignored.
     pub comments: Vec<(char, String)>,
+
+    /// The pattern itself
     pub pattern: Pattern,
 }
 
@@ -64,6 +61,32 @@ impl fmt::Display for Rle {
 impl FromStr for Rle {
     type Err = RleError;
 
+    /// Parse a pattern given in RLE format.
+    ///
+    /// # Errors
+    ///
+    /// See [`RleError`] for the various error conditions.
+    ///
+    /// # Implementation-Specific Parsing Details
+    ///
+    /// This implementation makes the following decisions about how to parse
+    /// the RLE format:
+    ///
+    /// - Specifications for cells outside the width & height given in the
+    ///   header are accepted but ignored.
+    ///
+    /// - A `#` line must consist of, in order, a `#`, any single non-newline
+    ///   character, one or more space (U+0020) characters (discarded), and
+    ///   freeform text.
+    ///
+    /// - Tokens in the header line may be separated by zero or more Unicode
+    ///   whitespace characters other than newline sequences.
+    ///
+    /// - Tokens in the pattern data may be separated by zero or more Unicode
+    ///   whitespace characters.
+    ///
+    /// - 'b' and 'B' are parsed as dead cells.  All other ASCII letters are
+    ///   parsed as live cells.
     fn from_str(s: &str) -> Result<Rle, RleError> {
         let mut cparser = CommentParser(s);
         let mut comments = Vec::new();
@@ -84,7 +107,10 @@ impl FromStr for Rle {
             let (count, tag) = run?;
             match tag {
                 Tag::Dead => x += count,
-                Tag::Live => pattern.set_live_run(y, x, count),
+                Tag::Live => {
+                    pattern.set_live_run(y, x, count);
+                    x += count;
+                }
                 Tag::Eol => {
                     y += count;
                     x = 0;
@@ -97,20 +123,38 @@ impl FromStr for Rle {
 
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum RleError {
+    /// Returned if a `#` line does not have a non-newline character
+    /// immediately after the `#`.
     #[error("'#' line lacks code character")]
     NoCode,
+
+    /// Returned if the character after the `#` at the start of a `#` line is
+    /// not followed by one or more space characters
     #[error("no space after {0:?} code in '#' line")]
     NoSpaceAfterCode(char),
+
+    /// Returned if the input did not contain any characters outside of `#`
+    /// lines
     #[error("no data in RLE input")]
     NoData,
+
+    /// Returned if the header line was malformed
     #[error("invalid header line")]
     InvalidHeader,
+
+    /// Returned if the header line specified a rule other than B3/S23
     #[error("header specifies unsupported rule")]
     UnsupportedRule,
+
+    /// Returned if a number in the header or data exceeded [`usize::MAX`]
     #[error("numeric value exceeds integer bounds")]
     NumericOverflow(#[from] ParseIntError),
+
+    /// Returned if an invalid character was encountered in the data
     #[error("invalid character {0:?} in data")]
     InvalidChar(char),
+
+    /// Returned if the end of input was reached without encountering a `!`
     #[error("input ended without reaching '!'")]
     UnexpectedEof,
 }
@@ -327,6 +371,98 @@ mod tests {
         assert_eq!(
             rle.to_string(),
             "#C This is a glider.\nx = 3, y = 3\nbo$2bo$3o$!\n"
+        );
+    }
+
+    #[test]
+    fn ragged() {
+        let s = concat!(
+            "#N beehiveoncap.rle\n",
+            "#C https://conwaylife.com/wiki/Beehive_on_cap\n",
+            "#C https://www.conwaylife.com/patterns/beehiveoncap.rle\n",
+            "x = 5, y = 7, rule = B3/S23\n",
+            "b2o$o2bo$4o2$2b2o$bo2bo$2b2o!\n",
+        );
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.comments,
+            [
+                ('N', String::from("beehiveoncap.rle")),
+                (
+                    'C',
+                    String::from("https://conwaylife.com/wiki/Beehive_on_cap")
+                ),
+                (
+                    'C',
+                    String::from("https://www.conwaylife.com/patterns/beehiveoncap.rle")
+                ),
+            ]
+        );
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            ".OO..\nO..O.\nOOOO.\n.....\n..OO.\n.O..O\n..OO."
+        );
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N beehiveoncap.rle\n",
+                "#C https://conwaylife.com/wiki/Beehive_on_cap\n",
+                "#C https://www.conwaylife.com/patterns/beehiveoncap.rle\n",
+                "x = 5, y = 7\n",
+                "b2o$o2bo$4o2$2b2o$bo2bo$2b2o$!\n",
+            )
+        );
+    }
+
+    #[test]
+    fn line_wrapping() {
+        let s = concat!(
+            "#N zebrastripes.rle\n",
+            "#C https://conwaylife.com/wiki/Zebra_stripes\n",
+            "#C https://www.conwaylife.com/patterns/zebrastripes.rle\n",
+            "x = 27, y = 21, rule = B3/S23\n",
+            "2b2o$2bo$4bo2bo2bo2bo2bo2bo2bo$3b20o$2bo$3b18o$21bo$b20o$o$b22o$23bob\n",
+            "2o$b20o2bob2o$o20bobo$b20o2bo$23b2o$3b18o$2bo18bo$3b18o2$5b2o2b2obob4o\n",
+            "b2o$5b2o2bob2obo2bob2o!\n",
+        );
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            concat!(
+                "..OO.......................\n",
+                "..O........................\n",
+                "....O..O..O..O..O..O..O....\n",
+                "...OOOOOOOOOOOOOOOOOOOO....\n",
+                "..O........................\n",
+                "...OOOOOOOOOOOOOOOOOO......\n",
+                ".....................O.....\n",
+                ".OOOOOOOOOOOOOOOOOOOO......\n",
+                "O..........................\n",
+                ".OOOOOOOOOOOOOOOOOOOOOO....\n",
+                ".......................O.OO\n",
+                ".OOOOOOOOOOOOOOOOOOOO..O.OO\n",
+                "O....................O.O...\n",
+                ".OOOOOOOOOOOOOOOOOOOO..O...\n",
+                ".......................OO..\n",
+                "...OOOOOOOOOOOOOOOOOO......\n",
+                "..O..................O.....\n",
+                "...OOOOOOOOOOOOOOOOOO......\n",
+                "...........................\n",
+                ".....OO..OO.O.OOOO.OO......\n",
+                ".....OO..O.OO.O..O.OO......",
+            )
+        );
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N zebrastripes.rle\n",
+                "#C https://conwaylife.com/wiki/Zebra_stripes\n",
+                "#C https://www.conwaylife.com/patterns/zebrastripes.rle\n",
+                "x = 27, y = 21\n",
+                "2b2o$2bo$4bo2bo2bo2bo2bo2bo2bo$3b20o$2bo$3b18o$21bo$b20o$o$b22o$23bob\n",
+                "2o$b20o2bob2o$o20bobo$b20o2bo$23b2o$3b18o$2bo18bo$3b18o2$5b2o2b2obob4o\n",
+                "b2o$5b2o2bob2obo2bob2o$!\n",
+            )
         );
     }
 }
