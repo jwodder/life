@@ -15,7 +15,7 @@ fn main() -> std::io::Result<()> {
     let source = args.infile.read_to_string()?;
     let mut pattern = PatternParser::dead_chars(" .").parse(&source);
     for _ in 0..args.number {
-        pattern = pattern.advance();
+        pattern = pattern.step();
     }
     println!("{}", pattern.draw('.', '#'));
     Ok(())

@@ -73,7 +73,7 @@ impl Pattern {
         Draw::new(self, dead, live)
     }
 
-    pub fn advance(&self) -> Pattern {
+    pub fn step(&self) -> Pattern {
         let mut next_state = self.clone();
         for y in 0..self.height {
             let yrange = self.edges.about_y(y, self.height);
@@ -256,7 +256,7 @@ impl Iterator for Generations {
     type Item = Pattern;
 
     fn next(&mut self) -> Option<Pattern> {
-        let mut life = self.0.advance();
+        let mut life = self.0.step();
         std::mem::swap(&mut self.0, &mut life);
         Some(life)
     }
@@ -574,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn test_advance1() {
+    fn test_step1() {
         // .#.
         // ..#
         // ###
@@ -584,12 +584,12 @@ mod tests {
         life[(2, 0)] = true;
         life[(2, 1)] = true;
         life[(2, 2)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
     }
 
     #[test]
-    fn test_advance1_wrapx() {
+    fn test_step1_wrapx() {
         // ..#..
         // +..#.
         // +###+
@@ -599,12 +599,12 @@ mod tests {
         life[(2, 0)] = true;
         life[(2, 1)] = true;
         life[(2, 2)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
     }
 
     #[test]
-    fn test_advance1_wrapy() {
+    fn test_step1_wrapy() {
         // +++
         // .#.
         // ..#
@@ -616,12 +616,12 @@ mod tests {
         life[(2, 0)] = true;
         life[(2, 1)] = true;
         life[(2, 2)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
     }
 
     #[test]
-    fn test_advance1_wrapxy() {
+    fn test_step1_wrapxy() {
         // +++++
         // ..#..
         // +..#.
@@ -633,19 +633,19 @@ mod tests {
         life[(2, 0)] = true;
         life[(2, 1)] = true;
         life[(2, 2)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
     }
 
     #[test]
-    fn test_advance2() {
+    fn test_step2() {
         let mut life = Pattern::new(5, 5, Edges::Dead);
         life[(1, 2)] = true;
         life[(2, 3)] = true;
         life[(3, 1)] = true;
         life[(3, 2)] = true;
         life[(3, 3)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(
             life2.draw('.', '#').to_string(),
             ".....\n.....\n.#.#.\n..##.\n..#.."
@@ -657,10 +657,10 @@ mod tests {
     #[case(Edges::WrapX, "..")]
     #[case(Edges::WrapY, ".#")]
     #[case(Edges::WrapXY, "..")]
-    fn test_advance_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
+    fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 2, edges);
         life[(0, 0)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
 
@@ -669,10 +669,10 @@ mod tests {
     #[case(Edges::WrapX, ".\n#")]
     #[case(Edges::WrapY, ".\n.")]
     #[case(Edges::WrapXY, ".\n.")]
-    fn test_advance_vert_domino(#[case] edges: Edges, #[case] after: &str) {
+    fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 1, edges);
         life[(0, 0)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
 
@@ -681,11 +681,11 @@ mod tests {
     #[case(Edges::WrapX, "##\n##")]
     #[case(Edges::WrapY, "##\n##")]
     #[case(Edges::WrapXY, "..\n..")]
-    fn test_advance_square_diag(#[case] edges: Edges, #[case] after: &str) {
+    fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 2, edges);
         life[(0, 0)] = true;
         life[(1, 1)] = true;
-        let life2 = life.advance();
+        let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
 
@@ -782,7 +782,7 @@ mod tests {
         let life = Pattern::new(0, 0, Edges::Dead);
         assert_eq!(life.get(0, 0), None);
         assert_eq!(life.draw('.', '#').to_string(), "");
-        assert_eq!(life.advance(), life);
+        assert_eq!(life.step(), life);
         assert_eq!(life.enumerate().collect::<Vec<_>>(), Vec::new());
         assert_eq!(life.iter_live().collect::<Vec<_>>(), Vec::new());
     }
