@@ -1,4 +1,4 @@
-use super::newlines::ascii_lines;
+use super::util::ascii_lines;
 use crate::{Pattern, PatternBuilder};
 use std::fmt;
 use std::str::FromStr;

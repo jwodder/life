@@ -1,5 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 mod formats;
+use crate::formats::rle::{RleItem, Tag};
 pub use crate::formats::*;
 
 #[cfg(feature = "image")]
@@ -68,6 +69,19 @@ impl Pattern {
 
     pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut bool> {
         self.get_index(y, x).map(|i| &mut self.cells[i])
+    }
+
+    // TODO: Make this public?
+    fn set_live_run(&mut self, y: usize, x: usize, length: usize) {
+        if let Some(i) = self.get_index(y, x) {
+            let length = length.min(self.width - x);
+            self.cells[i..i.saturating_add(length)].fill(true);
+        }
+    }
+
+    // TODO: Make this public?
+    fn runs(&self) -> Runs<'_> {
+        Runs::new(self)
     }
 
     pub fn enumerate(&self) -> Enumerate<'_> {
@@ -176,6 +190,74 @@ impl FromStr for Edges {
 #[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 #[error("invalid Edges string")]
 pub struct ParseEdgesError;
+
+#[derive(Clone, Debug)]
+struct Runs<'a> {
+    chunks: std::slice::ChunksExact<'a, bool>,
+    row: Option<&'a [bool]>,
+}
+
+impl<'a> Runs<'a> {
+    fn new(life: &'a Pattern) -> Runs<'a> {
+        let mut chunks = life.cells.chunks_exact(life.width);
+        let row = chunks.next();
+        Runs { chunks, row }
+    }
+
+    fn next_row(&mut self) -> Option<&'a [bool]> {
+        self.row = self.chunks.next();
+        self.row
+    }
+
+    fn next_run_in_row(&mut self) -> Option<RleItem> {
+        let (&current, rest) = self.row?.split_first()?;
+        let spanlen = rest.iter().take_while(|&&b| b == current).count();
+        self.row = Some(&rest[spanlen..]);
+        Some(RleItem {
+            count: spanlen + 1,
+            tag: if current { Tag::Live } else { Tag::Dead },
+        })
+    }
+
+    fn at_eol(&mut self) -> bool {
+        self.row.map_or(true, <[bool]>::is_empty)
+    }
+
+    fn eol_run(&mut self) -> RleItem {
+        let mut count = 1;
+        while let Some(row) = self.next_row() {
+            if row.iter().any(|&b| b) {
+                break;
+            }
+            count += 1;
+        }
+        RleItem {
+            count,
+            tag: Tag::Eol,
+        }
+    }
+}
+
+impl Iterator for Runs<'_> {
+    type Item = RleItem;
+
+    fn next(&mut self) -> Option<RleItem> {
+        if let Some(item) = self.next_run_in_row() {
+            if self.at_eol() && item.tag == Tag::Dead {
+                Some(self.eol_run())
+            } else {
+                Some(item)
+            }
+        } else if self.row.is_none() {
+            None
+        } else {
+            // At EOL
+            Some(self.eol_run())
+        }
+    }
+}
+
+impl FusedIterator for Runs<'_> {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Enumerate<'a> {
