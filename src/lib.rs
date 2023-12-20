@@ -786,4 +786,73 @@ mod tests {
         assert_eq!(life.enumerate().collect::<Vec<_>>(), Vec::new());
         assert_eq!(life.iter_live().collect::<Vec<_>>(), Vec::new());
     }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_into_generations() {
+        let parser = PatternParser::dead_chars(" .");
+        let life = parser.parse(concat!(
+            "......\n",
+            "..#...\n",
+            "...#..\n",
+            ".###..\n",
+            "......\n",
+            "......\n",
+        ));
+        let mut iter = life.into_generations();
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "..#...\n",
+            "...#..\n",
+            ".###..\n",
+            "......\n",
+            "......",
+        ));
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "......\n",
+            ".#.#..\n",
+            "..##..\n",
+            "..#...\n",
+            "......",
+        ));
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "......\n",
+            "...#..\n",
+            ".#.#..\n",
+            "..##..\n",
+            "......",
+        ));
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "......\n",
+            "..#...\n",
+            "...##.\n",
+            "..##..\n",
+            "......",
+        ));
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "......\n",
+            "...#..\n",
+            "....#.\n",
+            "..###.\n",
+            "......",
+        ));
+        let life = iter.next().unwrap();
+        assert_eq!(life.draw('.', '#').to_string(), concat!(
+            "......\n",
+            "......\n",
+            "......\n",
+            "..#.#.\n",
+            "...##.\n",
+            "...#..",
+        ));
+    }
 }
