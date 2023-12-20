@@ -289,6 +289,90 @@ impl fmt::Display for Draw<'_> {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PatternBuilder {
+    edges: Edges,
+    height: usize,
+    width: usize,
+    max_height: usize,
+    max_width: usize,
+    live: Vec<(usize, usize)>,
+}
+
+impl PatternBuilder {
+    pub fn new() -> PatternBuilder {
+        PatternBuilder {
+            edges: Edges::default(),
+            height: 0,
+            width: 0,
+            max_height: usize::MAX,
+            max_width: usize::MAX,
+            live: Vec::new(),
+        }
+    }
+
+    pub fn edges(mut self, edges: Edges) -> Self {
+        self.edges = edges;
+        self
+    }
+
+    pub fn min_height(mut self, height: usize) -> Self {
+        self.height = height.max(self.height);
+        self
+    }
+
+    pub fn min_width(mut self, width: usize) -> Self {
+        self.width = width.max(self.width);
+        self
+    }
+
+    pub fn max_height(mut self, height: usize) -> Self {
+        self.max_height = height;
+        self.live.retain(|&(y, _)| y < height);
+        self
+    }
+
+    pub fn max_width(mut self, width: usize) -> Self {
+        self.max_width = width;
+        self.live.retain(|&(_, x)| x < width);
+        self
+    }
+
+    pub fn push(&mut self, y: usize, x: usize) {
+        if (0..self.max_height).contains(&y) && (0..self.max_width).contains(&x) {
+            if y >= self.height {
+                self.height = y + 1;
+            }
+            if x >= self.width {
+                self.width = x + 1;
+            }
+            self.live.push((y, x));
+        }
+    }
+
+    pub fn build(self) -> Pattern {
+        let mut life = Pattern::new(self.height, self.width, self.edges);
+        for yx in self.live {
+            life[yx] = true;
+        }
+        life
+    }
+}
+
+impl Default for PatternBuilder {
+    fn default() -> PatternBuilder {
+        PatternBuilder::new()
+    }
+}
+
+impl Extend<(usize, usize)> for PatternBuilder {
+    fn extend<I: IntoIterator<Item = (usize, usize)>>(&mut self, iter: I) {
+        for (y, x) in iter {
+            self.push(y, x);
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum CellParser<'a> {
     DeadChars(&'a str),
@@ -317,10 +401,10 @@ impl CellParser<'_> {
 pub struct PatternParser<'a> {
     cell_parser: CellParser<'a>,
     edges: Edges,
-    min_width: usize,
     min_height: usize,
-    max_width: Option<usize>,
-    max_height: Option<usize>,
+    min_width: usize,
+    max_height: usize,
+    max_width: usize,
 }
 
 impl<'a> PatternParser<'a> {
@@ -343,10 +427,10 @@ impl<'a> PatternParser<'a> {
         PatternParser {
             cell_parser: CellParser::DeadChars(s),
             edges: Edges::default(),
-            min_width: 0,
             min_height: 0,
-            max_width: None,
-            max_height: None,
+            min_width: 0,
+            max_height: usize::MAX,
+            max_width: usize::MAX,
         }
     }
 
@@ -369,25 +453,15 @@ impl<'a> PatternParser<'a> {
         PatternParser {
             cell_parser: CellParser::LiveChars(s),
             edges: Edges::default(),
-            min_width: 0,
             min_height: 0,
-            max_width: None,
-            max_height: None,
+            min_width: 0,
+            max_height: usize::MAX,
+            max_width: usize::MAX,
         }
     }
 
     pub fn edges(mut self, edges: Edges) -> Self {
         self.edges = edges;
-        self
-    }
-
-    /// Set the minimum width of parsed [`Pattern`] instances.
-    ///
-    /// If the input to [`PatternParser::parse()`] contains any lines with
-    /// fewer than `width` characters, such lines will be padded with dead
-    /// cells on the right.
-    pub fn min_width(mut self, width: usize) -> Self {
-        self.min_width = width;
         self
     }
 
@@ -401,13 +475,13 @@ impl<'a> PatternParser<'a> {
         self
     }
 
-    /// Set the maximum width of parsed [`Pattern`] instances.
+    /// Set the minimum width of parsed [`Pattern`] instances.
     ///
-    /// If the input to [`PatternParser::parse()`] contains any lines with more
-    /// than `width` characters, characters after the first `width` will be
-    /// ignored.
-    pub fn max_width(mut self, width: usize) -> Self {
-        self.max_width = Some(width);
+    /// If the input to [`PatternParser::parse()`] contains any lines with
+    /// fewer than `width` characters, such lines will be padded with dead
+    /// cells on the right.
+    pub fn min_width(mut self, width: usize) -> Self {
+        self.min_width = width;
         self
     }
 
@@ -416,7 +490,17 @@ impl<'a> PatternParser<'a> {
     /// If the input to [`PatternParser::parse()`] contains more than `height`
     /// lines, lines after the first `height` will be ignored.
     pub fn max_height(mut self, height: usize) -> Self {
-        self.max_height = Some(height);
+        self.max_height = height;
+        self
+    }
+
+    /// Set the maximum width of parsed [`Pattern`] instances.
+    ///
+    /// If the input to [`PatternParser::parse()`] contains any lines with more
+    /// than `width` characters, characters after the first `width` will be
+    /// ignored.
+    pub fn max_width(mut self, width: usize) -> Self {
+        self.max_width = width;
         self
     }
 
@@ -434,33 +518,24 @@ impl<'a> PatternParser<'a> {
     /// value passed to [`PatternParser::max_width()`] (if any), whichever is
     /// smaller.
     pub fn parse(&self, s: &str) -> Pattern {
-        let mut live_points = Vec::new();
-        let mut width = self.min_width;
-        let mut height = self.min_height;
-        for (y, line) in s.lines().enumerate() {
-            if self.max_height.is_some_and(|h| y >= h) {
-                break;
-            }
-            if y >= height {
-                height = y + 1;
-            }
-            for (x, ch) in line.chars().enumerate() {
-                if self.max_width.is_some_and(|w| x >= w) {
-                    break;
-                }
-                if x >= width {
-                    width = x + 1;
-                }
+        let mut builder = PatternBuilder::new()
+            .edges(self.edges)
+            .min_height(self.min_height)
+            .min_width(self.min_width)
+            .max_height(self.max_height)
+            .max_width(self.max_width);
+        for (y, line) in s.lines().enumerate().take(self.max_height) {
+            // Ensure that trailing dead rows count towards the height:
+            builder = builder.min_height(y + 1);
+            for (x, ch) in line.chars().enumerate().take(self.max_width) {
+                // Ensure that trailing dead cells count towards the width:
+                builder = builder.min_width(x + 1);
                 if self.cell_parser.parse(ch) {
-                    live_points.push((y, x));
+                    builder.push(y, x);
                 }
             }
         }
-        let mut life = Pattern::new(height, width, self.edges);
-        for yx in live_points {
-            life[yx] = true;
-        }
-        life
+        builder.build()
     }
 }
 
