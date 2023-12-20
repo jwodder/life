@@ -7,9 +7,6 @@ description = "Conway's Game of Life in Rust"
 authors = ["John Thorvald Wodder II <life-rust@varonathe.org>"]
 repository = "https://github.com/jwodder/life"
 license = "MIT"
-keywords = []
-# See <https://crates.io/category_slugs> for a list of categories
-categories = []
 exclude = ["/.*"]
 publish = false
 
