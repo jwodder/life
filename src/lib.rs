@@ -57,6 +57,11 @@ impl Pattern {
         self.edges
     }
 
+    pub fn with_edges(mut self, edges: Edges) -> Pattern {
+        self.edges = edges;
+        self
+    }
+
     fn get_index(&self, y: usize, x: usize) -> Option<usize> {
         if (0..self.height).contains(&y) && (0..self.width).contains(&x) {
             y.checked_mul(self.width).and_then(|yw| yw.checked_add(x))
