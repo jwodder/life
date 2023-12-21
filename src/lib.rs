@@ -9,8 +9,10 @@ mod images;
 pub use crate::images::*;
 
 use std::fmt::{self, Write};
+use std::fs::read_to_string;
 use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut};
+use std::path::Path;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -122,6 +124,21 @@ impl Pattern {
     pub fn into_generations(self) -> Generations {
         Generations(self)
     }
+
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Pattern, FromFileError> {
+        let path = path.as_ref();
+        match path.extension().and_then(|s| s.to_str()) {
+            Some("cells") => {
+                let s = read_to_string(path)?;
+                Ok(s.parse::<Plaintext>()?.into())
+            }
+            Some("rle") => {
+                let s = read_to_string(path)?;
+                Ok(s.parse::<Rle>()?.into())
+            }
+            _ => Err(FromFileError::InvalidExtension),
+        }
+    }
 }
 
 impl Index<(usize, usize)> for Pattern {
@@ -190,6 +207,18 @@ impl FromStr for Edges {
 #[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 #[error("invalid Edges string")]
 pub struct ParseEdgesError;
+
+#[derive(Debug, Error)]
+pub enum FromFileError {
+    #[error("path does not have a supported file extension")]
+    InvalidExtension,
+    #[error("failed to read file contents")]
+    Read(#[from] std::io::Error),
+    #[error("failed to parse plaintext")]
+    ParsePlaintext(#[from] PlaintextError),
+    #[error("failed to parse RLE")]
+    ParseRle(#[from] RleError),
+}
 
 #[derive(Clone, Debug)]
 enum Runs<'a> {
