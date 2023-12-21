@@ -18,6 +18,7 @@ thiserror = "1.0.51"
 
 [features]
 examples = ["dep:clap", "dep:patharg"]
+image = ["dep:image"]
 
 [[example]]
 name = "tick"
