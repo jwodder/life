@@ -114,7 +114,7 @@ impl FromStr for Rle {
             match tag {
                 Tag::Dead => x += count,
                 Tag::Live => {
-                    pattern.set_live_run(y, x, count);
+                    pattern.set_run(y, x, count, true);
                     x += count;
                 }
                 Tag::Eol => {

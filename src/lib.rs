@@ -78,11 +78,15 @@ impl Pattern {
         self.get_index(y, x).map(|i| &mut self.cells[i])
     }
 
-    // TODO: Make this public?
-    fn set_live_run(&mut self, y: usize, x: usize, length: usize) {
+    /// Set `length` cells in a single row starting at `(y, x)` to `state`.
+    ///
+    /// If `(y, x)` is not within the bounds of the `Pattern`, nothing happens.
+    ///
+    /// At most `width - x` cells are set, even if `length` is larger.
+    pub fn set_run(&mut self, y: usize, x: usize, length: usize, state: bool) {
         if let Some(i) = self.get_index(y, x) {
             let length = length.min(self.width - x);
-            self.cells[i..i.saturating_add(length)].fill(true);
+            self.cells[i..i.saturating_add(length)].fill(state);
         }
     }
 
