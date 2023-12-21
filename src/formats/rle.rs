@@ -1,5 +1,5 @@
 use super::util::{ascii_lines, scan_some, split_at_newline};
-use crate::{Edges, Pattern};
+use crate::Pattern;
 use std::fmt;
 use std::iter::FusedIterator;
 use std::num::ParseIntError;
@@ -106,7 +106,7 @@ impl FromStr for Rle {
             _ => return Err(RleError::NoData),
         };
         let (width, height) = parse_header(header)?;
-        let mut pattern = Pattern::new(height, width, Edges::default());
+        let mut pattern = Pattern::new(height, width);
         let mut y = 0;
         let mut x = 0;
         for run in parse_runs(data) {

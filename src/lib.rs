@@ -28,7 +28,7 @@ impl Pattern {
     /// # Panics
     ///
     /// Panics if ``width * height`` exceeds the maximum capacity of a [`Vec`].
-    pub fn new(mut height: usize, mut width: usize, edges: Edges) -> Pattern {
+    pub fn new(mut height: usize, mut width: usize) -> Pattern {
         if height == 0 || width == 0 {
             height = 0;
             width = 0;
@@ -40,7 +40,7 @@ impl Pattern {
         Pattern {
             height,
             width,
-            edges,
+            edges: Edges::default(),
             cells,
         }
     }
@@ -497,7 +497,7 @@ impl PatternBuilder {
     }
 
     pub fn build(self) -> Pattern {
-        let mut life = Pattern::new(self.height, self.width, self.edges);
+        let mut life = Pattern::new(self.height, self.width).with_edges(self.edges);
         for yx in self.live {
             life[yx] = true;
         }
@@ -721,7 +721,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Pattern::new(3, 3, Edges::Dead);
+        let mut life = Pattern::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -757,7 +757,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Pattern::new(3, 3, Edges::Dead);
+        let mut life = Pattern::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -785,7 +785,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Pattern::new(3, 3, Edges::Dead);
+        let mut life = Pattern::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -799,7 +799,7 @@ mod tests {
         // .#.
         // ..#
         // ###
-        let mut life = Pattern::new(3, 3, Edges::Dead);
+        let mut life = Pattern::new(3, 3);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -814,7 +814,7 @@ mod tests {
         // ..#..
         // +..#.
         // +###+
-        let mut life = Pattern::new(3, 3, Edges::WrapX);
+        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapX);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -831,7 +831,7 @@ mod tests {
         // ..#
         // ###
         // .+.
-        let mut life = Pattern::new(3, 3, Edges::WrapY);
+        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapY);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -848,7 +848,7 @@ mod tests {
         // +..#.
         // +###+
         // ..+..
-        let mut life = Pattern::new(3, 3, Edges::WrapXY);
+        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapXY);
         life[(0, 1)] = true;
         life[(1, 2)] = true;
         life[(2, 0)] = true;
@@ -860,7 +860,7 @@ mod tests {
 
     #[test]
     fn test_step2() {
-        let mut life = Pattern::new(5, 5, Edges::Dead);
+        let mut life = Pattern::new(5, 5);
         life[(1, 2)] = true;
         life[(2, 3)] = true;
         life[(3, 1)] = true;
@@ -879,7 +879,7 @@ mod tests {
     #[case(Edges::WrapY, "#")]
     #[case(Edges::WrapXY, ".")]
     fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(1, 1, edges);
+        let mut life = Pattern::new(1, 1).with_edges(edges);
         life[(0, 0)] = true;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
@@ -891,7 +891,7 @@ mod tests {
     #[case(Edges::WrapY, "##")]
     #[case(Edges::WrapXY, "#.")]
     fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(1, 2, edges);
+        let mut life = Pattern::new(1, 2).with_edges(edges);
         life[(0, 0)] = true;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
@@ -903,7 +903,7 @@ mod tests {
     #[case(Edges::WrapY, ".\n.")]
     #[case(Edges::WrapXY, "#\n.")]
     fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(2, 1, edges);
+        let mut life = Pattern::new(2, 1).with_edges(edges);
         life[(0, 0)] = true;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
@@ -915,7 +915,7 @@ mod tests {
     #[case(Edges::WrapY, "##\n##")]
     #[case(Edges::WrapXY, "..\n..")]
     fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(2, 2, edges);
+        let mut life = Pattern::new(2, 2).with_edges(edges);
         life[(0, 0)] = true;
         life[(1, 1)] = true;
         let life2 = life.step();
@@ -1038,7 +1038,7 @@ mod tests {
 
     #[test]
     fn test_zero_size() {
-        let life = Pattern::new(0, 0, Edges::Dead);
+        let life = Pattern::new(0, 0);
         assert_eq!(life.get(0, 0), None);
         assert_eq!(life.draw('.', '#').to_string(), "");
         assert_eq!(life.step(), life);
