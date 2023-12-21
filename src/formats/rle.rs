@@ -390,7 +390,6 @@ impl<'a> Scanner<'a> {
 mod tests {
     use super::*;
     use crate::PatternParser;
-    use assert_matches::assert_matches;
 
     #[test]
     fn glider() {
@@ -574,42 +573,6 @@ mod tests {
     }
 
     #[test]
-    fn textless_comment() {
-        let s = "#C\nx = 3, y = 3\nbo$2bo$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::NoSpaceAfterType('C'));
-        assert_eq!(e.to_string(), "no space after 'C' type in '#' line");
-    }
-
-    #[test]
-    fn embedded_comment() {
-        let s = "x = 3, y = 3\nbo$2bo$\n#C \\o/!\n3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::InvalidChar('#'));
-        assert_eq!(e.to_string(), "invalid character '#' in data");
-    }
-
-    #[test]
-    fn count_space_tag() {
-        let s = "x = 3, y = 3\nbo$ 2 b o$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::SpaceAfterCount);
-        assert_eq!(e.to_string(), "space after RLE count");
-    }
-
-    #[test]
-    fn multiline_comment() {
-        let rle = Rle {
-            comments: vec![('C', String::from("Line 1\nLine 2\n"))],
-            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
-        };
-        assert_eq!(
-            rle.to_string(),
-            "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
-        );
-    }
-
-    #[test]
     fn lowercase_rule() {
         let s = concat!(
             "#N Hooks\n",
@@ -691,91 +654,132 @@ mod tests {
     }
 
     #[test]
-    fn codeless_comment() {
-        let s = "#\nx = 3, y = 3\nbo$ 2 b o$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::NoType);
-        assert_eq!(e.to_string(), "'#' line lacks type character");
-    }
-
-    #[test]
-    fn nodata() {
-        let s = "#C Oops, forgot the pattern!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::NoData);
-        assert_eq!(e.to_string(), "no data in RLE input");
-    }
-
-    #[test]
-    fn backwards_header() {
-        let s = "y = 3, x = 3\nbo$2bo$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::InvalidHeader);
-        assert_eq!(e.to_string(), "invalid header line");
-    }
-
-    #[test]
-    fn unsupported_rule() {
-        let s = concat!(
-            "#N nontnosedp15.rle\n",
-            "#C https://conwaylife.com/wiki/T-nose\n",
-            "#C https://www.conwaylife.com/patterns/nontnosedp15.rle\n",
-            "#C (LifeHistory highlighted version)\n",
-            "x = 3, y = 16, rule = LifeHistory\n",
-            ".E$.A$3A3$3A$.A$.A$.A$.A$3A3$3A$.A$.A!\n",
+    fn multiline_comment() {
+        let rle = Rle {
+            comments: vec![('C', String::from("Line 1\nLine 2\n"))],
+            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
+        };
+        assert_eq!(
+            rle.to_string(),
+            "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
         );
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::UnsupportedRule);
-        assert_eq!(e.to_string(), "header specifies unsupported rule");
     }
 
-    #[test]
-    fn extra_header_field() {
-        let s = "x = 3, y = 3, coolness = 20\nbo$2bo$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::InvalidHeader);
-        assert_eq!(e.to_string(), "invalid header line");
-    }
+    mod parse_err {
+        use super::*;
+        use assert_matches::assert_matches;
 
-    #[cfg(any(
-        target_pointer_width = "16",
-        target_pointer_width = "32",
-        target_pointer_width = "64"
-    ))]
-    #[test]
-    fn giant_dimension() {
-        let s = "x = 18446744073709551616, y = 3\nbo$2bo$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_matches!(e, RleError::NumericOverflow(_));
-        assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
-    }
+        #[test]
+        fn textless_comment() {
+            let s = "#C\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NoSpaceAfterType('C'));
+            assert_eq!(e.to_string(), "no space after 'C' type in '#' line");
+        }
 
-    #[cfg(any(
-        target_pointer_width = "16",
-        target_pointer_width = "32",
-        target_pointer_width = "64"
-    ))]
-    #[test]
-    fn giant_count() {
-        let s = "x = 3, y = 3\nbo$18446744073709551616bo$3o!\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_matches!(e, RleError::NumericOverflow(_));
-        assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
-    }
+        #[test]
+        fn embedded_comment() {
+            let s = "x = 3, y = 3\nbo$2bo$\n#C \\o/!\n3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidChar('#'));
+            assert_eq!(e.to_string(), "invalid character '#' in data");
+        }
 
-    #[test]
-    fn missing_bang() {
-        let s = "x = 3, y = 3\nbo$2bo$3o\n";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::UnexpectedEof);
-        assert_eq!(e.to_string(), "input ended without reaching '!'");
-    }
+        #[test]
+        fn count_space_tag() {
+            let s = "x = 3, y = 3\nbo$ 2 b o$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::SpaceAfterCount);
+            assert_eq!(e.to_string(), "space after RLE count");
+        }
 
-    #[test]
-    fn just_header() {
-        let s = "x = 3, y = 3";
-        let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::UnexpectedEof);
-        assert_eq!(e.to_string(), "input ended without reaching '!'");
+        #[test]
+        fn codeless_comment() {
+            let s = "#\nx = 3, y = 3\nbo$ 2 b o$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NoType);
+            assert_eq!(e.to_string(), "'#' line lacks type character");
+        }
+
+        #[test]
+        fn nodata() {
+            let s = "#C Oops, forgot the pattern!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NoData);
+            assert_eq!(e.to_string(), "no data in RLE input");
+        }
+
+        #[test]
+        fn backwards_header() {
+            let s = "y = 3, x = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidHeader);
+            assert_eq!(e.to_string(), "invalid header line");
+        }
+
+        #[test]
+        fn unsupported_rule() {
+            let s = concat!(
+                "#N nontnosedp15.rle\n",
+                "#C https://conwaylife.com/wiki/T-nose\n",
+                "#C https://www.conwaylife.com/patterns/nontnosedp15.rle\n",
+                "#C (LifeHistory highlighted version)\n",
+                "x = 3, y = 16, rule = LifeHistory\n",
+                ".E$.A$3A3$3A$.A$.A$.A$.A$3A3$3A$.A$.A!\n",
+            );
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::UnsupportedRule);
+            assert_eq!(e.to_string(), "header specifies unsupported rule");
+        }
+
+        #[test]
+        fn extra_header_field() {
+            let s = "x = 3, y = 3, coolness = 20\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidHeader);
+            assert_eq!(e.to_string(), "invalid header line");
+        }
+
+        #[cfg(any(
+            target_pointer_width = "16",
+            target_pointer_width = "32",
+            target_pointer_width = "64"
+        ))]
+        #[test]
+        fn giant_dimension() {
+            let s = "x = 18446744073709551616, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_matches!(e, RleError::NumericOverflow(_));
+            assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
+        }
+
+        #[cfg(any(
+            target_pointer_width = "16",
+            target_pointer_width = "32",
+            target_pointer_width = "64"
+        ))]
+        #[test]
+        fn giant_count() {
+            let s = "x = 3, y = 3\nbo$18446744073709551616bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_matches!(e, RleError::NumericOverflow(_));
+            assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
+        }
+
+        #[test]
+        fn missing_bang() {
+            let s = "x = 3, y = 3\nbo$2bo$3o\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::UnexpectedEof);
+            assert_eq!(e.to_string(), "input ended without reaching '!'");
+        }
+
+        #[test]
+        fn just_header() {
+            let s = "x = 3, y = 3";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::UnexpectedEof);
+            assert_eq!(e.to_string(), "input ended without reaching '!'");
+        }
     }
 }
