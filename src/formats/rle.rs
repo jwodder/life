@@ -29,9 +29,9 @@ pub struct Rle {
 
 impl fmt::Display for Rle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (code, text) in &self.comments {
+        for (ty, text) in &self.comments {
             for ln in ascii_lines(text) {
-                writeln!(f, "#{code} {ln}")?;
+                writeln!(f, "#{ty} {ln}")?;
             }
         }
         writeln!(
@@ -72,28 +72,34 @@ impl FromStr for Rle {
     /// This implementation makes the following decisions about how to parse
     /// the RLE format:
     ///
-    /// - Specifications for cells outside the width & height given in the
-    ///   header are accepted but ignored.
-    ///
     /// - A `#` line must consist of, in order, a `#`, any single non-newline
     ///   character, one or more space (U+0020) characters (discarded), and
     ///   freeform text.
     ///
-    /// - Tokens in the header line may be separated by zero or more Unicode
+    /// - Blank lines (containing no characters other than Unicode whitespace)
+    ///   are permitted between the `#` lines (if any) and the header line.
+    ///
+    /// - Tokens in the header line may be surrounded by zero or more Unicode
     ///   whitespace characters other than newline sequences.
+    ///
+    /// - The header line may contain an optional "rule" field, but it must
+    ///   equal `B3/S23` (case insensitive) or `23/3`.
     ///
     /// - Tokens in the pattern data may be separated by zero or more Unicode
     ///   whitespace characters.
+    ///
+    /// - Specifications for cells outside the width & height given in the
+    ///   header are accepted but ignored.
     ///
     /// - 'b' and 'B' are parsed as dead cells.  All other ASCII letters are
     ///   parsed as live cells.
     fn from_str(s: &str) -> Result<Rle, RleError> {
         let mut cparser = CommentParser(s);
         let mut comments = Vec::new();
-        while let Some((code, text)) = cparser.next_comment()? {
-            comments.push((code, text.to_owned()));
+        while let Some((ty, text)) = cparser.next_comment()? {
+            comments.push((ty, text.to_owned()));
         }
-        let s = cparser.into_inner();
+        let s = cparser.into_inner().trim_start();
         let (header, data) = match split_at_newline(s) {
             Some(hd) => hd,
             None if !s.is_empty() => (s, ""),
@@ -125,13 +131,13 @@ impl FromStr for Rle {
 pub enum RleError {
     /// Returned if a `#` line does not have a non-newline character
     /// immediately after the `#`.
-    #[error("'#' line lacks code character")]
-    NoCode,
+    #[error("'#' line lacks type character")]
+    NoType,
 
     /// Returned if the character after the `#` at the start of a `#` line is
     /// not followed by one or more space characters
-    #[error("no space after {0:?} code in '#' line")]
-    NoSpaceAfterCode(char),
+    #[error("no space after {0:?} type in '#' line")]
+    NoSpaceAfterType(char),
 
     /// Returned if the input did not contain any characters outside of `#`
     /// lines
@@ -142,13 +148,18 @@ pub enum RleError {
     #[error("invalid header line")]
     InvalidHeader,
 
-    /// Returned if the header line specified a rule other than B3/S23
+    /// Returned if the header line specified a rule other than Conway's Game
+    /// of Life
     #[error("header specifies unsupported rule")]
     UnsupportedRule,
 
     /// Returned if a number in the header or data exceeded [`usize::MAX`]
     #[error("numeric value exceeds integer bounds")]
     NumericOverflow(#[from] ParseIntError),
+
+    /// Returned if whitespace is encountered after an RLE count
+    #[error("space after RLE count")]
+    SpaceAfterCount,
 
     /// Returned if an invalid character was encountered in the data
     #[error("invalid character {0:?} in data")]
@@ -169,14 +180,14 @@ impl<'a> CommentParser<'a> {
         else {
             return Ok(None);
         };
-        let code = line.chars().next().ok_or(RleError::NoCode)?;
-        let rest = &line[code.len_utf8()..];
+        let ty = line.chars().next().ok_or(RleError::NoType)?;
+        let rest = &line[ty.len_utf8()..];
         let text = rest.trim_start_matches(' ');
         if std::ptr::eq(rest, text) {
-            return Err(RleError::NoSpaceAfterCode(code));
+            return Err(RleError::NoSpaceAfterType(ty));
         }
         self.0 = rem;
-        Ok(Some((code, text)))
+        Ok(Some((ty, text)))
     }
 
     fn into_inner(self) -> &'a str {
@@ -236,6 +247,7 @@ impl Tag {
 
 fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     let mut scanner = Scanner::new(header);
+    scanner.skip_whitespace();
     scanner.expect_char('x')?;
     scanner.skip_whitespace();
     scanner.expect_char('=')?;
@@ -249,8 +261,8 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     scanner.expect_char('=')?;
     scanner.skip_whitespace();
     let height = scanner.scan_usize()?.ok_or(RleError::InvalidHeader)?;
+    scanner.skip_whitespace();
     if !scanner.is_empty() {
-        scanner.skip_whitespace();
         scanner.expect_char(',')?;
         scanner.skip_whitespace();
         scanner.expect_str("rule")?;
@@ -258,8 +270,10 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
         scanner.expect_char('=')?;
         scanner.skip_whitespace();
         scanner
-            .expect_str("B3/S23")
+            .expect_str_ignore_ascii_case("B3/S23")
+            .or_else(|_| scanner.expect_str("23/3"))
             .map_err(|_| RleError::UnsupportedRule)?;
+        scanner.skip_whitespace();
         if !scanner.is_empty() {
             return Err(RleError::InvalidHeader);
         }
@@ -298,6 +312,7 @@ impl Iterator for Runs<'_> {
         let tag = match self.0.scan_char() {
             Some('b' | 'B') => Tag::Dead,
             Some(c) if c.is_ascii_alphabetic() => Tag::Live,
+            Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
             Some('$') => Tag::Eol,
             Some(c) => return Some(Err(RleError::InvalidChar(c))),
             None => return Some(Err(RleError::UnexpectedEof)),
@@ -344,6 +359,19 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn expect_str_ignore_ascii_case(&mut self, s: &str) -> Result<(), RleError> {
+        if self
+            .0
+            .get(0..s.len())
+            .is_some_and(|t| t.eq_ignore_ascii_case(s))
+        {
+            self.0 = &self.0[s.len()..];
+            Ok(())
+        } else {
+            Err(RleError::InvalidHeader)
+        }
+    }
+
     fn scan_usize(&mut self) -> Result<Option<usize>, ParseIntError> {
         let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
             return Ok(None);
@@ -362,6 +390,7 @@ impl<'a> Scanner<'a> {
 mod tests {
     use super::*;
     use crate::PatternParser;
+    use assert_matches::assert_matches;
 
     #[test]
     fn glider() {
@@ -548,8 +577,24 @@ mod tests {
     fn textless_comment() {
         let s = "#C\nx = 3, y = 3\nbo$2bo$3o!\n";
         let e = s.parse::<Rle>().unwrap_err();
-        assert_eq!(e, RleError::NoSpaceAfterCode('C'));
-        assert_eq!(e.to_string(), "no space after 'C' code in '#' line");
+        assert_eq!(e, RleError::NoSpaceAfterType('C'));
+        assert_eq!(e.to_string(), "no space after 'C' type in '#' line");
+    }
+
+    #[test]
+    fn embedded_comment() {
+        let s = "x = 3, y = 3\nbo$2bo$\n#C \\o/!\n3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::InvalidChar('#'));
+        assert_eq!(e.to_string(), "invalid character '#' in data");
+    }
+
+    #[test]
+    fn count_space_tag() {
+        let s = "x = 3, y = 3\nbo$ 2 b o$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::SpaceAfterCount);
+        assert_eq!(e.to_string(), "space after RLE count");
     }
 
     #[test]
@@ -562,5 +607,175 @@ mod tests {
             rle.to_string(),
             "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
         );
+    }
+
+    #[test]
+    fn lowercase_rule() {
+        let s = concat!(
+            "#N Hooks\n",
+            "#C A period 5 oscillator.\n",
+            "#C www.conwaylife.com/wiki/Hooks\n",
+            "x = 11, y = 10, rule = b3/s23\n",
+            "6b2o3b$ob2obobo3b$2obobo5b$4b2o5b$5bo5b2$7b2o2b$7bo3b$8b3o$10bo!\n",
+        );
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            concat!(
+                "......OO...\n",
+                "O.OO.O.O...\n",
+                "OO.O.O.....\n",
+                "....OO.....\n",
+                ".....O.....\n",
+                "...........\n",
+                ".......OO..\n",
+                ".......O...\n",
+                "........OOO\n",
+                "..........O",
+            )
+        );
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N Hooks\n",
+                "#C A period 5 oscillator.\n",
+                "#C www.conwaylife.com/wiki/Hooks\n",
+                "x = 11, y = 10\n",
+                "6b2o$ob2obobo$2obobo$4b2o$5bo2$7b2o$7bo$8b3o$10bo!\n",
+            )
+        );
+    }
+
+    #[test]
+    fn sb_rule_and_blanks_before_header() {
+        let s = concat!(
+            "#N tubwithnine.rle\n",
+            "#C https://conwaylife.com/wiki/Tub_with_nine\n",
+            "#C https://www.conwaylife.com/patterns/tubwithnine.rle\n",
+            "\n",
+            "\n",
+            "x = 6, y = 6, rule = 23/3\n",
+            "2o4b$obo3b$2bo3b$2bobob$3bobo$4bo!\n",
+        );
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            "OO....\nO.O...\n..O...\n..O.O.\n...O.O\n....O."
+        );
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N tubwithnine.rle\n",
+                "#C https://conwaylife.com/wiki/Tub_with_nine\n",
+                "#C https://www.conwaylife.com/patterns/tubwithnine.rle\n",
+                "x = 6, y = 6\n",
+                "2o$obo$2bo$2bobo$3bobo$4bo!\n",
+            )
+        );
+    }
+
+    #[test]
+    fn unspaced_header() {
+        let s = "x=3,y=3\nbo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn extra_spaced_header() {
+        let s = " x  =  3  ,  y  =  3  \nbo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn codeless_comment() {
+        let s = "#\nx = 3, y = 3\nbo$ 2 b o$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::NoType);
+        assert_eq!(e.to_string(), "'#' line lacks type character");
+    }
+
+    #[test]
+    fn nodata() {
+        let s = "#C Oops, forgot the pattern!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::NoData);
+        assert_eq!(e.to_string(), "no data in RLE input");
+    }
+
+    #[test]
+    fn backwards_header() {
+        let s = "y = 3, x = 3\nbo$2bo$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::InvalidHeader);
+        assert_eq!(e.to_string(), "invalid header line");
+    }
+
+    #[test]
+    fn unsupported_rule() {
+        let s = concat!(
+            "#N nontnosedp15.rle\n",
+            "#C https://conwaylife.com/wiki/T-nose\n",
+            "#C https://www.conwaylife.com/patterns/nontnosedp15.rle\n",
+            "#C (LifeHistory highlighted version)\n",
+            "x = 3, y = 16, rule = LifeHistory\n",
+            ".E$.A$3A3$3A$.A$.A$.A$.A$3A3$3A$.A$.A!\n",
+        );
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::UnsupportedRule);
+        assert_eq!(e.to_string(), "header specifies unsupported rule");
+    }
+
+    #[test]
+    fn extra_header_field() {
+        let s = "x = 3, y = 3, coolness = 20\nbo$2bo$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::InvalidHeader);
+        assert_eq!(e.to_string(), "invalid header line");
+    }
+
+    #[cfg(any(
+        target_pointer_width = "16",
+        target_pointer_width = "32",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn giant_dimension() {
+        let s = "x = 18446744073709551616, y = 3\nbo$2bo$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_matches!(e, RleError::NumericOverflow(_));
+        assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
+    }
+
+    #[cfg(any(
+        target_pointer_width = "16",
+        target_pointer_width = "32",
+        target_pointer_width = "64"
+    ))]
+    #[test]
+    fn giant_count() {
+        let s = "x = 3, y = 3\nbo$18446744073709551616bo$3o!\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_matches!(e, RleError::NumericOverflow(_));
+        assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
+    }
+
+    #[test]
+    fn missing_bang() {
+        let s = "x = 3, y = 3\nbo$2bo$3o\n";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::UnexpectedEof);
+        assert_eq!(e.to_string(), "input ended without reaching '!'");
+    }
+
+    #[test]
+    fn just_header() {
+        let s = "x = 3, y = 3";
+        let e = s.parse::<Rle>().unwrap_err();
+        assert_eq!(e, RleError::UnexpectedEof);
+        assert_eq!(e.to_string(), "input ended without reaching '!'");
     }
 }
