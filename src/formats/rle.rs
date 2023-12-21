@@ -127,6 +127,12 @@ impl FromStr for Rle {
     }
 }
 
+impl From<Rle> for Pattern {
+    fn from(value: Rle) -> Pattern {
+        value.pattern
+    }
+}
+
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum RleError {
     /// Returned if a `#` line does not have a non-newline character

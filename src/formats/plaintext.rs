@@ -146,6 +146,12 @@ impl FromStr for Plaintext {
     }
 }
 
+impl From<Plaintext> for Pattern {
+    fn from(value: Plaintext) -> Pattern {
+        value.pattern
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 pub enum PlaintextError {
     /// Returned if the input does not start with `"!Name: "`
