@@ -1,5 +1,5 @@
 use super::util::{ascii_lines, scan_some, split_at_newline};
-use crate::Pattern;
+use crate::{Pattern, State};
 use std::fmt;
 use std::iter::FusedIterator;
 use std::num::ParseIntError;
@@ -114,7 +114,7 @@ impl FromStr for Rle {
             match tag {
                 Tag::Dead => x += count,
                 Tag::Live => {
-                    pattern.set_run(y, x, count, true);
+                    pattern.set_run(y, x, count, State::Live);
                     x += count;
                 }
                 Tag::Eol => {

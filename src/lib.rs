@@ -11,17 +11,53 @@ pub use crate::images::*;
 use std::fmt::{self, Write};
 use std::fs::read_to_string;
 use std::iter::FusedIterator;
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Not};
 use std::path::Path;
 use std::str::FromStr;
 use thiserror::Error;
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum State {
+    #[default]
+    Dead,
+    Live,
+}
+
+impl State {
+    pub fn is_live(self) -> bool {
+        self == State::Live
+    }
+
+    pub fn toggle(&mut self) {
+        *self = !*self;
+    }
+}
+
+impl Not for State {
+    type Output = State;
+
+    fn not(self) -> State {
+        match self {
+            State::Dead => State::Live,
+            State::Live => State::Dead,
+        }
+    }
+}
+
+impl Not for &State {
+    type Output = State;
+
+    fn not(self) -> State {
+        !*self
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pattern {
     height: usize,
     width: usize,
     edges: Edges,
-    cells: Vec<bool>,
+    cells: Vec<State>,
 }
 
 impl Pattern {
@@ -36,7 +72,7 @@ impl Pattern {
         let area = width
             .checked_mul(height)
             .expect("width * height for new Pattern exceeds usize::MAX");
-        let cells = vec![false; area];
+        let cells = vec![State::Dead; area];
         Pattern {
             height,
             width,
@@ -70,11 +106,11 @@ impl Pattern {
         }
     }
 
-    pub fn get(&self, y: usize, x: usize) -> Option<bool> {
+    pub fn get(&self, y: usize, x: usize) -> Option<State> {
         self.get_index(y, x).map(|i| self.cells[i])
     }
 
-    pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut bool> {
+    pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut State> {
         self.get_index(y, x).map(|i| &mut self.cells[i])
     }
 
@@ -83,7 +119,7 @@ impl Pattern {
     /// If `(y, x)` is not within the bounds of the `Pattern`, nothing happens.
     ///
     /// At most `width - x` cells are set, even if `length` is larger.
-    pub fn set_run(&mut self, y: usize, x: usize, length: usize, state: bool) {
+    pub fn set_run(&mut self, y: usize, x: usize, length: usize, state: State) {
         if let Some(i) = self.get_index(y, x) {
             let length = length.min(self.width - x);
             self.cells[i..i.saturating_add(length)].fill(state);
@@ -115,15 +151,15 @@ impl Pattern {
                 let mut alive = 0;
                 for x2 in self.edges.about_x(x, self.width) {
                     for &y2 in &yrange {
-                        if self[(y2, x2)] {
+                        if self[(y2, x2)].is_live() {
                             alive += 1;
                         }
                     }
                 }
                 match alive {
-                    3 => next_state[(y, x)] = true,
+                    3 => next_state[(y, x)] = State::Live,
                     4 => (),
-                    _ => next_state[(y, x)] = false,
+                    _ => next_state[(y, x)] = State::Dead,
                 }
             }
         }
@@ -151,9 +187,9 @@ impl Pattern {
 }
 
 impl Index<(usize, usize)> for Pattern {
-    type Output = bool;
+    type Output = State;
 
-    fn index(&self, (y, x): (usize, usize)) -> &bool {
+    fn index(&self, (y, x): (usize, usize)) -> &State {
         let i = self
             .get_index(y, x)
             .expect("(y, x) index should be in bounds for Pattern");
@@ -162,7 +198,7 @@ impl Index<(usize, usize)> for Pattern {
 }
 
 impl IndexMut<(usize, usize)> for Pattern {
-    fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut bool {
+    fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut State {
         let i = self
             .get_index(y, x)
             .expect("(y, x) index should be in bounds for Pattern");
@@ -237,8 +273,8 @@ enum Runs<'a> {
 
 #[derive(Clone, Debug)]
 struct InnerRuns<'a> {
-    chunks: std::slice::ChunksExact<'a, bool>,
-    row: Option<&'a [bool]>,
+    chunks: std::slice::ChunksExact<'a, State>,
+    row: Option<&'a [State]>,
 }
 
 impl<'a> Runs<'a> {
@@ -262,7 +298,7 @@ impl<'a> Runs<'a> {
 }
 
 impl<'a> InnerRuns<'a> {
-    fn next_row(&mut self) -> Option<&'a [bool]> {
+    fn next_row(&mut self) -> Option<&'a [State]> {
         self.row = self.chunks.next();
         self.row
     }
@@ -273,17 +309,21 @@ impl<'a> InnerRuns<'a> {
         self.row = Some(&rest[spanlen..]);
         Some(RleItem {
             count: spanlen + 1,
-            tag: if current { Tag::Live } else { Tag::Dead },
+            tag: if current.is_live() {
+                Tag::Live
+            } else {
+                Tag::Dead
+            },
         })
     }
 
     fn at_eol(&mut self) -> bool {
-        self.row.map_or(true, <[bool]>::is_empty)
+        self.row.map_or(true, <[State]>::is_empty)
     }
 
     fn eol_run(&mut self) -> Option<RleItem> {
         let mut count = 1;
-        while self.next_row()?.iter().all(|&b| !b) {
+        while self.next_row()?.iter().all(|&st| !st.is_live()) {
             count += 1;
         }
         Some(RleItem {
@@ -335,9 +375,9 @@ impl<'a> Enumerate<'a> {
 }
 
 impl Iterator for Enumerate<'_> {
-    type Item = ((usize, usize), bool);
+    type Item = ((usize, usize), State);
 
-    fn next(&mut self) -> Option<((usize, usize), bool)> {
+    fn next(&mut self) -> Option<((usize, usize), State)> {
         let &b = self.life.cells.get(self.i)?;
         let old_y = self.y;
         let old_x = self.x;
@@ -380,7 +420,7 @@ impl Iterator for IterLive<'_> {
 
     fn next(&mut self) -> Option<(usize, usize)> {
         for (yx, b) in self.inner.by_ref() {
-            if b {
+            if b.is_live() {
                 return Some(yx);
             }
         }
@@ -429,7 +469,7 @@ impl fmt::Display for Draw<'_> {
             if x == 0 && y > 0 {
                 f.write_char('\n')?;
             }
-            f.write_char(if b { self.live } else { self.dead })?;
+            f.write_char(if b.is_live() { self.live } else { self.dead })?;
         }
         Ok(())
     }
@@ -499,7 +539,7 @@ impl PatternBuilder {
     pub fn build(self) -> Pattern {
         let mut life = Pattern::new(self.height, self.width).with_edges(self.edges);
         for yx in self.live {
-            life[yx] = true;
+            life[yx] = State::Live;
         }
         life
     }
@@ -526,10 +566,15 @@ enum CellParser<'a> {
 }
 
 impl CellParser<'_> {
-    fn parse(&self, c: char) -> bool {
-        match self {
+    fn parse(&self, c: char) -> State {
+        let b = match self {
             CellParser::DeadChars(s) => !s.contains(c),
             CellParser::LiveChars(s) => s.contains(c),
+        };
+        if b {
+            State::Live
+        } else {
+            State::Dead
         }
     }
 }
@@ -565,9 +610,9 @@ impl<'a> PatternParser<'a> {
     ///
     /// let parser = PatternParser::dead_chars(" .");
     /// let life = parser.parse(".#?\n..#\n###\n");
-    /// assert!(!life[(0, 0)]);
-    /// assert!(life[(0, 1)]);
-    /// assert!(life[(0, 2)]);
+    /// assert!(!life[(0, 0)].is_live());
+    /// assert!(life[(0, 1)].is_live());
+    /// assert!(life[(0, 2)].is_live());
     /// ```
     pub fn dead_chars(s: &'a str) -> PatternParser<'a> {
         PatternParser {
@@ -591,9 +636,9 @@ impl<'a> PatternParser<'a> {
     ///
     /// let parser = PatternParser::live_chars("+#");
     /// let life = parser.parse(".#?\n..#\n###\n");
-    /// assert!(!life[(0, 0)]);
-    /// assert!(life[(0, 1)]);
-    /// assert!(!life[(0, 2)]);
+    /// assert!(!life[(0, 0)].is_live());
+    /// assert!(life[(0, 1)].is_live());
+    /// assert!(!life[(0, 2)].is_live());
     /// ```
     pub fn live_chars(s: &'a str) -> PatternParser<'a> {
         PatternParser {
@@ -676,7 +721,7 @@ impl<'a> PatternParser<'a> {
             for (x, ch) in line.chars().enumerate().take(self.max_width) {
                 // Ensure that trailing dead cells count towards the width:
                 builder = builder.min_width(x + 1);
-                if self.cell_parser.parse(ch) {
+                if self.cell_parser.parse(ch).is_live() {
                     builder.push(y, x);
                 }
             }
@@ -722,30 +767,30 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let mut iter = life.enumerate();
         assert_eq!(iter.size_hint(), (9, Some(9)));
-        assert_eq!(iter.next(), Some(((0, 0), false)));
+        assert_eq!(iter.next(), Some(((0, 0), State::Dead)));
         assert_eq!(iter.size_hint(), (8, Some(8)));
-        assert_eq!(iter.next(), Some(((0, 1), true)));
+        assert_eq!(iter.next(), Some(((0, 1), State::Live)));
         assert_eq!(iter.size_hint(), (7, Some(7)));
-        assert_eq!(iter.next(), Some(((0, 2), false)));
+        assert_eq!(iter.next(), Some(((0, 2), State::Dead)));
         assert_eq!(iter.size_hint(), (6, Some(6)));
-        assert_eq!(iter.next(), Some(((1, 0), false)));
+        assert_eq!(iter.next(), Some(((1, 0), State::Dead)));
         assert_eq!(iter.size_hint(), (5, Some(5)));
-        assert_eq!(iter.next(), Some(((1, 1), false)));
+        assert_eq!(iter.next(), Some(((1, 1), State::Dead)));
         assert_eq!(iter.size_hint(), (4, Some(4)));
-        assert_eq!(iter.next(), Some(((1, 2), true)));
+        assert_eq!(iter.next(), Some(((1, 2), State::Live)));
         assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert_eq!(iter.next(), Some(((2, 0), true)));
+        assert_eq!(iter.next(), Some(((2, 0), State::Live)));
         assert_eq!(iter.size_hint(), (2, Some(2)));
-        assert_eq!(iter.next(), Some(((2, 1), true)));
+        assert_eq!(iter.next(), Some(((2, 1), State::Live)));
         assert_eq!(iter.size_hint(), (1, Some(1)));
-        assert_eq!(iter.next(), Some(((2, 2), true)));
+        assert_eq!(iter.next(), Some(((2, 2), State::Live)));
         assert_eq!(iter.size_hint(), (0, Some(0)));
         assert_eq!(iter.next(), None);
         assert_eq!(iter.size_hint(), (0, Some(0)));
@@ -758,11 +803,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let mut iter = life.iter_live();
         assert_eq!(iter.size_hint(), (0, Some(9)));
         assert_eq!(iter.next(), Some((0, 1)));
@@ -786,11 +831,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         assert_eq!(life.draw('.', '#').to_string(), ".#.\n..#\n###");
     }
 
@@ -800,11 +845,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
     }
@@ -815,11 +860,11 @@ mod tests {
         // +..#.
         // +###+
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapX);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
     }
@@ -832,11 +877,11 @@ mod tests {
         // ###
         // .+.
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapY);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
     }
@@ -849,11 +894,11 @@ mod tests {
         // +###+
         // ..+..
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapXY);
-        life[(0, 1)] = true;
-        life[(1, 2)] = true;
-        life[(2, 0)] = true;
-        life[(2, 1)] = true;
-        life[(2, 2)] = true;
+        life[(0, 1)] = State::Live;
+        life[(1, 2)] = State::Live;
+        life[(2, 0)] = State::Live;
+        life[(2, 1)] = State::Live;
+        life[(2, 2)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
     }
@@ -861,11 +906,11 @@ mod tests {
     #[test]
     fn test_step2() {
         let mut life = Pattern::new(5, 5);
-        life[(1, 2)] = true;
-        life[(2, 3)] = true;
-        life[(3, 1)] = true;
-        life[(3, 2)] = true;
-        life[(3, 3)] = true;
+        life[(1, 2)] = State::Live;
+        life[(2, 3)] = State::Live;
+        life[(3, 1)] = State::Live;
+        life[(3, 2)] = State::Live;
+        life[(3, 3)] = State::Live;
         let life2 = life.step();
         assert_eq!(
             life2.draw('.', '#').to_string(),
@@ -880,7 +925,7 @@ mod tests {
     #[case(Edges::WrapXY, ".")]
     fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 1).with_edges(edges);
-        life[(0, 0)] = true;
+        life[(0, 0)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -892,7 +937,7 @@ mod tests {
     #[case(Edges::WrapXY, "#.")]
     fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 2).with_edges(edges);
-        life[(0, 0)] = true;
+        life[(0, 0)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -904,7 +949,7 @@ mod tests {
     #[case(Edges::WrapXY, "#\n.")]
     fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 1).with_edges(edges);
-        life[(0, 0)] = true;
+        life[(0, 0)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -916,8 +961,8 @@ mod tests {
     #[case(Edges::WrapXY, "..\n..")]
     fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 2).with_edges(edges);
-        life[(0, 0)] = true;
-        life[(1, 1)] = true;
+        life[(0, 0)] = State::Live;
+        life[(1, 1)] = State::Live;
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
