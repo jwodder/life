@@ -445,12 +445,12 @@ impl From<State> for RunType {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Enumerate<'a> {
     y: usize,
     x: usize,
-    i: usize,
-    life: &'a Pattern,
+    width: usize,
+    inner: std::slice::Iter<'a, State>,
 }
 
 impl<'a> Enumerate<'a> {
@@ -458,8 +458,8 @@ impl<'a> Enumerate<'a> {
         Enumerate {
             y: 0,
             x: 0,
-            i: 0,
-            life,
+            width: life.width(),
+            inner: life.cells.iter(),
         }
     }
 }
@@ -468,14 +468,13 @@ impl Iterator for Enumerate<'_> {
     type Item = ((usize, usize), State);
 
     fn next(&mut self) -> Option<((usize, usize), State)> {
-        let &b = self.life.cells.get(self.i)?;
+        let &b = self.inner.next()?;
         let old_y = self.y;
         let old_x = self.x;
-        // These operations won't overflow, as none of x, y, i will get
-        // past isize::MAX, the maximum capacity of a Vec.
-        self.i += 1;
+        // These operations won't overflow, as neither of x and y will get past
+        // isize::MAX, the maximum capacity of a Vec.
         self.x += 1;
-        if self.x >= self.life.width {
+        if self.x >= self.width {
             self.x = 0;
             self.y += 1;
         }
@@ -483,8 +482,7 @@ impl Iterator for Enumerate<'_> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let left = self.life.cells.len().saturating_sub(self.i);
-        (left, Some(left))
+        self.inner.size_hint()
     }
 }
 
@@ -492,7 +490,7 @@ impl ExactSizeIterator for Enumerate<'_> {}
 
 impl FusedIterator for Enumerate<'_> {}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct IterLive<'a> {
     inner: Enumerate<'a>,
 }
