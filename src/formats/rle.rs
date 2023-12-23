@@ -2,7 +2,7 @@ use super::util::{ascii_lines, scan_some, split_at_newline};
 use crate::{Pattern, Run, RunType, State};
 use std::fmt;
 use std::iter::FusedIterator;
-use std::num::ParseIntError;
+use std::num::{NonZeroUsize, ParseIntError};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -93,6 +93,8 @@ impl FromStr for Rle {
     ///
     /// - 'b' and 'B' are parsed as dead cells.  All other ASCII letters are
     ///   parsed as live cells.
+    ///
+    /// - Run counts of zero are accepted but, obviously, have no effect.
     fn from_str(s: &str) -> Result<Rle, RleError> {
         let mut cparser = CommentParser(s);
         let mut comments = Vec::new();
@@ -112,13 +114,13 @@ impl FromStr for Rle {
         for run in parse_runs(data) {
             let Run { length, run_type } = run?;
             match run_type {
-                RunType::Dead => x += length,
+                RunType::Dead => x += length.get(),
                 RunType::Live => {
-                    pattern.set_run(y, x, length, State::Live);
-                    x += length;
+                    pattern.set_run(y, x, length.get(), State::Live);
+                    x += length.get();
                 }
                 RunType::Eol => {
-                    y += length;
+                    y += length.get();
                     x = 0;
                 }
             }
@@ -250,24 +252,28 @@ impl Iterator for ParsedRuns<'_> {
     // Once this iterator yields `Err` or `None`, it is unsuitable for further
     // iteration.
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.skip_whitespace();
-        if self.0.expect_char('!').is_ok() {
-            return None;
+        loop {
+            self.0.skip_whitespace();
+            if self.0.expect_char('!').is_ok() {
+                return None;
+            }
+            let length = match self.0.scan_usize() {
+                Ok(Some(length)) => length,
+                Ok(None) => 1,
+                Err(e) => return Some(Err(e.into())),
+            };
+            let run_type = match self.0.scan_char() {
+                Some('b' | 'B') => RunType::Dead,
+                Some(c) if c.is_ascii_alphabetic() => RunType::Live,
+                Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
+                Some('$') => RunType::Eol,
+                Some(c) => return Some(Err(RleError::InvalidChar(c))),
+                None => return Some(Err(RleError::UnexpectedEof)),
+            };
+            if let Some(length) = NonZeroUsize::new(length) {
+                return Some(Ok(Run { length, run_type }));
+            }
         }
-        let length = match self.0.scan_usize() {
-            Ok(Some(length)) => length,
-            Ok(None) => 1,
-            Err(e) => return Some(Err(e.into())),
-        };
-        let run_type = match self.0.scan_char() {
-            Some('b' | 'B') => RunType::Dead,
-            Some(c) if c.is_ascii_alphabetic() => RunType::Live,
-            Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
-            Some('$') => RunType::Eol,
-            Some(c) => return Some(Err(RleError::InvalidChar(c))),
-            None => return Some(Err(RleError::UnexpectedEof)),
-        };
-        Some(Ok(Run { length, run_type }))
     }
 }
 
@@ -598,6 +604,14 @@ mod tests {
     #[test]
     fn extra_spaced_header() {
         let s = " x  =  3  ,  y  =  3  \nbo$2bo$3o!\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
+    fn zero_count() {
+        let s = "x = 3, y = 3\nbo$2bo0b$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");

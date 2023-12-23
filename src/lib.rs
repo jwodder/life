@@ -10,6 +10,7 @@ pub use crate::images::*;
 use std::fmt::{self, Write};
 use std::fs::read_to_string;
 use std::iter::FusedIterator;
+use std::num::NonZeroUsize;
 use std::ops::{Index, IndexMut, Not};
 use std::path::Path;
 use std::str::FromStr;
@@ -330,8 +331,11 @@ impl<'a> Runner<'a> {
         let (&current, rest) = self.row?.split_first()?;
         let spanlen = rest.iter().take_while(|&&b| b == current).count();
         self.row = Some(&rest[spanlen..]);
+        let Some(length) = NonZeroUsize::new(spanlen + 1) else {
+            unreachable!("1 plus value less than isize::MAX should be nonzero");
+        };
         Some(Run {
-            length: spanlen + 1,
+            length,
             run_type: current.into(),
         })
     }
@@ -345,6 +349,9 @@ impl<'a> Runner<'a> {
         while self.next_row()?.iter().all(|&st| !st.is_live()) {
             length += 1;
         }
+        let Some(length) = NonZeroUsize::new(length) else {
+            unreachable!("1 incremented fewer than isize::MAX times should be nonzero");
+        };
         Some(Run {
             length,
             run_type: RunType::Eol,
@@ -376,22 +383,19 @@ impl FusedIterator for RunLengths<'_> {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Run {
-    pub length: usize,
+    pub length: NonZeroUsize,
     pub run_type: RunType,
 }
 
 impl Run {
     pub fn display_len(&self) -> usize {
-        let digits = if self.length == 1 {
+        let digits = if self.length.get() == 1 {
             0
-        } else if let Some(x) = self.length.checked_ilog10() {
-            let Ok(x) = usize::try_from(x) else {
+        } else {
+            let Ok(x) = usize::try_from(self.length.ilog10()) else {
                 unreachable!("The number of digits in a usize should fit in a usize");
             };
             x + 1
-        } else {
-            // self.count == 0
-            1
         };
         digits + 1
     }
@@ -399,7 +403,7 @@ impl Run {
 
 impl fmt::Display for Run {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.length != 1 {
+        if self.length.get() != 1 {
             write!(f, "{}", self.length)?;
         }
         write!(f, "{}", self.run_type.rle_symbol())?;
