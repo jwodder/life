@@ -1,5 +1,5 @@
 use super::util::{ascii_lines, scan_some, split_at_newline};
-use crate::{Pattern, State};
+use crate::{Pattern, Run, RunType, State};
 use std::fmt;
 use std::iter::FusedIterator;
 use std::num::ParseIntError;
@@ -41,7 +41,7 @@ impl fmt::Display for Rle {
             self.pattern.height()
         )?;
         let mut linelen = 0;
-        for item in self.pattern.runs() {
+        for item in self.pattern.run_lengths() {
             let len = item.display_len();
             if linelen + len > 70 {
                 writeln!(f)?;
@@ -110,15 +110,15 @@ impl FromStr for Rle {
         let mut y = 0;
         let mut x = 0;
         for run in parse_runs(data) {
-            let (count, tag) = run?;
-            match tag {
-                Tag::Dead => x += count,
-                Tag::Live => {
-                    pattern.set_run(y, x, count, State::Live);
-                    x += count;
+            let Run { length, run_type } = run?;
+            match run_type {
+                RunType::Dead => x += length,
+                RunType::Live => {
+                    pattern.set_run(y, x, length, State::Live);
+                    x += length;
                 }
-                Tag::Eol => {
-                    y += count;
+                RunType::Eol => {
+                    y += length;
                     x = 0;
                 }
             }
@@ -201,56 +201,6 @@ impl<'a> CommentParser<'a> {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct RleItem {
-    pub(crate) count: usize,
-    pub(crate) tag: Tag,
-}
-
-impl RleItem {
-    fn display_len(&self) -> usize {
-        let digits = if self.count == 1 {
-            0
-        } else if let Some(x) = self.count.checked_ilog10() {
-            let Ok(x) = usize::try_from(x) else {
-                unreachable!("The number of digits in a usize should fit in a usize");
-            };
-            x + 1
-        } else {
-            // self.count == 0
-            1
-        };
-        digits + 1
-    }
-}
-
-impl fmt::Display for RleItem {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.count != 1 {
-            write!(f, "{}", self.count)?;
-        }
-        write!(f, "{}", self.tag.symbol())?;
-        Ok(())
-    }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Tag {
-    Dead,
-    Live,
-    Eol,
-}
-
-impl Tag {
-    fn symbol(&self) -> char {
-        match self {
-            Tag::Dead => 'b',
-            Tag::Live => 'o',
-            Tag::Eol => '$',
-        }
-    }
-}
-
 fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     let mut scanner = Scanner::new(header);
     scanner.skip_whitespace();
@@ -287,21 +237,15 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     Ok((width, height))
 }
 
-fn parse_runs(s: &str) -> Runs<'_> {
-    Runs::new(s)
+fn parse_runs(s: &str) -> ParsedRuns<'_> {
+    ParsedRuns(Scanner::new(s))
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-struct Runs<'a>(Scanner<'a>);
+struct ParsedRuns<'a>(Scanner<'a>);
 
-impl<'a> Runs<'a> {
-    fn new(s: &'a str) -> Runs<'a> {
-        Runs(Scanner::new(s))
-    }
-}
-
-impl Iterator for Runs<'_> {
-    type Item = Result<(usize, Tag), RleError>;
+impl Iterator for ParsedRuns<'_> {
+    type Item = Result<Run, RleError>;
 
     // Once this iterator yields `Err` or `None`, it is unsuitable for further
     // iteration.
@@ -310,24 +254,24 @@ impl Iterator for Runs<'_> {
         if self.0.expect_char('!').is_ok() {
             return None;
         }
-        let count = match self.0.scan_usize() {
-            Ok(Some(count)) => count,
+        let length = match self.0.scan_usize() {
+            Ok(Some(length)) => length,
             Ok(None) => 1,
             Err(e) => return Some(Err(e.into())),
         };
-        let tag = match self.0.scan_char() {
-            Some('b' | 'B') => Tag::Dead,
-            Some(c) if c.is_ascii_alphabetic() => Tag::Live,
+        let run_type = match self.0.scan_char() {
+            Some('b' | 'B') => RunType::Dead,
+            Some(c) if c.is_ascii_alphabetic() => RunType::Live,
             Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
-            Some('$') => Tag::Eol,
+            Some('$') => RunType::Eol,
             Some(c) => return Some(Err(RleError::InvalidChar(c))),
             None => return Some(Err(RleError::UnexpectedEof)),
         };
-        Some(Ok((count, tag)))
+        Some(Ok(Run { length, run_type }))
     }
 }
 
-impl FusedIterator for Runs<'_> {}
+impl FusedIterator for ParsedRuns<'_> {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct Scanner<'a>(&'a str);

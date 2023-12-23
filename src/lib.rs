@@ -1,6 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 mod formats;
-use crate::formats::rle::{RleItem, Tag};
 pub use crate::formats::*;
 
 #[cfg(feature = "image")]
@@ -118,7 +117,6 @@ impl Pattern {
         self.get_index(y, x).map(|i| &mut self.cells[i])
     }
 
-    // TODO: Try to come up with a better name for this method
     pub fn birth(&mut self, y: usize, x: usize) {
         if let Some(st) = self.get_mut(y, x) {
             *st = State::Live;
@@ -149,9 +147,8 @@ impl Pattern {
         }
     }
 
-    // TODO: Make this public?
-    fn runs(&self) -> Runs<'_> {
-        Runs::new(self)
+    pub fn run_lengths(&self) -> RunLengths<'_> {
+        RunLengths::new(self)
     }
 
     pub fn enumerate(&self) -> Enumerate<'_> {
@@ -289,54 +286,53 @@ pub enum FromFileError {
 }
 
 #[derive(Clone, Debug)]
-enum Runs<'a> {
-    Inner(InnerRuns<'a>),
+pub struct RunLengths<'a>(InnerRunLengths<'a>);
+
+#[derive(Clone, Debug)]
+enum InnerRunLengths<'a> {
+    Runner(Runner<'a>),
     Empty,
 }
 
 #[derive(Clone, Debug)]
-struct InnerRuns<'a> {
+struct Runner<'a> {
     chunks: std::slice::ChunksExact<'a, State>,
     row: Option<&'a [State]>,
 }
 
-impl<'a> Runs<'a> {
-    fn new(life: &'a Pattern) -> Runs<'a> {
+impl<'a> RunLengths<'a> {
+    fn new(life: &'a Pattern) -> RunLengths<'a> {
         if life.width == 0 {
             // Chunk size must be nonzero
-            Runs::Empty
+            RunLengths(InnerRunLengths::Empty)
         } else {
             let mut chunks = life.cells.chunks_exact(life.width);
             let row = chunks.next();
-            Runs::Inner(InnerRuns { chunks, row })
+            RunLengths(InnerRunLengths::Runner(Runner { chunks, row }))
         }
     }
 
-    fn inner(&mut self) -> Option<&mut InnerRuns<'a>> {
-        match self {
-            Runs::Inner(inner) => Some(inner),
-            Runs::Empty => None,
+    fn runner(&mut self) -> Option<&mut Runner<'a>> {
+        match &mut self.0 {
+            InnerRunLengths::Runner(runner) => Some(runner),
+            InnerRunLengths::Empty => None,
         }
     }
 }
 
-impl<'a> InnerRuns<'a> {
+impl<'a> Runner<'a> {
     fn next_row(&mut self) -> Option<&'a [State]> {
         self.row = self.chunks.next();
         self.row
     }
 
-    fn next_run_in_row(&mut self) -> Option<RleItem> {
+    fn next_run_in_row(&mut self) -> Option<Run> {
         let (&current, rest) = self.row?.split_first()?;
         let spanlen = rest.iter().take_while(|&&b| b == current).count();
         self.row = Some(&rest[spanlen..]);
-        Some(RleItem {
-            count: spanlen + 1,
-            tag: if current.is_live() {
-                Tag::Live
-            } else {
-                Tag::Dead
-            },
+        Some(Run {
+            length: spanlen + 1,
+            run_type: current.into(),
         })
     }
 
@@ -344,39 +340,106 @@ impl<'a> InnerRuns<'a> {
         self.row.map_or(true, <[State]>::is_empty)
     }
 
-    fn eol_run(&mut self) -> Option<RleItem> {
-        let mut count = 1;
+    fn eol_run(&mut self) -> Option<Run> {
+        let mut length = 1;
         while self.next_row()?.iter().all(|&st| !st.is_live()) {
-            count += 1;
+            length += 1;
         }
-        Some(RleItem {
-            count,
-            tag: Tag::Eol,
+        Some(Run {
+            length,
+            run_type: RunType::Eol,
         })
     }
 }
 
-impl Iterator for Runs<'_> {
-    type Item = RleItem;
+impl Iterator for RunLengths<'_> {
+    type Item = Run;
 
-    fn next(&mut self) -> Option<RleItem> {
-        let inner = self.inner()?;
-        if let Some(item) = inner.next_run_in_row() {
-            if inner.at_eol() && item.tag == Tag::Dead {
-                inner.eol_run()
+    fn next(&mut self) -> Option<Run> {
+        let runner = self.runner()?;
+        if let Some(item) = runner.next_run_in_row() {
+            if runner.at_eol() && item.run_type == RunType::Dead {
+                runner.eol_run()
             } else {
                 Some(item)
             }
-        } else if inner.row.is_none() {
+        } else if runner.row.is_none() {
             None
         } else {
             // At EOL
-            inner.eol_run()
+            runner.eol_run()
         }
     }
 }
 
-impl FusedIterator for Runs<'_> {}
+impl FusedIterator for RunLengths<'_> {}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Run {
+    pub length: usize,
+    pub run_type: RunType,
+}
+
+impl Run {
+    pub fn display_len(&self) -> usize {
+        let digits = if self.length == 1 {
+            0
+        } else if let Some(x) = self.length.checked_ilog10() {
+            let Ok(x) = usize::try_from(x) else {
+                unreachable!("The number of digits in a usize should fit in a usize");
+            };
+            x + 1
+        } else {
+            // self.count == 0
+            1
+        };
+        digits + 1
+    }
+}
+
+impl fmt::Display for Run {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.length != 1 {
+            write!(f, "{}", self.length)?;
+        }
+        write!(f, "{}", self.run_type.rle_symbol())?;
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum RunType {
+    Dead,
+    Live,
+    Eol,
+}
+
+impl RunType {
+    pub fn rle_symbol(&self) -> char {
+        match self {
+            RunType::Dead => 'b',
+            RunType::Live => 'o',
+            RunType::Eol => '$',
+        }
+    }
+
+    pub fn as_state(&self) -> Option<State> {
+        match self {
+            RunType::Dead => Some(State::Dead),
+            RunType::Live => Some(State::Live),
+            RunType::Eol => None,
+        }
+    }
+}
+
+impl From<State> for RunType {
+    fn from(st: State) -> RunType {
+        match st {
+            State::Dead => RunType::Dead,
+            State::Live => RunType::Live,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Enumerate<'a> {
