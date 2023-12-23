@@ -98,8 +98,12 @@ impl Pattern {
         self
     }
 
+    pub fn has_coord(&self, y: usize, x: usize) -> bool {
+        (0..self.height).contains(&y) && (0..self.width).contains(&x)
+    }
+
     fn get_index(&self, y: usize, x: usize) -> Option<usize> {
-        if (0..self.height).contains(&y) && (0..self.width).contains(&x) {
+        if self.has_coord(y, x) {
             y.checked_mul(self.width).and_then(|yw| yw.checked_add(x))
         } else {
             None
@@ -112,6 +116,25 @@ impl Pattern {
 
     pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut State> {
         self.get_index(y, x).map(|i| &mut self.cells[i])
+    }
+
+    // TODO: Try to come up with a better name for this method
+    pub fn birth(&mut self, y: usize, x: usize) {
+        if let Some(st) = self.get_mut(y, x) {
+            *st = State::Live;
+        }
+    }
+
+    pub fn kill(&mut self, y: usize, x: usize) {
+        if let Some(st) = self.get_mut(y, x) {
+            *st = State::Dead;
+        }
+    }
+
+    pub fn toggle(&mut self, y: usize, x: usize) {
+        if let Some(st) = self.get_mut(y, x) {
+            st.toggle();
+        }
     }
 
     /// Set `length` cells in a single row starting at `(y, x)` to `state`.
@@ -157,9 +180,9 @@ impl Pattern {
                     }
                 }
                 match alive {
-                    3 => next_state[(y, x)] = State::Live,
+                    3 => next_state.birth(y, x),
                     4 => (),
-                    _ => next_state[(y, x)] = State::Dead,
+                    _ => next_state.kill(y, x),
                 }
             }
         }
@@ -538,8 +561,8 @@ impl PatternBuilder {
 
     pub fn build(self) -> Pattern {
         let mut life = Pattern::new(self.height, self.width).with_edges(self.edges);
-        for yx in self.live {
-            life[yx] = State::Live;
+        for (y, x) in self.live {
+            life.birth(y, x);
         }
         life
     }
@@ -767,11 +790,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let mut iter = life.enumerate();
         assert_eq!(iter.size_hint(), (9, Some(9)));
         assert_eq!(iter.next(), Some(((0, 0), State::Dead)));
@@ -803,11 +826,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let mut iter = life.iter_live();
         assert_eq!(iter.size_hint(), (0, Some(9)));
         assert_eq!(iter.next(), Some((0, 1)));
@@ -831,11 +854,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         assert_eq!(life.draw('.', '#').to_string(), ".#.\n..#\n###");
     }
 
@@ -845,11 +868,11 @@ mod tests {
         // ..#
         // ###
         let mut life = Pattern::new(3, 3);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
     }
@@ -860,11 +883,11 @@ mod tests {
         // +..#.
         // +###+
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapX);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
     }
@@ -877,11 +900,11 @@ mod tests {
         // ###
         // .+.
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapY);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
     }
@@ -894,11 +917,11 @@ mod tests {
         // +###+
         // ..+..
         let mut life = Pattern::new(3, 3).with_edges(Edges::WrapXY);
-        life[(0, 1)] = State::Live;
-        life[(1, 2)] = State::Live;
-        life[(2, 0)] = State::Live;
-        life[(2, 1)] = State::Live;
-        life[(2, 2)] = State::Live;
+        life.birth(0, 1);
+        life.birth(1, 2);
+        life.birth(2, 0);
+        life.birth(2, 1);
+        life.birth(2, 2);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
     }
@@ -906,11 +929,11 @@ mod tests {
     #[test]
     fn test_step2() {
         let mut life = Pattern::new(5, 5);
-        life[(1, 2)] = State::Live;
-        life[(2, 3)] = State::Live;
-        life[(3, 1)] = State::Live;
-        life[(3, 2)] = State::Live;
-        life[(3, 3)] = State::Live;
+        life.birth(1, 2);
+        life.birth(2, 3);
+        life.birth(3, 1);
+        life.birth(3, 2);
+        life.birth(3, 3);
         let life2 = life.step();
         assert_eq!(
             life2.draw('.', '#').to_string(),
@@ -925,7 +948,7 @@ mod tests {
     #[case(Edges::WrapXY, ".")]
     fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 1).with_edges(edges);
-        life[(0, 0)] = State::Live;
+        life.birth(0, 0);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -937,7 +960,7 @@ mod tests {
     #[case(Edges::WrapXY, "#.")]
     fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(1, 2).with_edges(edges);
-        life[(0, 0)] = State::Live;
+        life.birth(0, 0);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -949,7 +972,7 @@ mod tests {
     #[case(Edges::WrapXY, "#\n.")]
     fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 1).with_edges(edges);
-        life[(0, 0)] = State::Live;
+        life.birth(0, 0);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
@@ -961,8 +984,8 @@ mod tests {
     #[case(Edges::WrapXY, "..\n..")]
     fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
         let mut life = Pattern::new(2, 2).with_edges(edges);
-        life[(0, 0)] = State::Live;
-        life[(1, 1)] = State::Live;
+        life.birth(0, 0);
+        life.birth(1, 1);
         let life2 = life.step();
         assert_eq!(life2.draw('.', '#').to_string(), after);
     }
