@@ -397,7 +397,7 @@ impl<'a> PatternParser<'a> {
     /// # Example
     ///
     /// ```
-    /// use life::PatternParser;
+    /// use lifelib::PatternParser;
     ///
     /// let parser = PatternParser::dead_chars(" .");
     /// let life = parser.parse(".#?\n..#\n###\n");
@@ -423,7 +423,7 @@ impl<'a> PatternParser<'a> {
     /// # Example
     ///
     /// ```
-    /// use life::PatternParser;
+    /// use lifelib::PatternParser;
     ///
     /// let parser = PatternParser::live_chars("+#");
     /// let life = parser.parse(".#?\n..#\n###\n");
