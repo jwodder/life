@@ -136,7 +136,6 @@ impl FromStr for Plaintext {
             }
         }
         // Ensure that trailing dead rows count towards the height:
-        eprintln!("Setting min height to {y}");
         builder = builder.min_height(y);
         Ok(Plaintext {
             name: String::from(name),
