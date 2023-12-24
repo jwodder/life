@@ -7,6 +7,8 @@ description = "Conway's Game of Life in Rust"
 authors = ["John Thorvald Wodder II <life-rust@varonathe.org>"]
 repository = "https://github.com/jwodder/life"
 license = "MIT"
+keywords = ["conway", "game-of-life"]
+categories = ["mathematics", "parser-implementations", "simulation", "visualization"]
 exclude = ["/.*"]
 publish = false
 
