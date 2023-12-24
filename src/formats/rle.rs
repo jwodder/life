@@ -27,6 +27,34 @@ pub struct Rle {
     pub pattern: Pattern,
 }
 
+impl Rle {
+    /// Returns the text of the first `#` line of type `'N'`, if any.
+    pub fn get_name(&self) -> Option<&str> {
+        self.comments
+            .iter()
+            .find_map(|(ty, text)| (*ty == 'N').then_some(&**text))
+    }
+
+    /// Set the text of the first `#` line of type `'N'` to `name` and remove
+    /// all other `'N'` comments.  If there is no `'N'`-comment, one is added.
+    pub fn set_name(&mut self, name: String) {
+        let mut value = Some(name);
+        self.comments.retain_mut(|(ty, text)| {
+            if *ty != 'N' {
+                true
+            } else if let Some(n) = value.take() {
+                *text = n;
+                true
+            } else {
+                false
+            }
+        });
+        if let Some(n) = value.take() {
+            self.comments.push(('N', n));
+        }
+    }
+}
+
 impl fmt::Display for Rle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (ty, text) in &self.comments {
@@ -626,6 +654,45 @@ mod tests {
         assert_eq!(
             rle.to_string(),
             "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
+        );
+    }
+
+    #[test]
+    fn test_get_set_multi_name() {
+        let s = concat!(
+            "#N beehiveoncap.rle\n",
+            "#C https://conwaylife.com/wiki/Beehive_on_cap\n",
+            "#C https://www.conwaylife.com/patterns/beehiveoncap.rle\n",
+            "#N Beehive on Cap\n",
+            "x = 5, y = 7, rule = B3/S23\n",
+            "b2o$o2bo$4o2$2b2o$bo2bo$2b2o!\n",
+        );
+        let mut rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.get_name(), Some("beehiveoncap.rle"));
+        rle.set_name(String::from("Beehive-on-Cap"));
+        assert_eq!(rle.get_name(), Some("Beehive-on-Cap"));
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N Beehive-on-Cap\n",
+                "#C https://conwaylife.com/wiki/Beehive_on_cap\n",
+                "#C https://www.conwaylife.com/patterns/beehiveoncap.rle\n",
+                "x = 5, y = 7\n",
+                "b2o$o2bo$4o2$2b2o$bo2bo$2b2o!\n",
+            )
+        );
+    }
+
+    #[test]
+    fn get_set_no_name() {
+        let s = "#C This is a glider.\nx = 3, y = 3\nbo$2bo$3o!\n";
+        let mut rle = s.parse::<Rle>().unwrap();
+        assert_eq!(rle.get_name(), None);
+        rle.set_name(String::from("Glider"));
+        assert_eq!(rle.get_name(), Some("Glider"));
+        assert_eq!(
+            rle.to_string(),
+            "#C This is a glider.\n#N Glider\nx = 3, y = 3\nbo$2bo$3o!\n"
         );
     }
 
