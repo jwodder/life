@@ -139,7 +139,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Check docs
-        run: cargo doc --no-deps --all-features
+        run: cargo doc -p lifelib --no-deps --all-features
         env:
           RUSTDOCFLAGS: -Dwarnings
 
