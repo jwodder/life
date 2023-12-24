@@ -1,0 +1,29 @@
+[package]
+name = "lifelib"
+version = "0.1.0-dev"
+edition.workspace = true
+rust-version.workspace = true
+description = "Conway's Game of Life in Rust"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords = ["conway", "game-of-life"]
+categories = ["mathematics", "parser-implementations", "simulation", "visualization"]
+publish = false
+
+[dependencies]
+image = { version = "0.24.7", optional = true, default-features = false }
+thiserror = "1.0.51"
+
+[dev-dependencies]
+assert_matches = "1.5.0"
+image = { version = "0.24.7", default-features = false, features = ["pnm"] }
+pretty_assertions = "1.4.0"
+rstest = { version = "0.18.2", default-features = false }
+
+[features]
+image = ["dep:image"]
+image-formats = ["image", "image/default"]
+
+[lints]
+workspace = true

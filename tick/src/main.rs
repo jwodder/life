@@ -1,5 +1,5 @@
 use clap::Parser;
-use life::PatternParser;
+use lifelib::PatternParser;
 
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {

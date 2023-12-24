@@ -1,0 +1,18 @@
+[package]
+name = "tick"
+version = "0.1.0-dev"
+edition.workspace = true
+rust-version.workspace = true
+description = "Command for advancing Game of Life patterns"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+clap = { version = "4.4.11", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+patharg = { version = "0.4.0" }
+lifelib = { path = "../lifelib" }
+
+[lints]
+workspace = true
