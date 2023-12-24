@@ -1,5 +1,5 @@
 [workspace]
-members = ["lifelib"]
+members = ["lifelib", "tick"]
 resolver = "2"
 
 [workspace.package]

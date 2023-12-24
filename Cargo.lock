@@ -306,9 +306,7 @@ name = "lifelib"
 version = "0.1.0-dev"
 dependencies = [
  "assert_matches",
- "clap",
  "image",
- "patharg",
  "pretty_assertions",
  "rstest",
  "thiserror",
@@ -627,6 +625,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tick"
+version = "0.1.0-dev"
+dependencies = [
+ "clap",
+ "lifelib",
+ "patharg",
 ]
 
 [[package]]

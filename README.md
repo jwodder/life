@@ -12,6 +12,9 @@ The packages are:
 - [`lifelib`][] — Core library implementing the Game of Life and related
   functionality
 
+- [`tick`][] — Command for advancing Game of Life patterns
+
 [workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
 [`lifelib`]: https://github.com/jwodder/life/tree/master/lifelib
+[`tick`]: https://github.com/jwodder/life/tree/master/tick
