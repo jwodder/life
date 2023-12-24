@@ -1,6 +1,7 @@
 #![cfg(feature = "image")]
 #![cfg_attr(docsrs, doc(cfg(feature = "image")))]
 use super::Pattern;
+pub use image;
 use image::{Rgb, RgbImage};
 use std::num::NonZeroU32;
 

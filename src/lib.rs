@@ -2,7 +2,7 @@
 pub mod errors;
 pub mod formats;
 #[cfg(feature = "image")]
-pub mod images;
+pub mod image;
 pub mod utilities;
 use crate::errors::*;
 use crate::formats::*;
