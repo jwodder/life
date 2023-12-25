@@ -13,7 +13,7 @@ publish = false
 anyhow = "1.0.76"
 clap = { version = "4.4.11", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
 fs-err = "2.11.0"
-lifelib = { path = "../lifelib" }
+lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 
 [lints]
 workspace = true

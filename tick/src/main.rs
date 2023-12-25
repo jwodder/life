@@ -1,14 +1,23 @@
+use anyhow::Context;
 use clap::Parser;
 use fs_err::File;
 use lifelib::{
     formats::{Plaintext, Rle},
+    image::{image::ImageFormat, ImageBuilder},
     Pattern,
 };
 use std::io::Write;
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {
+    #[arg(long, default_value = "5")]
+    cell_size: NonZeroU32,
+
+    #[arg(long, default_value_t = 0)]
+    gutter: u32,
+
     #[arg(short = 'N', long)]
     name: Option<String>,
 
@@ -47,6 +56,13 @@ impl Arguments {
                 let rle = Rle { comments, pattern };
                 let mut fp = File::create(self.outfile)?;
                 write!(fp, "{rle}")?;
+            }
+            _ if ImageFormat::from_path(&self.outfile).is_ok() => {
+                let img = ImageBuilder::new(self.cell_size)
+                    .gutter(self.gutter)
+                    .pattern_to_image(&pattern);
+                img.save(&self.outfile)
+                    .context("failed to write image file")?;
             }
             _ => anyhow::bail!("output path does not have a supported file extension"),
         }
