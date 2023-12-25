@@ -16,5 +16,12 @@ csscolorparser = "0.6.2"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 
+[dev-dependencies]
+assert_cmd = "2.0.12"
+assert_fs = "1.0.13"
+predicates = { version = "3.0.4", default-features = false }
+pretty_assertions = "1.4.0"
+rstest = { version = "0.18.2", default-features = false }
+
 [lints]
 workspace = true

@@ -1,0 +1,200 @@
+#![cfg(test)]
+use assert_cmd::Command;
+use assert_fs::{assert::PathAssert, NamedTempFile};
+use predicates::path::eq_file;
+use rstest::rstest;
+use std::fs::read_to_string;
+use std::path::Path;
+
+static DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data");
+
+fn assert_str_files_eq(file1: &Path, file2: &Path) {
+    let str1 = read_to_string(file1).unwrap();
+    let str2 = read_to_string(file2).unwrap();
+    pretty_assertions::assert_eq!(str1, str2);
+}
+
+mod default_number {
+    use super::*;
+
+    #[test]
+    fn cells() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1.cells"), &outfile);
+    }
+
+    #[test]
+    fn rle() {
+        let outfile = NamedTempFile::new("glider1.rle").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1.rle"), &outfile);
+    }
+
+    #[test]
+    fn png() {
+        let outfile = NamedTempFile::new("glider1.png").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1.png")));
+    }
+}
+
+#[rstest]
+#[case(0, "glider.cells")]
+#[case(0, "glider.rle")]
+#[case(1, "glider1.cells")]
+#[case(1, "glider1.rle")]
+#[case(2, "glider2.cells")]
+#[case(2, "glider2.rle")]
+#[case(3, "glider3.cells")]
+#[case(3, "glider3.rle")]
+#[case(4, "glider4.cells")]
+#[case(4, "glider4.rle")]
+#[case(11, "glider11.cells")]
+#[case(11, "glider11.rle")]
+fn numbers(#[case] number: usize, #[case] filename: &str) {
+    let outfile = NamedTempFile::new(filename).unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg(format!("-n{number}"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_str_files_eq(&Path::new(DATA_DIR).join(filename), &outfile);
+}
+
+#[test]
+fn number0_png() {
+    let outfile = NamedTempFile::new("glider.png").unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("-n0")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    outfile.assert(eq_file(Path::new(DATA_DIR).join("glider.png")));
+}
+
+#[test]
+fn rle2plaintext() {
+    let outfile = NamedTempFile::new("glider.cells").unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("-n0")
+        .arg(Path::new(DATA_DIR).join("glider.rle"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_str_files_eq(&Path::new(DATA_DIR).join("glider.cells"), &outfile);
+}
+
+mod imgopts {
+    use super::*;
+
+    #[test]
+    fn live_color() {
+        let outfile = NamedTempFile::new("glider.png").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--live-color")
+            .arg("red")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-red.png")));
+    }
+
+    #[test]
+    fn gutter() {
+        let outfile = NamedTempFile::new("glider.png").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--gutter")
+            .arg("1")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-g1.png")));
+    }
+
+    #[test]
+    fn cell_size() {
+        let outfile = NamedTempFile::new("glider.png").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--cell-size")
+            .arg("10")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-s10.png")));
+    }
+
+    #[test]
+    fn cell_size_gutter() {
+        let outfile = NamedTempFile::new("glider.png").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--cell-size")
+            .arg("10")
+            .arg("--gutter")
+            .arg("2")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-s10-g2.png")));
+    }
+}
+
+mod name {
+    use super::*;
+
+    #[test]
+    fn cells() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-named.cells"), &outfile);
+    }
+
+    #[test]
+    fn rle() {
+        let outfile = NamedTempFile::new("glider1.rle").unwrap();
+        Command::cargo_bin("tick")
+            .unwrap()
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-named.rle"), &outfile);
+    }
+}
