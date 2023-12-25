@@ -5,10 +5,13 @@ use lifelib::{
     Pattern,
 };
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {
+    #[arg(short = 'N', long)]
+    name: Option<String>,
+
     #[arg(short, long, default_value_t = 1)]
     number: usize,
 
@@ -17,37 +20,46 @@ struct Arguments {
     outfile: PathBuf,
 }
 
+impl Arguments {
+    fn save_pattern(self, pattern: Pattern) -> anyhow::Result<()> {
+        match self.outfile.extension().and_then(|s| s.to_str()) {
+            Some("cells") => {
+                let name = self.name.unwrap_or_else(|| {
+                    self.outfile.file_name().map_or_else(
+                        || String::from("Pattern"),
+                        |oss| oss.to_string_lossy().into_owned(),
+                    )
+                });
+                let pt = Plaintext {
+                    name,
+                    comments: Vec::new(),
+                    pattern,
+                };
+                let mut fp = File::create(self.outfile)?;
+                write!(fp, "{pt}")?;
+            }
+            Some("rle") => {
+                let comments = if let Some(name) = self.name {
+                    vec![('N', name)]
+                } else {
+                    Vec::new()
+                };
+                let rle = Rle { comments, pattern };
+                let mut fp = File::create(self.outfile)?;
+                write!(fp, "{rle}")?;
+            }
+            _ => anyhow::bail!("output path does not have a supported file extension"),
+        }
+        Ok(())
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let mut pattern = Pattern::from_file(args.infile)?;
+    let mut pattern = Pattern::from_file(&args.infile)?;
     for _ in 0..args.number {
         pattern = pattern.step();
     }
-    save_pattern(pattern, args.outfile)?;
-    Ok(())
-}
-
-fn save_pattern<P: AsRef<Path>>(pattern: Pattern, path: P) -> anyhow::Result<()> {
-    let path = path.as_ref();
-    match path.extension().and_then(|s| s.to_str()) {
-        Some("cells") => {
-            let pt = Plaintext {
-                name: String::from("Pattern"),
-                comments: Vec::new(),
-                pattern,
-            };
-            let mut fp = File::create(path)?;
-            write!(fp, "{pt}")?;
-        }
-        Some("rle") => {
-            let rle = Rle {
-                comments: Vec::new(),
-                pattern,
-            };
-            let mut fp = File::create(path)?;
-            write!(fp, "{rle}")?;
-        }
-        _ => anyhow::bail!("output path does not have a supported file extension"),
-    }
+    args.save_pattern(pattern)?;
     Ok(())
 }
