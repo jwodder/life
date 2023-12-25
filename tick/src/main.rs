@@ -1,3 +1,5 @@
+mod tickset;
+use crate::tickset::TickSet;
 use anyhow::Context;
 use clap::Parser;
 use fs_err::File;
@@ -32,8 +34,8 @@ struct Arguments {
     #[arg(short = 'N', long)]
     name: Option<String>,
 
-    #[arg(short, long, default_value_t = 1, value_name = "INT")]
-    number: usize,
+    #[arg(short = 'n', long = "number", default_value = "1", value_name = "INTS")]
+    ticks: TickSet,
 
     infile: PathBuf,
 
@@ -41,10 +43,10 @@ struct Arguments {
 }
 
 impl Arguments {
-    fn save_pattern(self, pattern: Pattern) -> anyhow::Result<()> {
+    fn save_pattern(&self, pattern: Pattern) -> anyhow::Result<()> {
         match self.outfile.extension().and_then(|s| s.to_str()) {
             Some("cells") => {
-                let name = self.name.unwrap_or_else(|| {
+                let name = self.name.clone().unwrap_or_else(|| {
                     self.outfile.file_name().map_or_else(
                         || String::from("Pattern"),
                         |oss| oss.to_string_lossy().into_owned(),
@@ -55,17 +57,17 @@ impl Arguments {
                     comments: Vec::new(),
                     pattern,
                 };
-                let mut fp = File::create(self.outfile)?;
+                let mut fp = File::create(&self.outfile)?;
                 write!(fp, "{pt}")?;
             }
             Some("rle") => {
-                let comments = if let Some(name) = self.name {
+                let comments = if let Some(name) = self.name.clone() {
                     vec![('N', name)]
                 } else {
                     Vec::new()
                 };
                 let rle = Rle { comments, pattern };
-                let mut fp = File::create(self.outfile)?;
+                let mut fp = File::create(&self.outfile)?;
                 write!(fp, "{rle}")?;
             }
             _ if ImageFormat::from_path(&self.outfile).is_ok() => {
@@ -85,10 +87,16 @@ impl Arguments {
 
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let mut pattern = Pattern::from_file(&args.infile)?.with_edges(args.edges);
-    for _ in 0..args.number {
-        pattern = pattern.step();
+    let maxtick = args.ticks.maxvalue();
+    let pattern = Pattern::from_file(&args.infile)?.with_edges(args.edges);
+    for (i, pat) in pattern
+        .into_generations()
+        .take(maxtick.saturating_add(1))
+        .enumerate()
+    {
+        if args.ticks.contains(i) {
+            args.save_pattern(pat)?;
+        }
     }
-    args.save_pattern(pattern)?;
     Ok(())
 }
