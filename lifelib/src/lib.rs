@@ -7,6 +7,7 @@ pub mod utilities;
 use crate::errors::*;
 use crate::formats::*;
 use crate::utilities::*;
+use std::fmt;
 use std::fs::read_to_string;
 use std::ops::{Index, IndexMut, Not};
 use std::path::Path;
@@ -245,6 +246,18 @@ impl Edges {
             Edges::Dead | Edges::WrapX => range_about(y, limit),
             Edges::WrapY | Edges::WrapXY => wrap_about(y, limit),
         }
+    }
+}
+
+impl fmt::Display for Edges {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Edges::Dead => "dead",
+            Edges::WrapX => "wrapx",
+            Edges::WrapY => "wrapy",
+            Edges::WrapXY => "wrapxy",
+        };
+        write!(f, "{s}")
     }
 }
 
@@ -995,5 +1008,23 @@ mod tests {
     #[case("wrap-x-y", None)]
     fn test_edges_from_str(#[case] s: &str, #[case] parsed: Option<Edges>) {
         assert_eq!(s.parse::<Edges>().ok(), parsed);
+    }
+
+    #[rstest]
+    #[case(Edges::Dead, "dead")]
+    #[case(Edges::WrapX, "wrapx")]
+    #[case(Edges::WrapY, "wrapy")]
+    #[case(Edges::WrapXY, "wrapxy")]
+    fn test_display_edges(#[case] value: Edges, #[case] s: &str) {
+        assert_eq!(value.to_string(), s);
+    }
+
+    #[rstest]
+    #[case(Edges::Dead)]
+    #[case(Edges::WrapX)]
+    #[case(Edges::WrapY)]
+    #[case(Edges::WrapXY)]
+    fn test_display_then_parse_edges(#[case] value: Edges) {
+        assert_eq!(value.to_string().parse::<Edges>().unwrap(), value);
     }
 }
