@@ -4,7 +4,7 @@ use fs_err::File;
 use lifelib::{
     formats::{Plaintext, Rle},
     image::{image::ImageFormat, ImageBuilder},
-    Pattern,
+    Edges, Pattern,
 };
 use std::io::Write;
 use std::num::NonZeroU32;
@@ -14,6 +14,14 @@ use std::path::PathBuf;
 struct Arguments {
     #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
+
+    #[arg(
+        short = 'E',
+        long,
+        default_value_t,
+        value_name = "dead|wrapx|wrapy|wrapxy"
+    )]
+    edges: Edges,
 
     #[arg(short, long, default_value_t = 0, value_name = "INT")]
     gutter: u32,
@@ -77,7 +85,7 @@ impl Arguments {
 
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let mut pattern = Pattern::from_file(&args.infile)?;
+    let mut pattern = Pattern::from_file(&args.infile)?.with_edges(args.edges);
     for _ in 0..args.number {
         pattern = pattern.step();
     }

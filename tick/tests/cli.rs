@@ -198,3 +198,36 @@ mod name {
         assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-named.rle"), &outfile);
     }
 }
+
+#[rstest]
+#[case(10, "dead", "glider10.rle")]
+#[case(11, "dead", "glider11.rle")]
+#[case(12, "dead", "glider11.rle")]
+#[case(28, "dead", "glider11.rle")]
+#[case(10, "wrapx", "glider10.rle")]
+#[case(11, "wrapx", "glider11.rle")]
+#[case(12, "wrapx", "glider11.rle")]
+#[case(28, "wrapx", "glider11.rle")]
+#[case(12, "wrapy", "glider12-wrapy.rle")]
+#[case(13, "wrapy", "glider13-wrapy.rle")]
+#[case(14, "wrapy", "glider13-wrapy.rle")]
+#[case(28, "wrapy", "glider13-wrapy.rle")]
+#[case(10, "wrapxy", "glider10-wrapxy.rle")]
+#[case(11, "wrapxy", "glider11-wrapxy.rle")]
+#[case(12, "wrapxy", "glider12-wrapxy.rle")]
+#[case(13, "wrapxy", "glider13-wrapxy.rle")]
+#[case(14, "wrapxy", "glider14-wrapxy.rle")]
+#[case(28, "wrapxy", "glider.rle")]
+fn edges_opt(#[case] number: usize, #[case] edges: &str, #[case] filename: &str) {
+    let outfile = NamedTempFile::new("outfile.rle").unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg(format!("-n{number}"))
+        .arg("--edges")
+        .arg(edges)
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_str_files_eq(&Path::new(DATA_DIR).join(filename), &outfile);
+}
