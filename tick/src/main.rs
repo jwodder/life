@@ -12,16 +12,16 @@ use std::path::PathBuf;
 
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {
-    #[arg(long, default_value = "5")]
+    #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
 
-    #[arg(long, default_value_t = 0)]
+    #[arg(short, long, default_value_t = 0, value_name = "INT")]
     gutter: u32,
 
     #[arg(short = 'N', long)]
     name: Option<String>,
 
-    #[arg(short, long, default_value_t = 1)]
+    #[arg(short, long, default_value_t = 1, value_name = "INT")]
     number: usize,
 
     infile: PathBuf,
