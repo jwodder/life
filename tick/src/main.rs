@@ -10,13 +10,16 @@ use std::io::Write;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Eq, Parser, PartialEq)]
+#[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {
     #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
 
     #[arg(short, long, default_value_t = 0, value_name = "INT")]
     gutter: u32,
+
+    #[arg(short = 'C', long, default_value = "#000000", value_name = "COLOR")]
+    live_color: csscolorparser::Color,
 
     #[arg(short = 'N', long)]
     name: Option<String>,
@@ -58,7 +61,9 @@ impl Arguments {
                 write!(fp, "{rle}")?;
             }
             _ if ImageFormat::from_path(&self.outfile).is_ok() => {
+                let [r, g, b, _] = self.live_color.to_rgba8();
                 let img = ImageBuilder::new(self.cell_size)
+                    .live_color([r, g, b].into())
                     .gutter(self.gutter)
                     .pattern_to_image(&pattern);
                 img.save(&self.outfile)
