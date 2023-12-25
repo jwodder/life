@@ -970,4 +970,30 @@ mod tests {
         assert_eq!(life.width(), 0);
         assert_eq!(life.draw('.', '#').to_string(), "");
     }
+
+    #[rstest]
+    #[case("dead", Some(Edges::Dead))]
+    #[case("Dead", Some(Edges::Dead))]
+    #[case("DEAD", Some(Edges::Dead))]
+    #[case("wrapx", Some(Edges::WrapX))]
+    #[case("Wrapx", Some(Edges::WrapX))]
+    #[case("WrapX", Some(Edges::WrapX))]
+    #[case("WRAPX", Some(Edges::WrapX))]
+    #[case("wrap-x", None)]
+    #[case("wrapy", Some(Edges::WrapY))]
+    #[case("Wrapy", Some(Edges::WrapY))]
+    #[case("WrapY", Some(Edges::WrapY))]
+    #[case("WRAPY", Some(Edges::WrapY))]
+    #[case("wrap-y", None)]
+    #[case("wrapxy", Some(Edges::WrapXY))]
+    #[case("Wrapxy", Some(Edges::WrapXY))]
+    #[case("WrapXy", Some(Edges::WrapXY))]
+    #[case("WrapxY", Some(Edges::WrapXY))]
+    #[case("WrapXY", Some(Edges::WrapXY))]
+    #[case("WRAPXY", Some(Edges::WrapXY))]
+    #[case("wrap-xy", None)]
+    #[case("wrap-x-y", None)]
+    fn test_edges_from_str(#[case] s: &str, #[case] parsed: Option<Edges>) {
+        assert_eq!(s.parse::<Edges>().ok(), parsed);
+    }
 }
