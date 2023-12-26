@@ -15,11 +15,31 @@ use std::io::Write;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
+/// Advance Conway's Game of Life patterns
+///
+/// See <https://github.com/jwodder/life/tree/master/tick> for more
+/// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {
+    /// (Image output only) Set the height & width of the cell squares to the
+    /// given number of pixels
     #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
 
+    /// Configure the behavior of the edges of the pattern's universe.
+    ///
+    /// Possible values (case insensitive):
+    ///
+    /// - dead [default]: Cells beyond the universe's bounds are dead and
+    ///   cannot come to life
+    ///
+    /// - wrapx: The universe's x-axis wraps around so that the left edge is
+    ///   connected to the right edge
+    ///
+    /// - wrapy: The universe's y-axis wraps around so that the top edge is
+    ///   connected to the bottom edge
+    ///
+    /// - wrapxy: The universe's x- and y-axes both wrap around
     #[arg(
         short = 'E',
         long,
@@ -28,20 +48,57 @@ struct Arguments {
     )]
     edges: Edges,
 
+    /// (Image output only) Insert the given number of pixels as padding
+    /// between adjacent cell squares
     #[arg(short, long, default_value_t = 0, value_name = "INT")]
     gutter: u32,
 
+    /// (Image output only) Set the color of live cells.
+    ///
+    /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
+    /// or a CSS color name.
     #[arg(short = 'C', long, default_value = "#000000", value_name = "COLOR")]
     live_color: csscolorparser::Color,
 
-    #[arg(short = 'N', long)]
+    /// (Non-image output only) Set the pattern name to embed in the output
+    /// file.
+    ///
+    /// The name may contain `%d` placeholders which will be replaced by the
+    /// tick number.
+    #[arg(short = 'N', long, value_name = "TEXT")]
     name: Option<TickTemplate>,
 
-    #[arg(short = 'n', long = "number", default_value = "1", value_name = "INTS")]
+    /// Specify the number(s) of ticks to advance the input pattern by in order
+    /// to produce the output.
+    ///
+    /// `NUMBERS` consists of one or more nonnegative integers and/or
+    /// hyphenated inclusive ranges of nonnegative integers, all separated by
+    /// commas.  If multiple tick numbers are specified, multiple outputs are
+    /// produced, one for each specified tick number in the input pattern's
+    /// history.
+    #[arg(
+        short = 'n',
+        long = "number",
+        default_value = "1",
+        value_name = "NUMBERS"
+    )]
     ticks: TickSet,
 
+    /// A file containing a Game of Life pattern.
+    ///
+    /// The file must either be in plaintext format with a `.cells` file
+    /// extension or be in Run Length Encoded format with an `.rle` file
+    /// extension.
     infile: PathBuf,
 
+    /// Path at which to write the output pattern(s).
+    ///
+    /// The path's file extension must be `.cells` (to produce a plaintext
+    /// file), `.rle` (to produce an RLE file), or an image extension (to
+    /// produce an image).
+    ///
+    /// The path may contain `%d` placeholders which will be replaced by the
+    /// tick number.
     outfile: TickTemplate,
 }
 

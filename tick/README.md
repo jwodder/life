@@ -74,10 +74,10 @@ Options
 The following option only has an effect when outputting to a plaintext or RLE
 file:
 
-- `-N <TEXT>`, `--name <TEXT>` — Specify the name to embed in the file.
-  `<TEXT>` may contain [tick placeholders](#tick-placeholders).  When `--name`
-  is not given, plaintext files have their name set to their base file name,
-  and RLE files are not given names.
+- `-N <TEXT>`, `--name <TEXT>` — Set the pattern name to embed in the output
+  file.  `<TEXT>` may contain [tick placeholders](#tick-placeholders).  When
+  `--name` is not given, plaintext files have their name set to their base file
+  name, and RLE files are not given names.
 
 The following options only have an effect when outputting to an image file:
 
