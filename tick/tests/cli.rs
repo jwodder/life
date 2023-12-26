@@ -1,9 +1,9 @@
 #![cfg(test)]
 use assert_cmd::Command;
-use assert_fs::{assert::PathAssert, NamedTempFile};
+use assert_fs::{assert::PathAssert, NamedTempFile, TempDir};
 use predicates::path::eq_file;
 use rstest::rstest;
-use std::fs::read_to_string;
+use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
 static DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data");
@@ -230,4 +230,39 @@ fn edges_opt(#[case] number: usize, #[case] edges: &str, #[case] filename: &str)
         .assert()
         .success();
     assert_str_files_eq(&Path::new(DATA_DIR).join(filename), &outfile);
+}
+
+#[test]
+fn multiticks() {
+    let tmpdir = TempDir::new().unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("-n")
+        .arg("2-4")
+        .arg("--name=Glider + %d")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(tmpdir.path().join("glider-%d-named.cells"))
+        .assert()
+        .success();
+    let mut filenames = Vec::new();
+    let diriter = read_dir(tmpdir.path()).unwrap();
+    for entry in diriter {
+        let entry = entry.unwrap();
+        filenames.push(entry.file_name().into_string().unwrap());
+    }
+    filenames.sort_unstable();
+    assert_eq!(
+        filenames,
+        [
+            "glider-2-named.cells",
+            "glider-3-named.cells",
+            "glider-4-named.cells"
+        ]
+    );
+    for fname in filenames {
+        assert_str_files_eq(
+            &Path::new(DATA_DIR).join(&fname),
+            &tmpdir.path().join(fname),
+        );
+    }
 }
