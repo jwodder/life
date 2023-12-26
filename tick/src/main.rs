@@ -11,7 +11,7 @@ use lifelib::{
     image::{image::ImageFormat, ImageBuilder},
     Edges, Pattern,
 };
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
@@ -147,8 +147,9 @@ impl Saver {
                     comments: Vec::new(),
                     pattern,
                 };
-                let mut fp = File::create(path)?;
+                let mut fp = BufWriter::new(File::create(path)?);
                 write!(fp, "{pt}")?;
+                fp.flush()?;
             }
             Saver::Rle { name } => {
                 let comments = if let Some(tmplt) = name {
@@ -157,8 +158,9 @@ impl Saver {
                     Vec::new()
                 };
                 let rle = Rle { comments, pattern };
-                let mut fp = File::create(path)?;
+                let mut fp = BufWriter::new(File::create(path)?);
                 write!(fp, "{rle}")?;
+                fp.flush()?;
             }
             Saver::Image { builder } => builder
                 .pattern_to_image(&pattern)
