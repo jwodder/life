@@ -24,7 +24,7 @@ impl TickTemplate {
             match *item {
                 Item::Literal(ref ss) => s.push_str(ss),
                 Item::Number {
-                    flag,
+                    mut flag,
                     width,
                     precision,
                 } => {
@@ -33,8 +33,17 @@ impl TickTemplate {
                     else {
                         unreachable!("The number of digits in a usize should fit in a usize");
                     };
-                    let pre_zeroes = precision.saturating_sub(digits);
-                    let padwidth = width.saturating_sub(digits.max(precision));
+                    let (pre_zeroes, padwidth);
+                    if let Some(p) = precision {
+                        pre_zeroes = p.saturating_sub(digits);
+                        padwidth = width.saturating_sub(digits.max(p));
+                        if flag == Flag::Zero {
+                            flag = Flag::None;
+                        }
+                    } else {
+                        pre_zeroes = 0;
+                        padwidth = width.saturating_sub(digits);
+                    }
                     if padwidth > 0 && matches!(flag, Flag::None | Flag::Zero) {
                         let pad = if flag == Flag::Zero { '0' } else { ' ' };
                         for _ in 0..padwidth {
@@ -60,6 +69,8 @@ impl TickTemplate {
 impl FromStr for TickTemplate {
     type Err = ScannerError;
 
+    // False positive that is inapplicable due to side effects:
+    #[allow(clippy::if_then_some_else_none)]
     fn from_str(s: &str) -> Result<TickTemplate, ScannerError> {
         let mut scanner = Scanner::new(s);
         let mut builder = TemplateBuilder::new();
@@ -77,9 +88,9 @@ impl FromStr for TickTemplate {
                     };
                     let width = scanner.maybe_scan_usize()?.unwrap_or_default();
                     let precision = if scanner.maybe_scan_char('.') {
-                        scanner.scan_usize()?
+                        Some(scanner.scan_usize()?)
                     } else {
-                        0
+                        None
                     };
                     scanner.scan_char('d')?;
                     builder.number(flag, width, precision);
@@ -101,7 +112,7 @@ enum Item {
     Number {
         flag: Flag,
         width: usize,
-        precision: usize,
+        precision: Option<usize>,
     },
 }
 
@@ -128,7 +139,7 @@ impl TemplateBuilder {
         }
     }
 
-    fn number(&mut self, flag: Flag, width: usize, precision: usize) {
+    fn number(&mut self, flag: Flag, width: usize, precision: Option<usize>) {
         self.0.push(Item::Number {
             flag,
             width,
@@ -158,7 +169,10 @@ mod tests {
     #[case("[%.6d]", 42, "[000042]")]
     #[case("[%0.6d]", 42, "[000042]")]
     #[case("[%06d]", 42, "[000042]")]
+    #[case("[%06.5d]", 42, "[ 00042]")]
+    #[case("[%06.0d]", 42, "[    42]")]
     #[case("[%-6d]", 42, "[42    ]")]
+    #[case("[%-6.5d]", 42, "[00042 ]")]
     #[case("[%6d]", 1234567, "[1234567]")]
     #[case("[%6.5d]", 1234567, "[1234567]")]
     #[case("[%5.6d]", 1234567, "[1234567]")]
