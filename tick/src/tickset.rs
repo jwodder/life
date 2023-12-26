@@ -1,5 +1,5 @@
+use crate::scanner::{Scanner, ScannerError};
 use rangemap::RangeInclusiveSet;
-use std::num::ParseIntError;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -25,7 +25,7 @@ impl FromStr for TickSet {
     type Err = ParseTickSetError;
 
     fn from_str(s: &str) -> Result<TickSet, ParseTickSetError> {
-        let mut scanner = Scanner(s);
+        let mut scanner = Scanner::new(s);
         let mut first = true;
         let mut ranges = RangeInclusiveSet::new();
         loop {
@@ -39,8 +39,7 @@ impl FromStr for TickSet {
             }
             let start = scanner.scan_usize()?;
             scanner.skip_whitespace();
-            if scanner.peek_char() == Some('-') {
-                scanner.scan_char('-')?;
+            if scanner.maybe_scan_char('-') {
                 scanner.skip_whitespace();
                 let end = scanner.scan_usize()?;
                 if start > end {
@@ -60,77 +59,14 @@ impl FromStr for TickSet {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-struct Scanner<'a>(&'a str);
-
-impl Scanner<'_> {
-    fn skip_whitespace(&mut self) {
-        self.0 = self.0.trim_start();
-    }
-
-    fn scan_usize(&mut self) -> Result<usize, ParseTickSetError> {
-        let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
-            if let Some(c) = self.peek_char() {
-                return Err(ParseTickSetError::NoIntButChar(c));
-            } else {
-                return Err(ParseTickSetError::NoIntButEof);
-            }
-        };
-        let value = digits.parse::<usize>()?;
-        self.0 = s;
-        Ok(value)
-    }
-
-    fn scan_char(&mut self, ch: char) -> Result<(), ParseTickSetError> {
-        if let Some(t) = self.0.strip_prefix(ch) {
-            self.0 = t;
-            Ok(())
-        } else if let Some(got) = self.peek_char() {
-            Err(ParseTickSetError::WrongChar { expected: ch, got })
-        } else {
-            Err(ParseTickSetError::NotCharButEof(ch))
-        }
-    }
-
-    fn peek_char(&self) -> Option<char> {
-        self.0.chars().next()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-/// Divides a string in two before the first character that does not satisfy
-/// the given predicate.  If the first part is nonempty, the parts are
-/// returned.  Otherwise, `None` is returned.
-///
-/// Note that the first part is the maximal leading substring of `s` whose
-/// characters all satisfy `predicate`.
-fn scan_some<P: FnMut(char) -> bool>(s: &str, mut predicate: P) -> Option<(&str, &str)> {
-    let boundary = s
-        .char_indices()
-        .find(move |&(_, ch)| !predicate(ch))
-        .map_or(s.len(), |(i, _)| i);
-    (boundary > 0).then(|| s.split_at(boundary))
-}
-
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub(crate) enum ParseTickSetError {
     #[error("empty tick set not allowed")]
     Empty,
     #[error("decreasing range {start}-{end} not allowed")]
     Decreasing { start: usize, end: usize },
-    #[error("expected integer, got {0:?}")]
-    NoIntButChar(char),
-    #[error("expected integer, got end of string")]
-    NoIntButEof,
-    #[error("expected {expected:?}, got {got:?}")]
-    WrongChar { expected: char, got: char },
-    #[error("expected {0:?}, got end of string")]
-    NotCharButEof(char),
-    #[error("numeric value exceeds integer bounds")]
-    NumericOverflow(#[from] ParseIntError),
+    #[error(transparent)]
+    Scanner(#[from] ScannerError),
 }
 
 #[cfg(test)]
@@ -192,10 +128,10 @@ mod tests {
         let e = "1 2".parse::<TickSet>().unwrap_err();
         assert_eq!(
             e,
-            ParseTickSetError::WrongChar {
+            ParseTickSetError::Scanner(ScannerError::WrongChar {
                 expected: ',',
                 got: '2'
-            }
+            })
         );
         assert_eq!(e.to_string(), "expected ',', got '2'");
     }
@@ -203,21 +139,24 @@ mod tests {
     #[test]
     fn int_hyphen_eof() {
         let e = "1-".parse::<TickSet>().unwrap_err();
-        assert_eq!(e, ParseTickSetError::NoIntButEof);
+        assert_eq!(e, ParseTickSetError::Scanner(ScannerError::NoIntButEof));
         assert_eq!(e.to_string(), "expected integer, got end of string");
     }
 
     #[test]
     fn int_hyphen_space_eof() {
         let e = "1- ".parse::<TickSet>().unwrap_err();
-        assert_eq!(e, ParseTickSetError::NoIntButEof);
+        assert_eq!(e, ParseTickSetError::Scanner(ScannerError::NoIntButEof));
         assert_eq!(e.to_string(), "expected integer, got end of string");
     }
 
     #[test]
     fn int_hyphen_splat() {
         let e = "1-*".parse::<TickSet>().unwrap_err();
-        assert_eq!(e, ParseTickSetError::NoIntButChar('*'));
+        assert_eq!(
+            e,
+            ParseTickSetError::Scanner(ScannerError::NoIntButChar('*'))
+        );
         assert_eq!(e.to_string(), "expected integer, got '*'");
     }
 
@@ -229,7 +168,10 @@ mod tests {
     #[test]
     fn giant_value() {
         let e = "18446744073709551616".parse::<TickSet>().unwrap_err();
-        assert_matches!(e, ParseTickSetError::NumericOverflow(_));
+        assert_matches!(
+            e,
+            ParseTickSetError::Scanner(ScannerError::NumericOverflow(_))
+        );
         assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
     }
 }
