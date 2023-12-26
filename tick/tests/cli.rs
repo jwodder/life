@@ -14,6 +14,17 @@ fn assert_str_files_eq(file1: &Path, file2: &Path) {
     pretty_assertions::assert_eq!(str1, str2);
 }
 
+fn listdir(dirpath: &Path) -> Vec<String> {
+    let mut filenames = Vec::new();
+    let diriter = read_dir(dirpath).unwrap();
+    for entry in diriter {
+        let entry = entry.unwrap();
+        filenames.push(entry.file_name().into_string().unwrap());
+    }
+    filenames.sort_unstable();
+    filenames
+}
+
 mod default_number {
     use super::*;
 
@@ -244,13 +255,7 @@ fn multiticks() {
         .arg(tmpdir.path().join("glider-%d-named.cells"))
         .assert()
         .success();
-    let mut filenames = Vec::new();
-    let diriter = read_dir(tmpdir.path()).unwrap();
-    for entry in diriter {
-        let entry = entry.unwrap();
-        filenames.push(entry.file_name().into_string().unwrap());
-    }
-    filenames.sort_unstable();
+    let filenames = listdir(tmpdir.path());
     assert_eq!(
         filenames,
         [
@@ -265,4 +270,25 @@ fn multiticks() {
             &tmpdir.path().join(fname),
         );
     }
+}
+
+#[test]
+fn create_dir() {
+    let tmpdir = TempDir::new().unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("--name")
+        .arg("Glider + 1")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(tmpdir.path().join("glider").join("%d.cells"))
+        .assert()
+        .success();
+    let filenames = listdir(tmpdir.path());
+    assert_eq!(filenames, ["glider"]);
+    let gliders = listdir(&tmpdir.path().join("glider"));
+    assert_eq!(gliders, ["1.cells"]);
+    assert_str_files_eq(
+        &Path::new(DATA_DIR).join("glider1-named.cells"),
+        &tmpdir.path().join("glider").join("1.cells"),
+    );
 }

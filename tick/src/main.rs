@@ -5,7 +5,7 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use fs_err::File;
+use fs_err::{create_dir_all, File};
 use lifelib::{
     formats::{Plaintext, Rle},
     image::{image::ImageFormat, ImageBuilder},
@@ -132,6 +132,11 @@ enum Saver {
 
 impl Saver {
     fn save(&self, pattern: Pattern, path: &Path, index: usize) -> anyhow::Result<()> {
+        if let Some(parent) = path.parent() {
+            if parent != Path::new("") {
+                create_dir_all(parent)?;
+            }
+        }
         match self {
             Saver::Plaintext { name } => {
                 let name = if let Some(tmplt) = name {
