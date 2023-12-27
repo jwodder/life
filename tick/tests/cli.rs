@@ -273,6 +273,27 @@ fn multiticks() {
 }
 
 #[test]
+fn multiticks_no_output_placeholder() {
+    let tmpdir = TempDir::new().unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("-n")
+        .arg("2-4")
+        .arg("--name=Glider + %d")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(tmpdir.path().join("glider.cells"))
+        .assert()
+        .success()
+        .stderr("tick: warning: multiple tick numbers selected but no placeholders included in output path\n");
+    let filenames = listdir(tmpdir.path());
+    assert_eq!(filenames, ["glider.cells"]);
+    assert_str_files_eq(
+        &Path::new(DATA_DIR).join("glider-4-named.cells"),
+        &tmpdir.path().join("glider.cells"),
+    );
+}
+
+#[test]
 fn create_dir() {
     let tmpdir = TempDir::new().unwrap();
     Command::cargo_bin("tick")

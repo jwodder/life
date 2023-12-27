@@ -19,6 +19,11 @@ impl TickSet {
     pub(crate) fn contains(&self, value: usize) -> bool {
         self.0.contains(&value)
     }
+
+    pub(crate) fn is_more_than_one(&self) -> bool {
+        let mut iter = self.0.iter();
+        iter.next().is_some_and(|rng| rng.start() < rng.end()) || iter.next().is_some()
+    }
 }
 
 impl FromStr for TickSet {
@@ -173,5 +178,19 @@ mod tests {
             ParseTickSetError::Scanner(ScannerError::NumericOverflow(_))
         );
         assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
+    }
+
+    #[rstest]
+    #[case("1", false)]
+    #[case("5", false)]
+    #[case("1-1", false)]
+    #[case("1,2", true)]
+    #[case("1-2", true)]
+    #[case("1,2-5", true)]
+    #[case("1-5,7", true)]
+    #[case("1-5,7-10", true)]
+    fn is_more_than_one(#[case] s: &str, #[case] b: bool) {
+        let ts = s.parse::<TickSet>().unwrap();
+        assert_eq!(ts.is_more_than_one(), b);
     }
 }

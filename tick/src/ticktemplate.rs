@@ -18,6 +18,10 @@ impl TickTemplate {
         }
     }
 
+    pub(crate) fn is_literal(&self) -> bool {
+        matches!(self.0.as_slice(), [] | [Item::Literal(_)])
+    }
+
     pub(crate) fn render(&self, value: usize) -> String {
         let mut s = String::new();
         for item in &self.0 {
@@ -289,5 +293,17 @@ mod tests {
         let e = "[%.".parse::<TickTemplate>().unwrap_err();
         assert_eq!(e, ScannerError::NoIntButEof);
         assert_eq!(e.to_string(), "expected integer, got end of string");
+    }
+
+    #[rstest]
+    #[case("foo", true)]
+    #[case("foo%d", false)]
+    #[case("%dfoo", false)]
+    #[case("foo%dbar", false)]
+    #[case("foo%%", true)]
+    #[case("", true)]
+    fn is_literal(#[case] s: &str, #[case] b: bool) {
+        let template = s.parse::<TickTemplate>().unwrap();
+        assert_eq!(template.is_literal(), b);
     }
 }

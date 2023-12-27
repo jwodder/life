@@ -178,6 +178,11 @@ impl Saver {
 
 fn main() -> anyhow::Result<()> {
     let mut args = Arguments::parse();
+    if args.outfile.is_literal() && args.ticks.is_more_than_one() {
+        eprintln!(
+            "tick: warning: multiple tick numbers selected but no placeholders included in output path"
+        );
+    }
     let saver = args.saver()?;
     let maxtick = args.ticks.maxvalue();
     let pattern = Pattern::from_file(&args.infile)?.with_edges(args.edges);
