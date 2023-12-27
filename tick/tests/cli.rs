@@ -313,3 +313,36 @@ fn create_dir() {
         &tmpdir.path().join("glider").join("1.cells"),
     );
 }
+
+#[test]
+fn create_dirs() {
+    let tmpdir = TempDir::new().unwrap();
+    Command::cargo_bin("tick")
+        .unwrap()
+        .arg("--name")
+        .arg("Glider + 1")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(
+            tmpdir
+                .path()
+                .join("glider")
+                .join("plaintext")
+                .join("%d.cells"),
+        )
+        .assert()
+        .success();
+    assert_eq!(listdir(tmpdir.path()), ["glider"]);
+    assert_eq!(listdir(&tmpdir.path().join("glider")), ["plaintext"]);
+    assert_eq!(
+        listdir(&tmpdir.path().join("glider").join("plaintext")),
+        ["1.cells"]
+    );
+    assert_str_files_eq(
+        &Path::new(DATA_DIR).join("glider1-named.cells"),
+        &tmpdir
+            .path()
+            .join("glider")
+            .join("plaintext")
+            .join("1.cells"),
+    );
+}
