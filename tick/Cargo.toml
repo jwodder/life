@@ -10,17 +10,17 @@ license.workspace = true
 publish = false
 
 [dependencies]
-anyhow = "1.0.76"
-clap = { version = "4.4.11", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+anyhow = "1.0.78"
+clap = { version = "4.4.12", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
 csscolorparser = "0.6.2"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 rangemap = "1.4.0"
-thiserror = "1.0.52"
+thiserror = "1.0.53"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
-assert_fs = "1.0.13"
+assert_fs = "1.1.0"
 assert_matches = "1.5.0"
 predicates = { version = "3.0.4", default-features = false }
 pretty_assertions = "1.4.0"
