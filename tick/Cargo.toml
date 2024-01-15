@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.79"
-clap = { version = "4.4.13", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+clap = { version = "4.4.16", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
 csscolorparser = "0.6.2"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
@@ -19,8 +19,8 @@ rangemap = "1.4.0"
 thiserror = "1.0.56"
 
 [dev-dependencies]
-assert_cmd = "2.0.12"
-assert_fs = "1.1.0"
+assert_cmd = "2.0.13"
+assert_fs = "1.1.1"
 assert_matches = "1.5.0"
 predicates = { version = "3.0.4", default-features = false }
 pretty_assertions = "1.4.0"
