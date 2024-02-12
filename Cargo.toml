@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.74"
 authors = ["John Thorvald Wodder II <life-rust@varonathe.org>"]
 repository = "https://github.com/jwodder/life"
 license = "MIT"
