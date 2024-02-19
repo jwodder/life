@@ -10,8 +10,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
-anyhow = "1.0.79"
-clap = { version = "4.5.0", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+anyhow = "1.0.80"
+clap = { version = "4.5.1", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
 csscolorparser = "0.6.2"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
