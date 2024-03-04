@@ -15,7 +15,7 @@ clap = { version = "4.5.1", default-features = false, features = ["derive", "err
 csscolorparser = "0.6.2"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
-rangemap = "1.5.0"
+rangemap = "1.5.1"
 thiserror = "1.0.57"
 
 [dev-dependencies]
