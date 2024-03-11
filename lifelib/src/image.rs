@@ -76,13 +76,12 @@ mod tests {
     use crate::PatternParser;
     use image::codecs::pnm::{PnmEncoder, PnmSubtype, SampleEncoding};
     use pretty_assertions::assert_eq;
-    use std::io::Cursor;
 
     fn img2ppm(img: RgbImage) -> String {
-        let mut buf = Cursor::new(Vec::<u8>::new());
+        let mut buf = Vec::<u8>::new();
         let enc = PnmEncoder::new(&mut buf).with_subtype(PnmSubtype::Pixmap(SampleEncoding::Ascii));
         img.write_with_encoder(enc).unwrap();
-        String::from_utf8(buf.into_inner()).unwrap()
+        String::from_utf8(buf).unwrap()
     }
 
     #[test]
