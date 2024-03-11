@@ -74,17 +74,15 @@ impl ImageBuilder {
 mod tests {
     use super::*;
     use crate::PatternParser;
-    use image::{
-        codecs::pnm::{PnmSubtype, SampleEncoding},
-        ImageOutputFormat,
-    };
+    use image::codecs::pnm::{PnmEncoder, PnmSubtype, SampleEncoding};
     use pretty_assertions::assert_eq;
     use std::io::Cursor;
 
-    fn img2bytes(img: RgbImage, fmt: ImageOutputFormat) -> Vec<u8> {
+    fn img2ppm(img: RgbImage) -> String {
         let mut buf = Cursor::new(Vec::<u8>::new());
-        img.write_to(&mut buf, fmt).unwrap();
-        buf.into_inner()
+        let enc = PnmEncoder::new(&mut buf).with_subtype(PnmSubtype::Pixmap(SampleEncoding::Ascii));
+        img.write_with_encoder(enc).unwrap();
+        String::from_utf8(buf.into_inner()).unwrap()
     }
 
     #[test]
@@ -92,11 +90,7 @@ mod tests {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap());
         let img = painter.pattern_to_image(&life);
-        let imgdata = String::from_utf8(img2bytes(
-            img,
-            ImageOutputFormat::Pnm(PnmSubtype::Pixmap(SampleEncoding::Ascii)),
-        ))
-        .unwrap();
+        let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
             include_str!("testdata/test_image1.ppm").trim_end_matches('\n')
@@ -109,11 +103,7 @@ mod tests {
         let painter =
             ImageBuilder::new(NonZeroU32::new(5).unwrap()).live_color([0xFF, 0, 0].into());
         let img = painter.pattern_to_image(&life);
-        let imgdata = String::from_utf8(img2bytes(
-            img,
-            ImageOutputFormat::Pnm(PnmSubtype::Pixmap(SampleEncoding::Ascii)),
-        ))
-        .unwrap();
+        let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
             include_str!("testdata/test_image_color.ppm").trim_end_matches('\n')
@@ -125,11 +115,7 @@ mod tests {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap()).gutter(1);
         let img = painter.pattern_to_image(&life);
-        let imgdata = String::from_utf8(img2bytes(
-            img,
-            ImageOutputFormat::Pnm(PnmSubtype::Pixmap(SampleEncoding::Ascii)),
-        ))
-        .unwrap();
+        let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
             include_str!("testdata/test_image_gutter.ppm").trim_end_matches('\n')
