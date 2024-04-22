@@ -13,7 +13,7 @@ publish = false
 
 [dependencies]
 image = { version = "0.25.1", optional = true, default-features = false }
-thiserror = "1.0.58"
+thiserror = "1.0.59"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
