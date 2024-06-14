@@ -1,7 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 pub mod errors;
 pub mod formats;
-#[cfg(feature = "image")]
 pub mod image;
 pub mod utilities;
 use crate::errors::*;
