@@ -58,7 +58,7 @@ impl<'a> Runner<'a> {
         })
     }
 
-    fn at_eol(&mut self) -> bool {
+    fn at_eol(&self) -> bool {
         self.row.map_or(true, <[State]>::is_empty)
     }
 
