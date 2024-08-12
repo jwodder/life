@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 anyhow = "1.0.82"
 clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
-csscolorparser = "0.6.2"
+csscolorparser = "0.7.0"
 fs-err = "2.11.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 rangemap = "1.5.1"
