@@ -1,9 +1,10 @@
 #![cfg(test)]
 use assert_cmd::Command;
-use assert_fs::{assert::PathAssert, NamedTempFile, TempDir};
-use predicates::path::eq_file;
+use assert_fs::{NamedTempFile, TempDir};
+use lifelib::image::image::{ImageFormat, ImageReader};
 use rstest::rstest;
-use std::fs::{read_dir, read_to_string};
+use std::fs::{read_dir, read_to_string, File};
+use std::io::BufReader;
 use std::path::Path;
 
 static DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data");
@@ -12,6 +13,18 @@ fn assert_str_files_eq(file1: &Path, file2: &Path) {
     let str1 = read_to_string(file1).unwrap();
     let str2 = read_to_string(file2).unwrap();
     pretty_assertions::assert_eq!(str1, str2);
+}
+
+fn assert_png_files_eq(file1: &Path, file2: &Path) {
+    let img1 =
+        ImageReader::with_format(BufReader::new(File::open(file1).unwrap()), ImageFormat::Png)
+            .decode()
+            .unwrap();
+    let img2 =
+        ImageReader::with_format(BufReader::new(File::open(file2).unwrap()), ImageFormat::Png)
+            .decode()
+            .unwrap();
+    assert_eq!(img1, img2);
 }
 
 fn listdir(dirpath: &Path) -> Vec<String> {
@@ -61,7 +74,7 @@ mod default_number {
             .arg(outfile.path())
             .assert()
             .success();
-        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1.png")));
+        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1.png"), &outfile);
     }
 }
 
@@ -100,7 +113,7 @@ fn number0_png() {
         .arg(outfile.path())
         .assert()
         .success();
-    outfile.assert(eq_file(Path::new(DATA_DIR).join("glider.png")));
+    assert_png_files_eq(&Path::new(DATA_DIR).join("glider.png"), &outfile);
 }
 
 #[test]
@@ -130,7 +143,7 @@ mod imgopts {
             .arg(outfile.path())
             .assert()
             .success();
-        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-red.png")));
+        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-red.png"), &outfile);
     }
 
     #[test]
@@ -144,7 +157,7 @@ mod imgopts {
             .arg(outfile.path())
             .assert()
             .success();
-        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-g1.png")));
+        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-g1.png"), &outfile);
     }
 
     #[test]
@@ -158,7 +171,7 @@ mod imgopts {
             .arg(outfile.path())
             .assert()
             .success();
-        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-s10.png")));
+        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10.png"), &outfile);
     }
 
     #[test]
@@ -174,7 +187,7 @@ mod imgopts {
             .arg(outfile.path())
             .assert()
             .success();
-        outfile.assert(eq_file(Path::new(DATA_DIR).join("glider1-s10-g2.png")));
+        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10-g2.png"), &outfile);
     }
 }
 
