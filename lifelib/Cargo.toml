@@ -12,12 +12,12 @@ categories = ["mathematics", "parser-implementations", "simulation", "visualizat
 publish = false
 
 [dependencies]
-image = { version = "0.25.1", optional = true, default-features = false }
+image = { version = "0.25.2", optional = true, default-features = false }
 thiserror = "1.0.59"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-image = { version = "0.25.1", default-features = false, features = ["pnm"] }
+image = { version = "0.25.2", default-features = false, features = ["pnm"] }
 pretty_assertions = "1.4.0"
 rstest = { version = "0.22.0", default-features = false }
 
