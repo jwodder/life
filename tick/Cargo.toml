@@ -13,7 +13,7 @@ publish = false
 anyhow = "1.0.82"
 clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
 csscolorparser = "0.7.0"
-fs-err = "2.11.0"
+fs-err = "3.0.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 rangemap = "1.5.1"
 thiserror = "1.0.59"
