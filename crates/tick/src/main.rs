@@ -1,4 +1,3 @@
-mod scanner;
 mod tickset;
 mod ticktemplate;
 use crate::tickset::TickSet;

@@ -1,4 +1,4 @@
-use crate::scanner::{Scanner, ScannerError};
+use life_utils::{Scanner, ScannerError};
 use std::fmt::Write;
 use std::path::MAIN_SEPARATOR;
 use std::str::FromStr;
@@ -79,24 +79,24 @@ impl FromStr for TickTemplate {
         let mut scanner = Scanner::new(s);
         let mut builder = TemplateBuilder::new();
         loop {
-            if scanner.maybe_scan_char('%') {
-                if scanner.maybe_scan_char('%') {
+            if scanner.maybe_expect_char('%') {
+                if scanner.maybe_expect_char('%') {
                     builder.push("%");
                 } else {
-                    let flag = if scanner.maybe_scan_char('0') {
+                    let flag = if scanner.maybe_expect_char('0') {
                         Flag::Zero
-                    } else if scanner.maybe_scan_char('-') {
+                    } else if scanner.maybe_expect_char('-') {
                         Flag::Left
                     } else {
                         Flag::None
                     };
                     let width = scanner.maybe_scan_usize()?.unwrap_or_default();
-                    let precision = if scanner.maybe_scan_char('.') {
+                    let precision = if scanner.maybe_expect_char('.') {
                         Some(scanner.scan_usize()?)
                     } else {
                         None
                     };
-                    scanner.scan_char('d')?;
+                    scanner.expect_char('d')?;
                     builder.number(flag, width, precision);
                 }
             } else if let Some(t) = scanner.scan_to('%') {
