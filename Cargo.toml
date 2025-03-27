@@ -1,5 +1,5 @@
 [workspace]
-members = ["life-utils", "lifelib", "tick"]
+members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]

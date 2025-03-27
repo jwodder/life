@@ -18,6 +18,6 @@ The packages are:
 
 [workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
-[`lifelib`]: https://github.com/jwodder/life/tree/master/lifelib
-[`tick`]: https://github.com/jwodder/life/tree/master/tick
-[`life-utils`]: https://github.com/jwodder/life/tree/master/life-utils
+[`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib
+[`tick`]: https://github.com/jwodder/life/tree/master/crates/tick
+[`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils
