@@ -1,5 +1,6 @@
-use super::util::{ascii_lines, scan_some, split_at_newline};
+use super::util::{ascii_lines, split_at_newline};
 use crate::{Pattern, Run, RunType, State};
+use life_utils::{Scanner, ScannerError};
 use std::fmt;
 use std::iter::FusedIterator;
 use std::num::{NonZeroUsize, ParseIntError};
@@ -206,6 +207,15 @@ pub enum RleError {
     UnexpectedEof,
 }
 
+impl From<ScannerError> for RleError {
+    fn from(e: ScannerError) -> RleError {
+        match e {
+            ScannerError::NumericOverflow(src) => RleError::NumericOverflow(src),
+            _ => RleError::InvalidHeader,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct CommentParser<'a>(&'a str);
 
@@ -238,7 +248,7 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     scanner.skip_whitespace();
     scanner.expect_char('=')?;
     scanner.skip_whitespace();
-    let width = scanner.scan_usize()?.ok_or(RleError::InvalidHeader)?;
+    let width = scanner.scan_usize()?;
     scanner.skip_whitespace();
     scanner.expect_char(',')?;
     scanner.skip_whitespace();
@@ -246,7 +256,7 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     scanner.skip_whitespace();
     scanner.expect_char('=')?;
     scanner.skip_whitespace();
-    let height = scanner.scan_usize()?.ok_or(RleError::InvalidHeader)?;
+    let height = scanner.scan_usize()?;
     scanner.skip_whitespace();
     if !scanner.is_empty() {
         scanner.expect_char(',')?;
@@ -285,12 +295,12 @@ impl Iterator for ParsedRuns<'_> {
             if self.0.expect_char('!').is_ok() {
                 return None;
             }
-            let length = match self.0.scan_usize() {
+            let length = match self.0.maybe_scan_usize() {
                 Ok(Some(length)) => length,
                 Ok(None) => 1,
                 Err(e) => return Some(Err(e.into())),
             };
-            let run_type = match self.0.scan_char() {
+            let run_type = match self.0.maybe_scan_char() {
                 Some('b' | 'B') => RunType::Dead,
                 Some(c) if c.is_ascii_alphabetic() => RunType::Live,
                 Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
@@ -306,69 +316,6 @@ impl Iterator for ParsedRuns<'_> {
 }
 
 impl FusedIterator for ParsedRuns<'_> {}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-struct Scanner<'a>(&'a str);
-
-impl<'a> Scanner<'a> {
-    fn new(s: &'a str) -> Scanner<'a> {
-        Scanner(s)
-    }
-
-    fn skip_whitespace(&mut self) {
-        self.0 = self.0.trim_start();
-    }
-
-    fn scan_char(&mut self) -> Option<char> {
-        let c = self.0.chars().next()?;
-        self.0 = &self.0[c.len_utf8()..];
-        Some(c)
-    }
-
-    fn expect_char(&mut self, c: char) -> Result<(), RleError> {
-        if let Some(t) = self.0.strip_prefix(c) {
-            self.0 = t;
-            Ok(())
-        } else {
-            Err(RleError::InvalidHeader)
-        }
-    }
-
-    fn expect_str(&mut self, s: &str) -> Result<(), RleError> {
-        if let Some(t) = self.0.strip_prefix(s) {
-            self.0 = t;
-            Ok(())
-        } else {
-            Err(RleError::InvalidHeader)
-        }
-    }
-
-    fn expect_str_ignore_ascii_case(&mut self, s: &str) -> Result<(), RleError> {
-        if self
-            .0
-            .get(0..s.len())
-            .is_some_and(|t| t.eq_ignore_ascii_case(s))
-        {
-            self.0 = &self.0[s.len()..];
-            Ok(())
-        } else {
-            Err(RleError::InvalidHeader)
-        }
-    }
-
-    fn scan_usize(&mut self) -> Result<Option<usize>, ParseIntError> {
-        let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
-            return Ok(None);
-        };
-        let value = digits.parse::<usize>()?;
-        self.0 = s;
-        Ok(Some(value))
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
 
 #[cfg(test)]
 mod tests {

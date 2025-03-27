@@ -1,4 +1,4 @@
-use crate::scanner::{Scanner, ScannerError};
+use life_utils::{Scanner, ScannerError};
 use rangemap::RangeInclusiveSet;
 use std::str::FromStr;
 use thiserror::Error;
@@ -39,12 +39,12 @@ impl FromStr for TickSet {
                 break;
             }
             if !std::mem::replace(&mut first, false) {
-                scanner.scan_char(',')?;
+                scanner.expect_char(',')?;
                 scanner.skip_whitespace();
             }
             let start = scanner.scan_usize()?;
             scanner.skip_whitespace();
-            if scanner.maybe_scan_char('-') {
+            if scanner.maybe_expect_char('-') {
                 scanner.skip_whitespace();
                 let end = scanner.scan_usize()?;
                 if start > end {

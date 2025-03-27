@@ -2,18 +2,18 @@ use std::num::ParseIntError;
 use thiserror::Error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Scanner<'a>(&'a str);
+pub struct Scanner<'a>(&'a str);
 
 impl<'a> Scanner<'a> {
-    pub(crate) fn new(s: &'a str) -> Scanner<'a> {
+    pub fn new(s: &'a str) -> Scanner<'a> {
         Scanner(s)
     }
 
-    pub(crate) fn skip_whitespace(&mut self) {
+    pub fn skip_whitespace(&mut self) {
         self.0 = self.0.trim_start();
     }
 
-    pub(crate) fn scan_usize(&mut self) -> Result<usize, ScannerError> {
+    pub fn scan_usize(&mut self) -> Result<usize, ScannerError> {
         let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
             if let Some(c) = self.peek_char() {
                 return Err(ScannerError::NoIntButChar(c));
@@ -26,7 +26,7 @@ impl<'a> Scanner<'a> {
         Ok(value)
     }
 
-    pub(crate) fn maybe_scan_usize(&mut self) -> Result<Option<usize>, ScannerError> {
+    pub fn maybe_scan_usize(&mut self) -> Result<Option<usize>, ScannerError> {
         let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
             return Ok(None);
         };
@@ -35,7 +35,13 @@ impl<'a> Scanner<'a> {
         Ok(Some(value))
     }
 
-    pub(crate) fn scan_char(&mut self, ch: char) -> Result<(), ScannerError> {
+    pub fn maybe_scan_char(&mut self) -> Option<char> {
+        let c = self.0.chars().next()?;
+        self.0 = &self.0[c.len_utf8()..];
+        Some(c)
+    }
+
+    pub fn expect_char(&mut self, ch: char) -> Result<(), ScannerError> {
         if let Some(t) = self.0.strip_prefix(ch) {
             self.0 = t;
             Ok(())
@@ -46,7 +52,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub(crate) fn maybe_scan_char(&mut self, ch: char) -> bool {
+    pub fn maybe_expect_char(&mut self, ch: char) -> bool {
         if let Some(t) = self.0.strip_prefix(ch) {
             self.0 = t;
             true
@@ -55,11 +61,37 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub(crate) fn peek_char(&self) -> Option<char> {
+    pub fn expect_str(&mut self, s: &str) -> Result<(), ScannerError> {
+        if let Some(t) = self.0.strip_prefix(s) {
+            self.0 = t;
+            Ok(())
+        } else {
+            Err(ScannerError::ExpectedStr(s.to_owned()))
+        }
+    }
+
+    pub fn expect_str_ignore_ascii_case(&mut self, s: &str) -> Result<(), ScannerError> {
+        if self
+            .0
+            .get(0..s.len())
+            .is_some_and(|t| t.eq_ignore_ascii_case(s))
+        {
+            self.0 = &self.0[s.len()..];
+            Ok(())
+        } else {
+            Err(ScannerError::ExpectedStr(s.to_owned()))
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn peek_char(&self) -> Option<char> {
         self.0.chars().next()
     }
 
-    pub(crate) fn scan_to(&mut self, ch: char) -> Option<&str> {
+    pub fn scan_to(&mut self, ch: char) -> Option<&str> {
         let i = self.0.find(ch).unwrap_or(self.0.len());
         (i > 0).then(|| {
             let s = &self.0[..i];
@@ -67,14 +99,10 @@ impl<'a> Scanner<'a> {
             s
         })
     }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
 }
 
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
-pub(crate) enum ScannerError {
+pub enum ScannerError {
     #[error("expected integer, got {0:?}")]
     NoIntButChar(char),
     #[error("expected integer, got end of string")]
@@ -85,6 +113,8 @@ pub(crate) enum ScannerError {
     NotCharButEof(char),
     #[error("numeric value exceeds integer bounds")]
     NumericOverflow(#[from] ParseIntError),
+    #[error("expected {0:?}, did not find")]
+    ExpectedStr(String),
 }
 
 /// Divides a string in two before the first character that does not satisfy
@@ -93,7 +123,7 @@ pub(crate) enum ScannerError {
 ///
 /// Note that the first part is the maximal leading substring of `s` whose
 /// characters all satisfy `predicate`.
-fn scan_some<P: FnMut(char) -> bool>(s: &str, mut predicate: P) -> Option<(&str, &str)> {
+pub fn scan_some<P: FnMut(char) -> bool>(s: &str, mut predicate: P) -> Option<(&str, &str)> {
     let boundary = s
         .char_indices()
         .find(move |&(_, ch)| !predicate(ch))

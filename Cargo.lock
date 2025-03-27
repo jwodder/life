@@ -608,11 +608,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "life-utils"
+version = "0.0.0"
+dependencies = [
+ "thiserror 2.0.11",
+]
+
+[[package]]
 name = "lifelib"
 version = "0.1.0-dev"
 dependencies = [
  "assert_matches",
  "image",
+ "life-utils",
  "pretty_assertions",
  "rstest",
  "thiserror 2.0.11",
@@ -1310,6 +1318,7 @@ dependencies = [
  "clap",
  "csscolorparser",
  "fs-err",
+ "life-utils",
  "lifelib",
  "predicates",
  "pretty_assertions",
