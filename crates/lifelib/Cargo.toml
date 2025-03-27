@@ -1,6 +1,6 @@
 [package]
 name = "lifelib"
-version = "0.1.0-dev"
+version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Conway's Game of Life in Rust"

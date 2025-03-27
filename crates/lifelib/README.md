@@ -3,7 +3,7 @@
 
 This is a Rust library implementing [Conway's Game of Life][], including
 reading & writing patterns in common [file formats][] and rendering patterns as
-image files.  It is intended solely for personal use.
+image files.
 
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
 [file formats]: https://conwaylife.com/wiki/File_formats

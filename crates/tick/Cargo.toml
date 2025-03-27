@@ -1,6 +1,6 @@
 [package]
 name = "tick"
-version = "0.1.0-dev"
+version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Command for advancing Game of Life patterns"
