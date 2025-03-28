@@ -35,7 +35,7 @@ impl ImageBuilder {
     ///
     /// Panics if the image width or image height does not fit in a `u32`, or
     /// when [`image::ImageBuffer::new()`] panics.
-    pub fn pattern_to_image(&self, life: &Pattern) -> RgbImage {
+    pub fn render(&self, life: &Pattern) -> RgbImage {
         let cell_size = self.cell_size.get();
         let pat_width = u32::try_from(life.width()).expect("Pattern width should fit in a u32");
         let pat_height = u32::try_from(life.height()).expect("Pattern height should fit in a u32");
@@ -88,7 +88,7 @@ mod tests {
     fn test_image1() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap());
-        let img = painter.pattern_to_image(&life);
+        let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
@@ -101,7 +101,7 @@ mod tests {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter =
             ImageBuilder::new(NonZeroU32::new(5).unwrap()).live_color([0xFF, 0, 0].into());
-        let img = painter.pattern_to_image(&life);
+        let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
@@ -113,7 +113,7 @@ mod tests {
     fn test_image_gutter() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap()).gutter(1);
-        let img = painter.pattern_to_image(&life);
+        let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
