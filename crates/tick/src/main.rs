@@ -6,7 +6,7 @@ use anyhow::Context;
 use clap::Parser;
 use fs_err::{create_dir_all, File};
 use lifelib::{
-    formats::{Plaintext, Rle},
+    formats::{Letter, Plaintext, Rle},
     image::{image::ImageFormat, ImageBuilder},
     Edges, Pattern,
 };
@@ -157,7 +157,7 @@ impl Saver {
             }
             Saver::Rle { name } => {
                 let comments = if let Some(tmplt) = name {
-                    vec![('N', tmplt.render(index))]
+                    vec![(Letter::NAME_TYPE, tmplt.render(index))]
                 } else {
                     Vec::new()
                 };

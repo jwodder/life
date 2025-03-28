@@ -22,7 +22,7 @@ pub struct Rle {
     /// `comments` contains one or more non-final newlines, each line in the
     /// text will be converted to a separate `#` line with the same type
     /// letter.  If the text ends in a newline, that newline is ignored.
-    pub comments: Vec<(char, String)>,
+    pub comments: Vec<(Letter, String)>,
 
     /// The pattern itself
     pub pattern: Pattern,
@@ -33,7 +33,7 @@ impl Rle {
     pub fn get_name(&self) -> Option<&str> {
         self.comments
             .iter()
-            .find_map(|(ty, text)| (*ty == 'N').then_some(&**text))
+            .find_map(|(ty, text)| (*ty == Letter::NAME_TYPE).then_some(&**text))
     }
 
     /// Set the text of the first `#` line of type `'N'` to `name` and remove
@@ -41,7 +41,7 @@ impl Rle {
     pub fn set_name(&mut self, name: String) {
         let mut value = Some(name);
         self.comments.retain_mut(|(ty, text)| {
-            if *ty != 'N' {
+            if *ty != Letter::NAME_TYPE {
                 true
             } else if let Some(n) = value.take() {
                 *text = n;
@@ -51,7 +51,7 @@ impl Rle {
             }
         });
         if let Some(n) = value.take() {
-            self.comments.push(('N', n));
+            self.comments.push((Letter::NAME_TYPE, n));
         }
     }
 }
@@ -173,6 +173,9 @@ pub enum RleError {
     #[error("no space after {0:?} type in '#' line")]
     NoSpaceAfterType(char),
 
+    #[error("invalid type character {:?} for '#' line", .0.0)]
+    InvalidType(#[from] ParseLetterError),
+
     /// Returned if the input did not contain any characters outside of `#`
     /// lines
     #[error("no data in RLE input")]
@@ -213,11 +216,49 @@ impl From<ScannerError> for RleError {
     }
 }
 
+/// An ASCII letter
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Letter(char);
+
+impl Letter {
+    pub const NAME_TYPE: Letter = Letter('N');
+    pub const COMMENT_TYPE: Letter = Letter('C');
+    pub const ALT_COMMENT_TYPE: Letter = Letter('c');
+}
+
+impl From<Letter> for char {
+    fn from(value: Letter) -> char {
+        value.0
+    }
+}
+
+impl TryFrom<char> for Letter {
+    type Error = ParseLetterError;
+
+    fn try_from(c: char) -> Result<Letter, ParseLetterError> {
+        if c.is_ascii_alphabetic() {
+            Ok(Letter(c))
+        } else {
+            Err(ParseLetterError(c))
+        }
+    }
+}
+
+impl fmt::Display for Letter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Error, Hash, Ord, PartialEq, PartialOrd)]
+#[error("{0:?} is not an ASCII letter")]
+pub struct ParseLetterError(char);
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct CommentParser<'a>(&'a str);
 
 impl<'a> CommentParser<'a> {
-    fn next_comment(&mut self) -> Result<Option<(char, &'a str)>, RleError> {
+    fn next_comment(&mut self) -> Result<Option<(Letter, &'a str)>, RleError> {
         loop {
             let Some((line, rem)) = split_at_newline(self.0) else {
                 return Ok(None);
@@ -230,10 +271,11 @@ impl<'a> CommentParser<'a> {
                 return Ok(None);
             };
             let ty = line.chars().next().ok_or(RleError::NoType)?;
-            let rest = &line[ty.len_utf8()..];
+            let ty = Letter::try_from(ty)?;
+            let rest = &line[1..];
             let text = rest.trim_start_matches(' ');
             if std::ptr::eq(rest, text) {
-                return Err(RleError::NoSpaceAfterType(ty));
+                return Err(RleError::NoSpaceAfterType(char::from(ty)));
             }
             self.0 = rem;
             return Ok(Some((ty, text)));
@@ -330,7 +372,10 @@ mod tests {
     fn glider() {
         let s = "#C This is a glider.\nx = 3, y = 3\nbo$2bo$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.comments, [('C', String::from("This is a glider."))]);
+        assert_eq!(
+            rle.comments,
+            [(Letter::COMMENT_TYPE, String::from("This is a glider."))]
+        );
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), s);
     }
@@ -348,13 +393,13 @@ mod tests {
         assert_eq!(
             rle.comments,
             [
-                ('N', String::from("beehiveoncap.rle")),
+                (Letter::NAME_TYPE, String::from("beehiveoncap.rle")),
                 (
-                    'C',
+                    Letter::COMMENT_TYPE,
                     String::from("https://conwaylife.com/wiki/Beehive_on_cap")
                 ),
                 (
-                    'C',
+                    Letter::COMMENT_TYPE,
                     String::from("https://www.conwaylife.com/patterns/beehiveoncap.rle")
                 ),
             ]
@@ -485,7 +530,7 @@ mod tests {
     fn empty_comment() {
         let s = "#C \nx = 3, y = 3\nbo$2bo$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.comments, [('C', String::new())]);
+        assert_eq!(rle.comments, [(Letter::COMMENT_TYPE, String::new())]);
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
     }
@@ -494,7 +539,7 @@ mod tests {
     fn whitespace_comment() {
         let s = "#C  \nx = 3, y = 3\nbo$2bo$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.comments, [('C', String::new())]);
+        assert_eq!(rle.comments, [(Letter::COMMENT_TYPE, String::new())]);
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
     }
@@ -590,7 +635,7 @@ mod tests {
     #[test]
     fn multiline_comment() {
         let rle = Rle {
-            comments: vec![('C', String::from("Line 1\nLine 2\n"))],
+            comments: vec![(Letter::COMMENT_TYPE, String::from("Line 1\nLine 2\n"))],
             pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
         };
         assert_eq!(
@@ -815,6 +860,14 @@ mod tests {
             let e = s.parse::<Rle>().unwrap_err();
             assert_eq!(e, RleError::InvalidHeader);
             assert_eq!(e.to_string(), "invalid header line");
+        }
+
+        #[test]
+        fn invalid_type() {
+            let s = "#? What is this?\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidType(ParseLetterError('?')));
+            assert_eq!(e.to_string(), "invalid type character '?' for '#' line");
         }
     }
 }
