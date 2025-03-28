@@ -61,7 +61,7 @@ pub struct Plaintext {
     /// non-final newlines, each line in `name` after the first will be
     /// converted to a comment.  If `name` ends in a newline, that newline is
     /// ignored.
-    pub name: String,
+    pub name: Option<String>,
 
     /// Comments on the pattern
     ///
@@ -77,13 +77,15 @@ pub struct Plaintext {
 
 impl fmt::Display for Plaintext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut namelines = ascii_lines(&self.name);
-        let Some(name) = namelines.next() else {
-            unreachable!("ascii_lines() should yield at least one element");
-        };
-        writeln!(f, "!Name: {name}")?;
-        for ln in namelines {
-            writeln!(f, "!{ln}")?;
+        if let Some(ref namestr) = self.name {
+            let mut namelines = ascii_lines(namestr);
+            let Some(name) = namelines.next() else {
+                unreachable!("ascii_lines() should yield at least one element");
+            };
+            writeln!(f, "!Name: {name}")?;
+            for ln in namelines {
+                writeln!(f, "!{ln}")?;
+            }
         }
         for c in &self.comments {
             for ln in ascii_lines(c) {
@@ -106,19 +108,13 @@ impl FromStr for Plaintext {
     /// the pattern drawing contains any characters other than `.`, `O`, and
     /// newline sequences.
     fn from_str(s: &str) -> Result<Plaintext, PlaintextError> {
-        let mut lines = ascii_lines(s);
-        let name = lines
-            .next()
-            .and_then(|ln| ln.strip_prefix("!Name: "))
-            .ok_or(PlaintextError::NoName)?
-            .trim_start_matches(' ');
-        let mut comments = Vec::new();
+        let mut comments = std::collections::VecDeque::new();
         let mut builder = PatternBuilder::new();
         let mut y = 0;
-        for ln in lines {
+        for ln in ascii_lines(s) {
             if let Some(comm) = ln.strip_prefix('!') {
                 if y == 0 {
-                    comments.push(String::from(comm));
+                    comments.push_back(String::from(comm));
                 } else {
                     return Err(PlaintextError::InvalidChar('!'));
                 }
@@ -137,9 +133,16 @@ impl FromStr for Plaintext {
         }
         // Ensure that trailing dead rows count towards the height:
         builder = builder.min_height(y);
+        let name = comments
+            .front()
+            .and_then(|ln| ln.strip_prefix("Name: "))
+            .map(|n| n.trim_start_matches(' ').to_owned());
+        if name.is_some() {
+            let _ = comments.pop_front();
+        }
         Ok(Plaintext {
-            name: String::from(name),
-            comments,
+            name,
+            comments: Vec::from(comments),
             pattern: builder.build(),
         })
     }
@@ -153,10 +156,6 @@ impl From<Plaintext> for Pattern {
 
 #[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 pub enum PlaintextError {
-    /// Returned if the input does not start with `"!Name: "`
-    #[error(r#"plaintext input does not start with "!Name:" line"#)]
-    NoName,
-
     /// Returned if the pattern drawing contains any characters other than `.`,
     /// `O`, and newline sequences
     #[error("plaintext drawing contains invalid character {0:?}")]
@@ -172,7 +171,7 @@ mod tests {
     fn glider() {
         let s = "!Name: Glider\n!\n.O.\n..O\nOOO\n";
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Glider");
+        assert_eq!(pt.name.as_ref().unwrap(), "Glider");
         assert_eq!(pt.comments, [""]);
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(pt.to_string(), s);
@@ -182,7 +181,7 @@ mod tests {
     fn empty() {
         let s = "!Name: Empty\n";
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Empty");
+        assert_eq!(pt.name.as_ref().unwrap(), "Empty");
         assert!(pt.comments.is_empty());
         assert_eq!(pt.pattern.height(), 0);
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), "");
@@ -193,7 +192,7 @@ mod tests {
     fn dot() {
         let s = "!Name: Dot\n.\n";
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Dot");
+        assert_eq!(pt.name.as_ref().unwrap(), "Dot");
         assert!(pt.comments.is_empty());
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".");
         assert_eq!(pt.to_string(), s);
@@ -211,7 +210,7 @@ mod tests {
             "OO..OOO\n",
         );
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Acorn");
+        assert_eq!(pt.name.as_ref().unwrap(), "Acorn");
         assert_eq!(
             pt.comments,
             [
@@ -242,7 +241,7 @@ mod tests {
     fn leading_trailing_blank_lines() {
         let s = "!Name: Glider\n\n.O.\n..O\nOOO\n\n";
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Glider");
+        assert_eq!(pt.name.as_ref().unwrap(), "Glider");
         assert!(pt.comments.is_empty());
         assert_eq!(
             pt.pattern.draw('.', 'O').to_string(),
@@ -266,7 +265,7 @@ mod tests {
             "OO..OO\n",
         );
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Beehive and dock");
+        assert_eq!(pt.name.as_ref().unwrap(), "Beehive and dock");
         assert_eq!(pt.comments, ["https://conwaylife.com/ref/lexicon/lex_b.htm#beehiveanddock"]);
         assert_eq!(
             pt.pattern.draw('.', 'O').to_string(),
@@ -308,7 +307,7 @@ mod tests {
     fn one_blank_line() {
         let s = "!Name: Blank line\n\n";
         let pt = s.parse::<Plaintext>().unwrap();
-        assert_eq!(pt.name, "Blank line");
+        assert_eq!(pt.name.as_ref().unwrap(), "Blank line");
         assert!(pt.comments.is_empty());
         assert_eq!(pt.pattern.height(), 0);
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), "");
@@ -318,7 +317,7 @@ mod tests {
     #[test]
     fn display_multiline_name() {
         let pt = Plaintext {
-            name: String::from("Line 1\nLine 2"),
+            name: Some(String::from("Line 1\nLine 2")),
             comments: Vec::new(),
             pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
         };
@@ -328,7 +327,7 @@ mod tests {
     #[test]
     fn display_multiline_comment() {
         let pt = Plaintext {
-            name: String::from("Pattern"),
+            name: Some(String::from("Pattern")),
             comments: vec![String::from("Line 1\nLine 2")],
             pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
         };
@@ -341,10 +340,30 @@ mod tests {
     #[test]
     fn display_empty_name_and_comment() {
         let pt = Plaintext {
-            name: String::new(),
+            name: Some(String::new()),
             comments: vec![String::new()],
             pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
         };
         assert_eq!(pt.to_string(), "!Name: \n!\n.O.\n..O\nOOO\n");
+    }
+
+    #[test]
+    fn no_name() {
+        let s = ".O.\n..O\nOOO\n";
+        let pt = s.parse::<Plaintext>().unwrap();
+        assert_eq!(pt.name, None);
+        assert!(pt.comments.is_empty());
+        assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(pt.to_string(), s);
+    }
+
+    #[test]
+    fn comment_no_name() {
+        let s = "!Glider\n.O.\n..O\nOOO\n";
+        let pt = s.parse::<Plaintext>().unwrap();
+        assert_eq!(pt.name, None);
+        assert_eq!(pt.comments, ["Glider"]);
+        assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(pt.to_string(), s);
     }
 }

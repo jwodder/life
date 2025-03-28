@@ -147,7 +147,7 @@ impl Saver {
                     )
                 };
                 let pt = Plaintext {
-                    name,
+                    name: Some(name),
                     comments: Vec::new(),
                     pattern,
                 };
