@@ -120,9 +120,6 @@ impl FromStr for Rle {
     /// - Specifications for cells outside the width & height given in the
     ///   header are accepted but ignored.
     ///
-    /// - 'b' and 'B' are parsed as dead cells.  All other ASCII letters are
-    ///   parsed as live cells.
-    ///
     /// - Run counts of zero are accepted but, obviously, have no effect.
     fn from_str(s: &str) -> Result<Rle, RleError> {
         let mut cparser = CommentParser(s);
@@ -301,10 +298,10 @@ impl Iterator for ParsedRuns<'_> {
                 Err(e) => return Some(Err(e.into())),
             };
             let run_type = match self.0.maybe_scan_char() {
-                Some('b' | 'B') => RunType::Dead,
-                Some(c) if c.is_ascii_alphabetic() => RunType::Live,
-                Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
+                Some('b') => RunType::Dead,
+                Some('o') => RunType::Live,
                 Some('$') => RunType::Eol,
+                Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
                 Some(c) => return Some(Err(RleError::InvalidChar(c))),
                 None => return Some(Err(RleError::UnexpectedEof)),
             };
@@ -475,14 +472,6 @@ mod tests {
             "...\n.O.\n..O\nOOO\n..."
         );
         assert_eq!(rle.to_string(), s);
-    }
-
-    #[test]
-    fn alternative_letters() {
-        let s = "x = 3, y = 3\nBO$2bq\n$3L\n!\n";
-        let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
-        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
     }
 
     #[test]
@@ -735,6 +724,14 @@ mod tests {
             let e = s.parse::<Rle>().unwrap_err();
             assert_eq!(e, RleError::UnsupportedRule);
             assert_eq!(e.to_string(), "header specifies unsupported rule");
+        }
+
+        #[test]
+        fn alternative_letters() {
+            let s = "x = 3, y = 3\nBO$2bq\n$3L\n!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidChar('B'));
+            assert_eq!(e.to_string(), "invalid character 'B' in data");
         }
     }
 }
