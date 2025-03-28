@@ -16,9 +16,9 @@ The packages are:
 
 - [`life-utils`][] — Internal utilities used by multiple packages
 
-This workspace as a whole is a personal project for personal experimentation
-and is not intended to be generally/widely used by others.  Use anything here
-at your own risk.
+This workspace as a whole is a hobby project for personal experimentation &
+edification and is not intended to be generally/widely used by others.  Use
+anything here at your own risk.
 
 [workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
