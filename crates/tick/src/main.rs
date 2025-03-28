@@ -167,7 +167,7 @@ impl Saver {
                 fp.flush()?;
             }
             Saver::Image { builder } => builder
-                .pattern_to_image(&pattern)
+                .render(&pattern)
                 .save(path)
                 .context("failed to write image file")?,
         }

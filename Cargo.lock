@@ -616,7 +616,7 @@ dependencies = [
 
 [[package]]
 name = "lifelib"
-version = "0.1.0-dev"
+version = "0.0.0"
 dependencies = [
  "assert_matches",
  "image",
@@ -1309,7 +1309,7 @@ dependencies = [
 
 [[package]]
 name = "tick"
-version = "0.1.0-dev"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
