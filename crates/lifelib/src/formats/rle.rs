@@ -106,7 +106,7 @@ impl FromStr for Rle {
     ///   freeform text.
     ///
     /// - Blank lines (containing no characters other than Unicode whitespace)
-    ///   are permitted between the `#` lines (if any) and the header line.
+    ///   are permitted at any point.
     ///
     /// - Tokens in the header line may be surrounded by zero or more Unicode
     ///   whitespace characters other than newline sequences.
@@ -218,19 +218,26 @@ struct CommentParser<'a>(&'a str);
 
 impl<'a> CommentParser<'a> {
     fn next_comment(&mut self) -> Result<Option<(char, &'a str)>, RleError> {
-        let Some((line, rem)) =
-            split_at_newline(self.0).and_then(|(ln, r)| Some((ln.strip_prefix('#')?, r)))
-        else {
-            return Ok(None);
-        };
-        let ty = line.chars().next().ok_or(RleError::NoType)?;
-        let rest = &line[ty.len_utf8()..];
-        let text = rest.trim_start_matches(' ');
-        if std::ptr::eq(rest, text) {
-            return Err(RleError::NoSpaceAfterType(ty));
+        loop {
+            let Some((line, rem)) = split_at_newline(self.0) else {
+                return Ok(None);
+            };
+            if line.chars().all(|c| matches!(c, ' ' | '\t')) {
+                self.0 = rem;
+                continue;
+            }
+            let Some(line) = line.strip_prefix('#') else {
+                return Ok(None);
+            };
+            let ty = line.chars().next().ok_or(RleError::NoType)?;
+            let rest = &line[ty.len_utf8()..];
+            let text = rest.trim_start_matches(' ');
+            if std::ptr::eq(rest, text) {
+                return Err(RleError::NoSpaceAfterType(ty));
+            }
+            self.0 = rem;
+            return Ok(Some((ty, text)));
         }
-        self.0 = rem;
-        Ok(Some((ty, text)))
     }
 
     fn into_inner(self) -> &'a str {
@@ -502,6 +509,42 @@ mod tests {
             "\n",
             "x = 6, y = 6, rule = 23/3\n",
             "2o4b$obo3b$2bo3b$2bobob$3bobo$4bo!\n",
+        );
+        let rle = s.parse::<Rle>().unwrap();
+        assert_eq!(
+            rle.pattern.draw('.', 'O').to_string(),
+            "OO....\nO.O...\n..O...\n..O.O.\n...O.O\n....O."
+        );
+        assert_eq!(
+            rle.to_string(),
+            concat!(
+                "#N tubwithnine.rle\n",
+                "#C https://conwaylife.com/wiki/Tub_with_nine\n",
+                "#C https://www.conwaylife.com/patterns/tubwithnine.rle\n",
+                "x = 6, y = 6\n",
+                "2o$obo$2bo$2bobo$3bobo$4bo!\n",
+            )
+        );
+    }
+
+    #[test]
+    fn more_blank_lines() {
+        let s = concat!(
+            "\n",
+            "#N tubwithnine.rle\n",
+            "\n",
+            " \n",
+            "\n",
+            "#C https://conwaylife.com/wiki/Tub_with_nine\n",
+            "\n",
+            "#C https://www.conwaylife.com/patterns/tubwithnine.rle\n",
+            " \n",
+            "\n",
+            "x = 6, y = 6, rule = 23/3\n",
+            "\n",
+            "2o4b$obo3b$2bo3b$\n",
+            " \n",
+            "2bobob$3bobo$4bo!\n",
         );
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(
