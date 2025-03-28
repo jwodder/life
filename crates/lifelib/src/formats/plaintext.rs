@@ -7,54 +7,14 @@ use std::str::FromStr;
 use thiserror::Error;
 
 /// A pattern represented in the [plaintext file
-/// format](https://conwaylife.com/wiki/Plaintext)
+/// format](https://conwaylife.com/wiki/Plaintext).  The exact format accepted
+/// by `lifelib` is described in [`doc/plaintext.md`][1].
+///
+/// [1]: https://github.com/jwodder/life/blob/master/doc/plaintext.md
 ///
 /// A `Plaintext` instance can be constructed from a plaintext string via
 /// [`FromStr`] and converted to the plaintext format via
 /// [`Display`][fmt::Display] (which includes a trailing newline).
-///
-/// # Format
-///
-/// The plaintext file format encodes a Game of Life pattern as follows:
-///
-/// - The first line must start with `"!Name:"`.  The rest of the line is a
-///   name for the pattern.
-///
-///   - This implementation requires that the colon be followed by one or more
-///     space (U+0020) characters, all of which are discarded when parsing.
-///
-///   - This implementation accepts empty names.
-///
-/// - After the first line, there may be any number of comment lines, each of
-///   which begins with an exclamation point (`!`), which is discarded when
-///   parsing.
-///
-/// - The remaining lines define the pattern itself via an ASCII drawing.  Each
-///   row of the pattern is represented as a line in which `.` denotes a dead
-///   cell and `O` denotes a live cell.
-///
-///   - Drawings in which not all lines are of the same length are accepted but
-///     discouraged.
-///
-///   - Blank lines in a drawing (denoting rows composed entirely of dead
-///     cells) are accepted but discouraged.
-///
-///   - This implementation does not accept any characters other than `.`, `O`,
-///     and newlines in a drawing.  In particular, comments may not occur in
-///     the middle of a drawing.
-///
-/// - This implementation recognizes only LF, CR, and CR LF as newline
-///   sequences.
-///
-/// A plaintext encoding of the [glider](https://conwaylife.com/wiki/Glider):
-///
-/// ```text
-/// !Name: Glider
-/// !Very famous.
-/// .O.
-/// ..O
-/// OOO
-/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Plaintext {
     /// Name of the pattern

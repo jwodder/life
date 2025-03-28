@@ -10,7 +10,10 @@ use std::str::FromStr;
 use thiserror::Error;
 
 /// A pattern represented in the [run length encoded file
-/// format](https://conwaylife.com/wiki/Run_Length_Encoded)
+/// format](https://conwaylife.com/wiki/Run_Length_Encoded).  The exact format
+/// accepted by `lifelib` is described in [`doc/rle.md`][1].
+///
+/// [1]: https://github.com/jwodder/life/blob/master/doc/rle.md
 ///
 /// An `Rle` instance can be constructed from an RLE string via [`FromStr`] and
 /// converted to the RLE format via [`Display`][fmt::Display] (which includes a
@@ -90,32 +93,6 @@ impl FromStr for Rle {
     /// # Errors
     ///
     /// See [`RleError`] for the various error conditions.
-    ///
-    /// # Implementation-Specific Parsing Details
-    ///
-    /// This implementation makes the following decisions about how to parse
-    /// the RLE format:
-    ///
-    /// - A `#` line must consist of, in order, a `#`, any single non-newline
-    ///   character, one or more space (U+0020) characters (discarded), and
-    ///   freeform text.
-    ///
-    /// - Blank lines (containing no characters other than Unicode whitespace)
-    ///   are permitted at any point.
-    ///
-    /// - Tokens in the header line may be surrounded by zero or more Unicode
-    ///   whitespace characters other than newline sequences.
-    ///
-    /// - The header line may contain an optional "rule" field, but it must
-    ///   equal `B3/S23` or `23/3`.
-    ///
-    /// - Tokens in the pattern data may be separated by zero or more Unicode
-    ///   whitespace characters.
-    ///
-    /// - Specifications for cells outside the width & height given in the
-    ///   header are accepted but ignored.
-    ///
-    /// - Run counts of zero are accepted but, obviously, have no effect.
     fn from_str(s: &str) -> Result<Rle, RleError> {
         let mut cparser = CommentParser(s);
         let mut comments = Vec::new();
