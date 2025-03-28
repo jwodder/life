@@ -127,7 +127,7 @@ impl FromStr for Rle {
         while let Some((ty, text)) = cparser.next_comment()? {
             comments.push((ty, text.to_owned()));
         }
-        let s = cparser.into_inner().trim_start();
+        let s = cparser.into_inner();
         let (header, data) = match split_at_newline(s) {
             Some(hd) => hd,
             None if !s.is_empty() => (s, ""),
@@ -247,33 +247,33 @@ impl<'a> CommentParser<'a> {
 
 fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
     let mut scanner = Scanner::new(header);
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     scanner.expect_char('x')?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     scanner.expect_char('=')?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     let width = scanner.scan_usize()?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     scanner.expect_char(',')?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     scanner.expect_char('y')?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     scanner.expect_char('=')?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     let height = scanner.scan_usize()?;
-    scanner.skip_whitespace();
+    scanner.skip_spaces_and_tabs();
     if !scanner.is_empty() {
         scanner.expect_char(',')?;
-        scanner.skip_whitespace();
+        scanner.skip_spaces_and_tabs();
         scanner.expect_str("rule")?;
-        scanner.skip_whitespace();
+        scanner.skip_spaces_and_tabs();
         scanner.expect_char('=')?;
-        scanner.skip_whitespace();
+        scanner.skip_spaces_and_tabs();
         scanner
             .expect_str("B3/S23")
             .or_else(|_| scanner.expect_str("23/3"))
             .map_err(|_| RleError::UnsupportedRule)?;
-        scanner.skip_whitespace();
+        scanner.skip_spaces_and_tabs();
         if !scanner.is_empty() {
             return Err(RleError::InvalidHeader);
         }
@@ -295,7 +295,7 @@ impl Iterator for ParsedRuns<'_> {
     // iteration.
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            self.0.skip_whitespace();
+            self.0.skip_plain_whitespace();
             if self.0.expect_char('!').is_ok() {
                 return None;
             }
@@ -308,7 +308,7 @@ impl Iterator for ParsedRuns<'_> {
                 Some('b') => RunType::Dead,
                 Some('o') => RunType::Live,
                 Some('$') => RunType::Eol,
-                Some(c) if c.is_whitespace() => return Some(Err(RleError::SpaceAfterCount)),
+                Some(' ' | '\t' | '\n' | '\r') => return Some(Err(RleError::SpaceAfterCount)),
                 Some(c) => return Some(Err(RleError::InvalidChar(c))),
                 None => return Some(Err(RleError::UnexpectedEof)),
             };
@@ -775,6 +775,46 @@ mod tests {
             let e = s.parse::<Rle>().unwrap_err();
             assert_eq!(e, RleError::InvalidChar('B'));
             assert_eq!(e.to_string(), "invalid character 'B' in data");
+        }
+
+        #[test]
+        fn bad_space_in_data() {
+            let s = "x = 3, y = 3\nbo$\x0C2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidChar('\x0C'));
+            assert_eq!(e.to_string(), "invalid character '\\u{c}' in data");
+        }
+
+        #[test]
+        fn bad_space_in_header() {
+            let s = "x = 3,\x0Cy = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidHeader);
+            assert_eq!(e.to_string(), "invalid header line");
+        }
+
+        #[test]
+        fn tab_in_hash_line() {
+            let s = "#C\tThis is a glider.\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NoSpaceAfterType('C'));
+            assert_eq!(e.to_string(), "no space after 'C' type in '#' line");
+        }
+
+        #[test]
+        fn bad_space_in_hash_line() {
+            let s = "#C\x0CThis is a glider.\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NoSpaceAfterType('C'));
+            assert_eq!(e.to_string(), "no space after 'C' type in '#' line");
+        }
+
+        #[test]
+        fn bad_space_in_blank_line() {
+            let s = "\x0C\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::InvalidHeader);
+            assert_eq!(e.to_string(), "invalid header line");
         }
     }
 }
