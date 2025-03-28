@@ -13,6 +13,14 @@ impl<'a> Scanner<'a> {
         self.0 = self.0.trim_start();
     }
 
+    pub fn skip_spaces_and_tabs(&mut self) {
+        self.0 = self.0.trim_start_matches([' ', '\t']);
+    }
+
+    pub fn skip_plain_whitespace(&mut self) {
+        self.0 = self.0.trim_start_matches([' ', '\t', '\n', '\r']);
+    }
+
     pub fn scan_usize(&mut self) -> Result<usize, ScannerError> {
         let Some((digits, s)) = scan_some(self.0, |c| c.is_ascii_digit()) else {
             if let Some(c) = self.peek_char() {
