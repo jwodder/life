@@ -112,7 +112,7 @@ impl FromStr for Rle {
     ///   whitespace characters other than newline sequences.
     ///
     /// - The header line may contain an optional "rule" field, but it must
-    ///   equal `B3/S23` (case insensitive) or `23/3`.
+    ///   equal `B3/S23` or `23/3`.
     ///
     /// - Tokens in the pattern data may be separated by zero or more Unicode
     ///   whitespace characters.
@@ -266,7 +266,7 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
         scanner.expect_char('=')?;
         scanner.skip_whitespace();
         scanner
-            .expect_str_ignore_ascii_case("B3/S23")
+            .expect_str("B3/S23")
             .or_else(|_| scanner.expect_str("23/3"))
             .map_err(|_| RleError::UnsupportedRule)?;
         scanner.skip_whitespace();
@@ -504,43 +504,6 @@ mod tests {
     }
 
     #[test]
-    fn lowercase_rule() {
-        let s = concat!(
-            "#N Hooks\n",
-            "#C A period 5 oscillator.\n",
-            "#C www.conwaylife.com/wiki/Hooks\n",
-            "x = 11, y = 10, rule = b3/s23\n",
-            "6b2o3b$ob2obobo3b$2obobo5b$4b2o5b$5bo5b2$7b2o2b$7bo3b$8b3o$10bo!\n",
-        );
-        let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(
-            rle.pattern.draw('.', 'O').to_string(),
-            concat!(
-                "......OO...\n",
-                "O.OO.O.O...\n",
-                "OO.O.O.....\n",
-                "....OO.....\n",
-                ".....O.....\n",
-                "...........\n",
-                ".......OO..\n",
-                ".......O...\n",
-                "........OOO\n",
-                "..........O",
-            )
-        );
-        assert_eq!(
-            rle.to_string(),
-            concat!(
-                "#N Hooks\n",
-                "#C A period 5 oscillator.\n",
-                "#C www.conwaylife.com/wiki/Hooks\n",
-                "x = 11, y = 10\n",
-                "6b2o$ob2obobo$2obobo$4b2o$5bo2$7b2o$7bo$8b3o$10bo!\n",
-            )
-        );
-    }
-
-    #[test]
     fn sb_rule_and_blanks_before_header() {
         let s = concat!(
             "#N tubwithnine.rle\n",
@@ -758,6 +721,20 @@ mod tests {
             let e = s.parse::<Rle>().unwrap_err();
             assert_eq!(e, RleError::UnexpectedEof);
             assert_eq!(e.to_string(), "input ended without reaching '!'");
+        }
+
+        #[test]
+        fn lowercase_rule() {
+            let s = concat!(
+                "#N Hooks\n",
+                "#C A period 5 oscillator.\n",
+                "#C www.conwaylife.com/wiki/Hooks\n",
+                "x = 11, y = 10, rule = b3/s23\n",
+                "6b2o3b$ob2obobo3b$2obobo5b$4b2o5b$5bo5b2$7b2o2b$7bo3b$8b3o$10bo!\n",
+            );
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::UnsupportedRule);
+            assert_eq!(e.to_string(), "header specifies unsupported rule");
         }
     }
 }
