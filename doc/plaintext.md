@@ -7,9 +7,10 @@ The following is an exact specification of the [plaintext file format][] for
 - A plaintext document must be encoded in UTF-8 and may not begin with a
   byte-order marker.
 
-- Lines in a plaintext document are terminated by LF, CR, and/or CR LF.  The
-  line terminator may be omitted from the last line of a plaintext document,
-  but this is discouraged.
+- Each line of a plaintext document is terminated by LF, CR, or CR LF.
+  Different lines in the same document may use different line terminators, but
+  this is discouraged.  The line terminator may be omitted from the last line
+  of a plaintext document, but this is discouraged.
 
 - The following "exotic" line endings may not occur anywhere in a plaintext
   document:
