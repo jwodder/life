@@ -1,4 +1,5 @@
 //! Utility types (mostly iterators)
+use crate::errors::{LineFromStringError, ParseLineError};
 use crate::{Pattern, State};
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
@@ -278,5 +279,89 @@ impl fmt::Display for Draw<'_> {
             f.write_char(if b.is_live() { self.live } else { self.dead })?;
         }
         Ok(())
+    }
+}
+
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Line(String);
+
+impl From<Line> for String {
+    fn from(value: Line) -> String {
+        value.0
+    }
+}
+
+impl From<&Line> for String {
+    fn from(value: &Line) -> String {
+        value.0.clone()
+    }
+}
+
+impl fmt::Debug for Line {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl fmt::Display for Line {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl PartialEq<str> for Line {
+    fn eq(&self, other: &str) -> bool {
+        self.0 == other
+    }
+}
+
+impl<'a> PartialEq<&'a str> for Line {
+    fn eq(&self, other: &&'a str) -> bool {
+        &self.0 == other
+    }
+}
+
+impl AsRef<str> for Line {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl std::ops::Deref for Line {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for Line {
+    type Err = ParseLineError;
+
+    fn from_str(s: &str) -> Result<Line, ParseLineError> {
+        check_for_newlines(s).map(|()| Line(s.to_owned()))
+    }
+}
+
+impl TryFrom<String> for Line {
+    type Error = LineFromStringError;
+
+    fn try_from(string: String) -> Result<Line, LineFromStringError> {
+        match check_for_newlines(&string) {
+            Ok(()) => Ok(Line(string)),
+            Err(source) => Err(LineFromStringError { source, string }),
+        }
+    }
+}
+
+fn check_for_newlines(s: &str) -> Result<(), ParseLineError> {
+    match s.chars().find(|&c| {
+        matches!(
+            c,
+            '\n' | '\r' | '\x0B' | '\x0C' | '\u{85}' | '\u{2028}' | '\u{2029}'
+        )
+    }) {
+        Some(c) => Err(ParseLineError(c)),
+        None => Ok(()),
     }
 }
