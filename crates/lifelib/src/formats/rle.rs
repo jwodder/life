@@ -1,4 +1,6 @@
-use super::util::{ascii_lines, split_at_newline};
+use super::util::split_at_newline;
+use crate::errors::ParseLineError;
+use crate::utilities::Line;
 use crate::{Pattern, Run, RunType, State};
 use life_utils::{Scanner, ScannerError};
 use std::fmt;
@@ -17,12 +19,7 @@ use thiserror::Error;
 pub struct Rle {
     /// A list of `#` lines present in the RLE encoding, represented as pairs
     /// of a type letter and text
-    ///
-    /// When displaying an `Rle` instance, if the text in an element of
-    /// `comments` contains one or more non-final newlines, each line in the
-    /// text will be converted to a separate `#` line with the same type
-    /// letter.  If the text ends in a newline, that newline is ignored.
-    pub comments: Vec<(Letter, String)>,
+    pub comments: Vec<(Letter, Line)>,
 
     /// The pattern itself
     pub pattern: Pattern,
@@ -30,15 +27,15 @@ pub struct Rle {
 
 impl Rle {
     /// Returns the text of the first `#` line of type `'N'`, if any.
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn get_name(&self) -> Option<&Line> {
         self.comments
             .iter()
-            .find_map(|(ty, text)| (*ty == Letter::NAME_TYPE).then_some(&**text))
+            .find_map(|(ty, text)| (*ty == Letter::NAME_TYPE).then_some(text))
     }
 
     /// Set the text of the first `#` line of type `'N'` to `name` and remove
     /// all other `'N'` comments.  If there is no `'N'`-comment, one is added.
-    pub fn set_name(&mut self, name: String) {
+    pub fn set_name(&mut self, name: Line) {
         let mut value = Some(name);
         self.comments.retain_mut(|(ty, text)| {
             if *ty != Letter::NAME_TYPE {
@@ -59,9 +56,7 @@ impl Rle {
 impl fmt::Display for Rle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (ty, text) in &self.comments {
-            for ln in ascii_lines(text) {
-                writeln!(f, "#{ty} {ln}")?;
-            }
+            writeln!(f, "#{ty} {text}")?;
         }
         writeln!(
             f,
@@ -125,7 +120,7 @@ impl FromStr for Rle {
         let mut cparser = CommentParser(s);
         let mut comments = Vec::new();
         while let Some((ty, text)) = cparser.next_comment()? {
-            comments.push((ty, text.to_owned()));
+            comments.push((ty, text));
         }
         let s = cparser.into_inner();
         let (header, data) = match split_at_newline(s) {
@@ -175,6 +170,13 @@ pub enum RleError {
 
     #[error("invalid type character {:?} for '#' line", .0.0)]
     InvalidType(#[from] ParseLetterError),
+
+    #[error("blank line contains forbidden whitespace character {0:?}")]
+    InvalidWhitespace(char),
+
+    /// Returned if a '#' line contains an "exotic" newline character
+    #[error(r#"# line contains forbidden "exotic" newline {:?}"#, .0.0)]
+    NewlineInComment(#[from] ParseLineError),
 
     /// Returned if the input did not contain any characters outside of `#`
     /// lines
@@ -258,12 +260,15 @@ pub struct ParseLetterError(char);
 struct CommentParser<'a>(&'a str);
 
 impl<'a> CommentParser<'a> {
-    fn next_comment(&mut self) -> Result<Option<(Letter, &'a str)>, RleError> {
+    fn next_comment(&mut self) -> Result<Option<(Letter, Line)>, RleError> {
         loop {
             let Some((line, rem)) = split_at_newline(self.0) else {
                 return Ok(None);
             };
-            if line.chars().all(|c| matches!(c, ' ' | '\t')) {
+            if line.chars().all(char::is_whitespace) {
+                if let Some(c) = line.chars().find(|c| !matches!(c, ' ' | '\t')) {
+                    return Err(RleError::InvalidWhitespace(c));
+                }
                 self.0 = rem;
                 continue;
             }
@@ -278,7 +283,7 @@ impl<'a> CommentParser<'a> {
                 return Err(RleError::NoSpaceAfterType(char::from(ty)));
             }
             self.0 = rem;
-            return Ok(Some((ty, text)));
+            return Ok(Some((ty, text.parse::<Line>()?)));
         }
     }
 
@@ -366,7 +371,6 @@ impl FusedIterator for ParsedRuns<'_> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::PatternParser;
 
     #[test]
     fn glider() {
@@ -374,7 +378,10 @@ mod tests {
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(
             rle.comments,
-            [(Letter::COMMENT_TYPE, String::from("This is a glider."))]
+            [(
+                Letter::COMMENT_TYPE,
+                "This is a glider.".parse::<Line>().unwrap()
+            )]
         );
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), s);
@@ -393,14 +400,21 @@ mod tests {
         assert_eq!(
             rle.comments,
             [
-                (Letter::NAME_TYPE, String::from("beehiveoncap.rle")),
                 (
-                    Letter::COMMENT_TYPE,
-                    String::from("https://conwaylife.com/wiki/Beehive_on_cap")
+                    Letter::NAME_TYPE,
+                    "beehiveoncap.rle".parse::<Line>().unwrap()
                 ),
                 (
                     Letter::COMMENT_TYPE,
-                    String::from("https://www.conwaylife.com/patterns/beehiveoncap.rle")
+                    "https://conwaylife.com/wiki/Beehive_on_cap"
+                        .parse::<Line>()
+                        .unwrap()
+                ),
+                (
+                    Letter::COMMENT_TYPE,
+                    "https://www.conwaylife.com/patterns/beehiveoncap.rle"
+                        .parse::<Line>()
+                        .unwrap()
                 ),
             ]
         );
@@ -530,7 +544,10 @@ mod tests {
     fn empty_comment() {
         let s = "#C \nx = 3, y = 3\nbo$2bo$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.comments, [(Letter::COMMENT_TYPE, String::new())]);
+        assert_eq!(
+            rle.comments,
+            [(Letter::COMMENT_TYPE, "".parse::<Line>().unwrap())]
+        );
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
     }
@@ -539,7 +556,10 @@ mod tests {
     fn whitespace_comment() {
         let s = "#C  \nx = 3, y = 3\nbo$2bo$3o!\n";
         let rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.comments, [(Letter::COMMENT_TYPE, String::new())]);
+        assert_eq!(
+            rle.comments,
+            [(Letter::COMMENT_TYPE, "".parse::<Line>().unwrap())]
+        );
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
     }
@@ -633,18 +653,6 @@ mod tests {
     }
 
     #[test]
-    fn multiline_comment() {
-        let rle = Rle {
-            comments: vec![(Letter::COMMENT_TYPE, String::from("Line 1\nLine 2\n"))],
-            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
-        };
-        assert_eq!(
-            rle.to_string(),
-            "#C Line 1\n#C Line 2\nx = 3, y = 3\nbo$2bo$3o!\n"
-        );
-    }
-
-    #[test]
     fn test_get_set_multi_name() {
         let s = concat!(
             "#N beehiveoncap.rle\n",
@@ -655,9 +663,15 @@ mod tests {
             "b2o$o2bo$4o2$2b2o$bo2bo$2b2o!\n",
         );
         let mut rle = s.parse::<Rle>().unwrap();
-        assert_eq!(rle.get_name(), Some("beehiveoncap.rle"));
-        rle.set_name(String::from("Beehive-on-Cap"));
-        assert_eq!(rle.get_name(), Some("Beehive-on-Cap"));
+        assert_eq!(
+            rle.get_name(),
+            Some(&"beehiveoncap.rle".parse::<Line>().unwrap())
+        );
+        rle.set_name("Beehive-on-Cap".parse::<Line>().unwrap());
+        assert_eq!(
+            rle.get_name(),
+            Some(&"Beehive-on-Cap".parse::<Line>().unwrap())
+        );
         assert_eq!(
             rle.to_string(),
             concat!(
@@ -675,8 +689,8 @@ mod tests {
         let s = "#C This is a glider.\nx = 3, y = 3\nbo$2bo$3o!\n";
         let mut rle = s.parse::<Rle>().unwrap();
         assert_eq!(rle.get_name(), None);
-        rle.set_name(String::from("Glider"));
-        assert_eq!(rle.get_name(), Some("Glider"));
+        rle.set_name("Glider".parse::<Line>().unwrap());
+        assert_eq!(rle.get_name(), Some(&"Glider".parse::<Line>().unwrap()));
         assert_eq!(
             rle.to_string(),
             "#C This is a glider.\n#N Glider\nx = 3, y = 3\nbo$2bo$3o!\n"
@@ -855,11 +869,25 @@ mod tests {
         }
 
         #[test]
+        fn bad_space_in_hash_line_text() {
+            let s = "#C This is a\x0Cglider.\nx = 3, y = 3\nbo$2bo$3o!\n";
+            let e = s.parse::<Rle>().unwrap_err();
+            assert_eq!(e, RleError::NewlineInComment(ParseLineError('\x0C')));
+            assert_eq!(
+                e.to_string(),
+                r#"# line contains forbidden "exotic" newline '\u{c}'"#
+            );
+        }
+
+        #[test]
         fn bad_space_in_blank_line() {
             let s = "\x0C\nx = 3, y = 3\nbo$2bo$3o!\n";
             let e = s.parse::<Rle>().unwrap_err();
-            assert_eq!(e, RleError::InvalidHeader);
-            assert_eq!(e.to_string(), "invalid header line");
+            assert_eq!(e, RleError::InvalidWhitespace('\x0C'));
+            assert_eq!(
+                e.to_string(),
+                "blank line contains forbidden whitespace character '\\u{c}'"
+            );
         }
 
         #[test]

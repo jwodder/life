@@ -1,4 +1,6 @@
 use super::util::ascii_lines;
+use crate::errors::ParseLineError;
+use crate::utilities::Line;
 use crate::{Pattern, PatternBuilder};
 use std::fmt;
 use std::str::FromStr;
@@ -56,20 +58,10 @@ use thiserror::Error;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Plaintext {
     /// Name of the pattern
-    ///
-    /// When displaying a `Plaintext` instance, if `name` contains one or more
-    /// non-final newlines, each line in `name` after the first will be
-    /// converted to a comment.  If `name` ends in a newline, that newline is
-    /// ignored.
-    pub name: Option<String>,
+    pub name: Option<Line>,
 
     /// Comments on the pattern
-    ///
-    /// When displaying a `Plaintext` instance, if an element of `comments`
-    /// contains one or more non-final newlines, each line of the element is
-    /// converted to a separate comment.  If an element ends in a newline, that
-    /// newline is ignored.
-    pub comments: Vec<String>,
+    pub comments: Vec<Line>,
 
     /// The pattern itself
     pub pattern: Pattern,
@@ -77,20 +69,11 @@ pub struct Plaintext {
 
 impl fmt::Display for Plaintext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(ref namestr) = self.name {
-            let mut namelines = ascii_lines(namestr);
-            let Some(name) = namelines.next() else {
-                unreachable!("ascii_lines() should yield at least one element");
-            };
+        if let Some(ref name) = self.name {
             writeln!(f, "!Name: {name}")?;
-            for ln in namelines {
-                writeln!(f, "!{ln}")?;
-            }
         }
         for c in &self.comments {
-            for ln in ascii_lines(c) {
-                writeln!(f, "!{ln}")?;
-            }
+            writeln!(f, "!{c}")?;
         }
         writeln!(f, "{}", self.pattern.draw('.', 'O'))?;
         Ok(())
@@ -108,13 +91,22 @@ impl FromStr for Plaintext {
     /// the pattern drawing contains any characters other than `.`, `O`, and
     /// newline sequences.
     fn from_str(s: &str) -> Result<Plaintext, PlaintextError> {
-        let mut comments = std::collections::VecDeque::new();
+        let mut name = None;
+        let mut comments = Vec::new();
         let mut builder = PatternBuilder::new();
         let mut y = 0;
         for ln in ascii_lines(s) {
             if let Some(comm) = ln.strip_prefix('!') {
                 if y == 0 {
-                    comments.push_back(String::from(comm));
+                    match (
+                        comments.is_empty() && name.is_none(),
+                        comm.strip_prefix("Name: "),
+                    ) {
+                        (true, Some(n)) => {
+                            name = Some(n.trim_start_matches(' ').parse::<Line>()?);
+                        }
+                        _ => comments.push(comm.parse::<Line>()?),
+                    }
                 } else {
                     return Err(PlaintextError::InvalidChar('!'));
                 }
@@ -133,16 +125,9 @@ impl FromStr for Plaintext {
         }
         // Ensure that trailing dead rows count towards the height:
         builder = builder.min_height(y);
-        let name = comments
-            .front()
-            .and_then(|ln| ln.strip_prefix("Name: "))
-            .map(|n| n.trim_start_matches(' ').to_owned());
-        if name.is_some() {
-            let _ = comments.pop_front();
-        }
         Ok(Plaintext {
             name,
-            comments: Vec::from(comments),
+            comments,
             pattern: builder.build(),
         })
     }
@@ -156,6 +141,11 @@ impl From<Plaintext> for Pattern {
 
 #[derive(Copy, Clone, Debug, Eq, Error, PartialEq)]
 pub enum PlaintextError {
+    /// Returned if a comment (including the "Name:" line) contains an "exotic"
+    /// newline character
+    #[error(r#"comment contains forbidden "exotic" newline {:?}"#, .0.0)]
+    NewlineInComment(#[from] ParseLineError),
+
     /// Returned if the pattern drawing contains any characters other than `.`,
     /// `O`, and newline sequences
     #[error("plaintext drawing contains invalid character {0:?}")]
@@ -315,33 +305,10 @@ mod tests {
     }
 
     #[test]
-    fn display_multiline_name() {
-        let pt = Plaintext {
-            name: Some(String::from("Line 1\nLine 2")),
-            comments: Vec::new(),
-            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
-        };
-        assert_eq!(pt.to_string(), "!Name: Line 1\n!Line 2\n.O.\n..O\nOOO\n");
-    }
-
-    #[test]
-    fn display_multiline_comment() {
-        let pt = Plaintext {
-            name: Some(String::from("Pattern")),
-            comments: vec![String::from("Line 1\nLine 2")],
-            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
-        };
-        assert_eq!(
-            pt.to_string(),
-            "!Name: Pattern\n!Line 1\n!Line 2\n.O.\n..O\nOOO\n"
-        );
-    }
-
-    #[test]
     fn display_empty_name_and_comment() {
         let pt = Plaintext {
-            name: Some(String::new()),
-            comments: vec![String::new()],
+            name: Some("".parse::<Line>().unwrap()),
+            comments: vec!["".parse::<Line>().unwrap()],
             pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
         };
         assert_eq!(pt.to_string(), "!Name: \n!\n.O.\n..O\nOOO\n");
@@ -365,5 +332,27 @@ mod tests {
         assert_eq!(pt.comments, ["Glider"]);
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(pt.to_string(), s);
+    }
+
+    #[test]
+    fn bad_newline_in_name() {
+        let s = "!Name: Glider\x0B\n.O.\n..O\nOOO\n";
+        let e = s.parse::<Plaintext>().unwrap_err();
+        assert_eq!(e, PlaintextError::NewlineInComment(ParseLineError('\x0B')));
+        assert_eq!(
+            e.to_string(),
+            r#"comment contains forbidden "exotic" newline '\u{b}'"#
+        );
+    }
+
+    #[test]
+    fn bad_newline_in_comment() {
+        let s = "!Pattern:\x0CGlider\x0B\n.O.\n..O\nOOO\n";
+        let e = s.parse::<Plaintext>().unwrap_err();
+        assert_eq!(e, PlaintextError::NewlineInComment(ParseLineError('\x0C')));
+        assert_eq!(
+            e.to_string(),
+            r#"comment contains forbidden "exotic" newline '\u{c}'"#
+        );
     }
 }
