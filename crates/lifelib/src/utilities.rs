@@ -285,6 +285,12 @@ impl fmt::Display for Draw<'_> {
 #[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Line(String);
 
+impl Line {
+    pub fn push_line(&mut self, line: &Line) {
+        self.0.push_str(&line.0);
+    }
+}
+
 impl From<Line> for String {
     fn from(value: Line) -> String {
         value.0

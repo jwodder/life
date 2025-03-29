@@ -138,16 +138,8 @@ impl Saver {
         }
         match self {
             Saver::Plaintext { name } => {
-                let name = if let Some(tmplt) = name {
-                    tmplt.render(index)
-                } else {
-                    path.file_name().map_or_else(
-                        || String::from("Pattern"),
-                        |oss| oss.to_string_lossy().into_owned(),
-                    )
-                };
                 let pt = Plaintext {
-                    name: Some(name),
+                    name: name.as_ref().map(|tmplt| tmplt.render(index)),
                     comments: Vec::new(),
                     pattern,
                 };
@@ -191,7 +183,7 @@ fn main() -> anyhow::Result<()> {
         .enumerate()
     {
         if args.ticks.contains(i) {
-            let outfile = PathBuf::from(args.outfile.render(i));
+            let outfile = PathBuf::from(String::from(args.outfile.render(i)));
             saver.save(pat, &outfile, i)?;
         }
     }
