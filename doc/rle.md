@@ -4,9 +4,10 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
 - An RLE document must be encoded in UTF-8 and may not begin with a byte-order
   marker.
 
-- Lines in an RLE document are terminated by LF, CR, and/or CR LF.  The line
-  terminator may be omitted from the last line of an RLE document, but this is
-  discouraged.
+- Each line of an RLE document is terminated by LF, CR, or CR LF.  Different
+  lines in the same document may use different line terminators, but this is
+  discouraged.  The line terminator may be omitted from the last line of an RLE
+  document, but this is discouraged.
 
 - The following "exotic" line endings may not occur anywhere in an RLE
   document:
@@ -20,7 +21,7 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
   described in [RFC 5234][] and updated by [RFC 7405][]:
 
     ```text
-    rle-document  =  *(hash-line / blank-line) header *blank-line pattern
+    rle-document  =  *(hash-line / blank-line) header pattern
 
     hash-line     =  "#" LETTER 1*SP text NL
                         ; a "# line"
@@ -88,8 +89,8 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
   element is the value of the metadata.  `lifelib` only assigns meanings to the
   following `<LETTER>` values:
     - `N` — The `<text>` element specifies the name of the pattern.  If an RLE
-      document contains multiple `#` lines of type `N`, `lifelib` only honors
-      the first one.
+      document contains multiple `#` lines of type `N`, `lifelib` only uses the
+      first one as the name, and the others are effectively ignored.
     - `C` — The `<text>` element is a comment.
     - `c` — Same as `C`, but not recommended.
 
@@ -99,15 +100,14 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
   `<width>` element, and the height is the value of the `<integer>` element
   within the `<height>` element.
 
-- The header line may contain an optional cellular automaton rule, but the
+- The header line may optionally contain a cellular automaton rule, but the
   value must be the [rulestring][] for the standard version of Conway's Game of
   Life, i.e., `B3/S23` or `23/3`.
 
 - The `<pattern>` element of an RLE document describes a Conway's Game of Life
   pattern.  It consists of zero or more `<run>` items, each of which is a pair
   of an optional integer (the *run count*, defaulting to 1 if omitted) and a
-  *tag*.  The possible tags are `b` (denoting a dead cell), `o` (denoting a
-  live cell), and `$` (denoting the end of a row).
+  *tag* (`b`, `o`, or `$`).
 
   - The `<run>` items specify the cells of the pattern from top to bottom and
     left to right.  A single item with a `b` or `o` tag denotes a run of
