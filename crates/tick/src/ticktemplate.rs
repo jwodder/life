@@ -1,7 +1,9 @@
 use life_utils::{Scanner, ScannerError};
+use lifelib::{errors::ParseLineError, utilities::Line};
 use std::fmt::Write;
 use std::path::MAIN_SEPARATOR;
 use std::str::FromStr;
+use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct TickTemplate(Vec<Item>);
@@ -22,7 +24,7 @@ impl TickTemplate {
         matches!(self.0.as_slice(), [] | [Item::Literal(_)])
     }
 
-    pub(crate) fn render(&self, value: usize) -> String {
+    pub(crate) fn render(&self, value: usize) -> Line {
         let mut s = String::new();
         for item in &self.0 {
             match *item {
@@ -66,22 +68,22 @@ impl TickTemplate {
                 }
             }
         }
-        s
+        Line::try_from(s).expect("rendered template should not contain newlines")
     }
 }
 
 impl FromStr for TickTemplate {
-    type Err = ScannerError;
+    type Err = TickTemplateError;
 
     // False positive that is inapplicable due to side effects:
     #[allow(clippy::if_then_some_else_none)]
-    fn from_str(s: &str) -> Result<TickTemplate, ScannerError> {
+    fn from_str(s: &str) -> Result<TickTemplate, TickTemplateError> {
         let mut scanner = Scanner::new(s);
         let mut builder = TemplateBuilder::new();
         loop {
             if scanner.maybe_expect_char('%') {
                 if scanner.maybe_expect_char('%') {
-                    builder.push("%");
+                    builder.push("%".parse::<Line>().expect(r#""%" should be a valid Line"#));
                 } else {
                     let flag = if scanner.maybe_expect_char('0') {
                         Flag::Zero
@@ -100,7 +102,7 @@ impl FromStr for TickTemplate {
                     builder.number(flag, width, precision);
                 }
             } else if let Some(t) = scanner.scan_to('%') {
-                builder.push(t);
+                builder.push(t.parse::<Line>()?);
             } else {
                 debug_assert!(scanner.is_empty(), "scanner should be empty here");
                 break;
@@ -110,9 +112,18 @@ impl FromStr for TickTemplate {
     }
 }
 
+#[derive(Clone, Debug, Eq, Error, PartialEq)]
+pub(crate) enum TickTemplateError {
+    #[error("newline character {:?} not allowed in template", .0.0)]
+    Newline(#[from] ParseLineError),
+
+    #[error(transparent)]
+    Scanner(#[from] ScannerError),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Item {
-    Literal(String),
+    Literal(Line),
     Number {
         flag: Flag,
         width: usize,
@@ -135,11 +146,11 @@ impl TemplateBuilder {
         TemplateBuilder(Vec::new())
     }
 
-    fn push(&mut self, s: &str) {
+    fn push(&mut self, s: Line) {
         if let Some(Item::Literal(ss)) = self.0.last_mut() {
-            ss.push_str(s);
+            ss.push_line(&s);
         } else {
-            self.0.push(Item::Literal(s.to_owned()));
+            self.0.push(Item::Literal(s));
         }
     }
 
@@ -225,10 +236,10 @@ mod tests {
         let e = "[%e]".parse::<TickTemplate>().unwrap_err();
         assert_eq!(
             e,
-            ScannerError::WrongChar {
+            TickTemplateError::Scanner(ScannerError::WrongChar {
                 expected: 'd',
                 got: 'e'
-            }
+            })
         );
         assert_eq!(e.to_string(), "expected 'd', got 'e'");
     }
@@ -243,7 +254,10 @@ mod tests {
         let e = "[%18446744073709551616d]"
             .parse::<TickTemplate>()
             .unwrap_err();
-        assert_matches!(e, ScannerError::NumericOverflow(_));
+        assert_matches!(
+            e,
+            TickTemplateError::Scanner(ScannerError::NumericOverflow(_))
+        );
         assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
     }
 
@@ -257,7 +271,10 @@ mod tests {
         let e = "[%.18446744073709551616d]"
             .parse::<TickTemplate>()
             .unwrap_err();
-        assert_matches!(e, ScannerError::NumericOverflow(_));
+        assert_matches!(
+            e,
+            TickTemplateError::Scanner(ScannerError::NumericOverflow(_))
+        );
         assert_eq!(e.to_string(), "numeric value exceeds integer bounds");
     }
 
@@ -266,10 +283,10 @@ mod tests {
         let e = "[%+d]".parse::<TickTemplate>().unwrap_err();
         assert_eq!(
             e,
-            ScannerError::WrongChar {
+            TickTemplateError::Scanner(ScannerError::WrongChar {
                 expected: 'd',
                 got: '+'
-            }
+            })
         );
         assert_eq!(e.to_string(), "expected 'd', got '+'");
     }
@@ -277,21 +294,27 @@ mod tests {
     #[test]
     fn percent_then_eof() {
         let e = "[%".parse::<TickTemplate>().unwrap_err();
-        assert_eq!(e, ScannerError::NotCharButEof('d'));
+        assert_eq!(
+            e,
+            TickTemplateError::Scanner(ScannerError::NotCharButEof('d'))
+        );
         assert_eq!(e.to_string(), "expected 'd', got end of string");
     }
 
     #[test]
     fn empty_precision() {
         let e = "[%.d]".parse::<TickTemplate>().unwrap_err();
-        assert_eq!(e, ScannerError::NoIntButChar('d'));
+        assert_eq!(
+            e,
+            TickTemplateError::Scanner(ScannerError::NoIntButChar('d'))
+        );
         assert_eq!(e.to_string(), "expected integer, got 'd'");
     }
 
     #[test]
     fn period_then_eof() {
         let e = "[%.".parse::<TickTemplate>().unwrap_err();
-        assert_eq!(e, ScannerError::NoIntButEof);
+        assert_eq!(e, TickTemplateError::Scanner(ScannerError::NoIntButEof));
         assert_eq!(e.to_string(), "expected integer, got end of string");
     }
 
@@ -305,5 +328,15 @@ mod tests {
     fn is_literal(#[case] s: &str, #[case] b: bool) {
         let template = s.parse::<TickTemplate>().unwrap();
         assert_eq!(template.is_literal(), b);
+    }
+
+    #[test]
+    fn newline() {
+        let e = "foo\n%d.cells".parse::<TickTemplate>().unwrap_err();
+        assert_eq!(e, TickTemplateError::Newline(ParseLineError('\n')));
+        assert_eq!(
+            e.to_string(),
+            "newline character '\\n' not allowed in template"
+        );
     }
 }

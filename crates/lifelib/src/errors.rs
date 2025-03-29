@@ -17,3 +17,14 @@ pub enum FromFileError {
     #[error("failed to parse RLE")]
     ParseRle(#[from] RleError),
 }
+
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[error("newline character {0:?} is not allowed inside a line")]
+pub struct ParseLineError(pub char);
+
+#[derive(Clone, Debug, Eq, Error, PartialEq)]
+#[error("{source}: {string:?}")]
+pub struct LineFromStringError {
+    pub source: ParseLineError,
+    pub string: String,
+}
