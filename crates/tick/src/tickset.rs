@@ -11,7 +11,7 @@ impl TickSet {
         *self
             .0
             .iter()
-            .last()
+            .next_back()
             .expect("TickSet should be nonempty")
             .end()
     }
