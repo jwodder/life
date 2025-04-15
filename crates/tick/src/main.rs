@@ -112,7 +112,8 @@ impl Arguments {
             }),
             Some(ext) if ImageFormat::from_extension(ext).is_some() => {
                 let [r, g, b, _] = self.live_color.to_rgba8();
-                let builder = ImageBuilder::new(self.cell_size)
+                let builder = ImageBuilder::new()
+                    .cell_size(self.cell_size)
                     .live_color([r, g, b].into())
                     .gutter(self.gutter);
                 Ok(Saver::Image { builder })

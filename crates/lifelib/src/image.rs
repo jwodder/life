@@ -13,12 +13,20 @@ pub struct ImageBuilder {
 }
 
 impl ImageBuilder {
-    pub fn new(cell_size: NonZeroU32) -> ImageBuilder {
+    pub fn new() -> ImageBuilder {
+        let Some(cell_size) = NonZeroU32::new(1) else {
+            unreachable!("1 should not be 0");
+        };
         ImageBuilder {
             cell_size,
             live_color: [0, 0, 0].into(),
             gutter: 0,
         }
+    }
+
+    pub fn cell_size(mut self, size: NonZeroU32) -> Self {
+        self.cell_size = size;
+        self
     }
 
     pub fn live_color(mut self, color: Rgb<u8>) -> Self {
@@ -70,6 +78,12 @@ impl ImageBuilder {
     }
 }
 
+impl Default for ImageBuilder {
+    fn default() -> ImageBuilder {
+        ImageBuilder::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,7 +101,7 @@ mod tests {
     #[test]
     fn test_image1() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
-        let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap());
+        let painter = ImageBuilder::new().cell_size(NonZeroU32::new(5).unwrap());
         let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
@@ -99,8 +113,9 @@ mod tests {
     #[test]
     fn test_image_color() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
-        let painter =
-            ImageBuilder::new(NonZeroU32::new(5).unwrap()).live_color([0xFF, 0, 0].into());
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .live_color([0xFF, 0, 0].into());
         let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
@@ -112,7 +127,9 @@ mod tests {
     #[test]
     fn test_image_gutter() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
-        let painter = ImageBuilder::new(NonZeroU32::new(5).unwrap()).gutter(1);
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .gutter(1);
         let img = painter.render(&life);
         let imgdata = img2ppm(img);
         assert_eq!(
