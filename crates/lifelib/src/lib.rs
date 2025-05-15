@@ -100,7 +100,7 @@ impl Pattern {
 
     fn get_index(&self, y: usize, x: usize) -> Option<usize> {
         if self.has_coord(y, x) {
-            y.checked_mul(self.width).and_then(|yw| yw.checked_add(x))
+            y.checked_mul(self.width)?.checked_add(x)
         } else {
             None
         }
