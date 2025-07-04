@@ -539,24 +539,19 @@ fn range_about(i: usize, limit: usize) -> Vec<usize> {
         vals.push(a);
     }
     vals.push(i);
-    if let Some(b) = i.checked_add(1) {
-        if b < limit {
-            vals.push(b);
-        }
+    if let Some(b) = i.checked_add(1).filter(|&b| b < limit) {
+        vals.push(b);
     }
     vals
 }
 
 fn wrap_about(i: usize, limit: usize) -> Vec<usize> {
-    let mut vals = Vec::with_capacity(3);
     debug_assert!(limit > 0, "limit should be > 0");
-    vals.push(i.checked_sub(1).unwrap_or(limit - 1));
-    vals.push(i);
-    match i.checked_add(1) {
-        Some(b) if b < limit => vals.push(b),
-        _ => vals.push(0),
-    }
-    vals
+    vec![
+        i.checked_sub(1).unwrap_or(limit - 1),
+        i,
+        i.checked_add(1).filter(|&b| b < limit).unwrap_or(0),
+    ]
 }
 
 #[cfg(test)]
