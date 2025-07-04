@@ -94,12 +94,12 @@ impl Pattern {
         self
     }
 
-    pub fn has_coord(&self, y: usize, x: usize) -> bool {
+    pub fn contains(&self, y: usize, x: usize) -> bool {
         (0..self.height).contains(&y) && (0..self.width).contains(&x)
     }
 
-    fn get_index(&self, y: usize, x: usize) -> Option<usize> {
-        if self.has_coord(y, x) {
+    fn index(&self, y: usize, x: usize) -> Option<usize> {
+        if self.contains(y, x) {
             y.checked_mul(self.width)?.checked_add(x)
         } else {
             None
@@ -107,11 +107,11 @@ impl Pattern {
     }
 
     pub fn get(&self, y: usize, x: usize) -> Option<State> {
-        self.get_index(y, x).map(|i| self.cells[i])
+        self.index(y, x).map(|i| self.cells[i])
     }
 
     pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut State> {
-        self.get_index(y, x).map(|i| &mut self.cells[i])
+        self.index(y, x).map(|i| &mut self.cells[i])
     }
 
     pub fn birth(&mut self, y: usize, x: usize) {
@@ -138,7 +138,7 @@ impl Pattern {
     ///
     /// At most `width - x` cells are set, even if `length` is larger.
     pub fn set_run(&mut self, y: usize, x: usize, length: usize, state: State) {
-        if let Some(i) = self.get_index(y, x) {
+        if let Some(i) = self.index(y, x) {
             let length = length.min(self.width - x);
             self.cells[i..i.saturating_add(length)].fill(state);
         }
@@ -208,7 +208,7 @@ impl Index<(usize, usize)> for Pattern {
 
     fn index(&self, (y, x): (usize, usize)) -> &State {
         let i = self
-            .get_index(y, x)
+            .index(y, x)
             .expect("(y, x) index should be in bounds for Pattern");
         &self.cells[i]
     }
@@ -217,7 +217,7 @@ impl Index<(usize, usize)> for Pattern {
 impl IndexMut<(usize, usize)> for Pattern {
     fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut State {
         let i = self
-            .get_index(y, x)
+            .index(y, x)
             .expect("(y, x) index should be in bounds for Pattern");
         &mut self.cells[i]
     }
