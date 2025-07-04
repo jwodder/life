@@ -55,7 +55,7 @@ impl<'a> Runner<'a> {
         };
         Some(Run {
             length,
-            run_type: current.into(),
+            kind: current.into(),
         })
     }
 
@@ -73,7 +73,7 @@ impl<'a> Runner<'a> {
         };
         Some(Run {
             length,
-            run_type: RunType::Eol,
+            kind: RunKind::Eol,
         })
     }
 }
@@ -84,7 +84,7 @@ impl Iterator for RunLengths<'_> {
     fn next(&mut self) -> Option<Run> {
         let runner = self.runner()?;
         if let Some(item) = runner.next_run_in_row() {
-            if runner.at_eol() && item.run_type == RunType::Dead {
+            if runner.at_eol() && item.kind == RunKind::Dead {
                 runner.eol_run()
             } else {
                 Some(item)
@@ -103,7 +103,7 @@ impl FusedIterator for RunLengths<'_> {}
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Run {
     pub length: NonZeroUsize,
-    pub run_type: RunType,
+    pub kind: RunKind,
 }
 
 impl Run {
@@ -125,41 +125,41 @@ impl fmt::Display for Run {
         if self.length.get() != 1 {
             write!(f, "{}", self.length)?;
         }
-        write!(f, "{}", self.run_type.rle_symbol())?;
+        write!(f, "{}", self.kind.rle_symbol())?;
         Ok(())
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum RunType {
+pub enum RunKind {
     Dead,
     Live,
     Eol,
 }
 
-impl RunType {
+impl RunKind {
     pub fn rle_symbol(&self) -> char {
         match self {
-            RunType::Dead => 'b',
-            RunType::Live => 'o',
-            RunType::Eol => '$',
+            RunKind::Dead => 'b',
+            RunKind::Live => 'o',
+            RunKind::Eol => '$',
         }
     }
 
     pub fn as_state(&self) -> Option<State> {
         match self {
-            RunType::Dead => Some(State::Dead),
-            RunType::Live => Some(State::Live),
-            RunType::Eol => None,
+            RunKind::Dead => Some(State::Dead),
+            RunKind::Live => Some(State::Live),
+            RunKind::Eol => None,
         }
     }
 }
 
-impl From<State> for RunType {
-    fn from(st: State) -> RunType {
+impl From<State> for RunKind {
+    fn from(st: State) -> RunKind {
         match st {
-            State::Dead => RunType::Dead,
-            State::Live => RunType::Live,
+            State::Dead => RunKind::Dead,
+            State::Live => RunKind::Live,
         }
     }
 }

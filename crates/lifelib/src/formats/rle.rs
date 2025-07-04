@@ -1,7 +1,7 @@
 use super::util::split_at_newline;
 use crate::errors::ParseLineError;
 use crate::utilities::Line;
-use crate::{Pattern, Run, RunType, State};
+use crate::{Pattern, Run, RunKind, State};
 use life_utils::{Scanner, ScannerError};
 use std::fmt;
 use std::iter::FusedIterator;
@@ -110,14 +110,14 @@ impl FromStr for Rle {
         let mut y = 0;
         let mut x = 0;
         for run in parse_runs(data) {
-            let Run { length, run_type } = run?;
-            match run_type {
-                RunType::Dead => x += length.get(),
-                RunType::Live => {
+            let Run { length, kind } = run?;
+            match kind {
+                RunKind::Dead => x += length.get(),
+                RunKind::Live => {
                     pattern.set_run(y, x, length.get(), State::Live);
                     x += length.get();
                 }
-                RunType::Eol => {
+                RunKind::Eol => {
                     y += length.get();
                     x = 0;
                 }
@@ -328,16 +328,16 @@ impl Iterator for ParsedRuns<'_> {
                 Ok(None) => 1,
                 Err(e) => return Some(Err(e.into())),
             };
-            let run_type = match self.0.maybe_scan_char() {
-                Some('b') => RunType::Dead,
-                Some('o') => RunType::Live,
-                Some('$') => RunType::Eol,
+            let kind = match self.0.maybe_scan_char() {
+                Some('b') => RunKind::Dead,
+                Some('o') => RunKind::Live,
+                Some('$') => RunKind::Eol,
                 Some(' ' | '\t' | '\n' | '\r') => return Some(Err(RleError::SpaceAfterCount)),
                 Some(c) => return Some(Err(RleError::InvalidChar(c))),
                 None => return Some(Err(RleError::UnexpectedEof)),
             };
             if let Some(length) = NonZeroUsize::new(length) {
-                return Some(Ok(Run { length, run_type }));
+                return Some(Ok(Run { length, kind }));
             }
         }
     }
