@@ -20,7 +20,7 @@ thiserror = "2.0.0"
 assert_matches = "1.5.0"
 image = { version = "0.25.2", default-features = false, features = ["pnm"] }
 pretty_assertions = "1.4.0"
-rstest = { version = "0.25.0", default-features = false }
+rstest = { version = "0.26.0", default-features = false }
 
 [features]
 image = ["dep:image"]
