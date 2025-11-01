@@ -1,5 +1,5 @@
 #![cfg(test)]
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use assert_fs::{NamedTempFile, TempDir};
 use lifelib::image::image::{ImageFormat, ImageReader};
 use rstest::rstest;
@@ -44,8 +44,7 @@ mod default_number {
     #[test]
     fn cells() {
         let outfile = NamedTempFile::new("glider1.cells").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
             .arg(outfile.path())
             .assert()
@@ -56,8 +55,7 @@ mod default_number {
     #[test]
     fn rle() {
         let outfile = NamedTempFile::new("glider1.rle").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
             .arg(outfile.path())
             .assert()
@@ -68,8 +66,7 @@ mod default_number {
     #[test]
     fn png() {
         let outfile = NamedTempFile::new("glider1.png").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
             .arg(outfile.path())
             .assert()
@@ -93,8 +90,7 @@ mod default_number {
 #[case(11, "glider11.rle")]
 fn numbers(#[case] number: usize, #[case] filename: &str) {
     let outfile = NamedTempFile::new(filename).unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg(format!("-n{number}"))
         .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
@@ -106,8 +102,7 @@ fn numbers(#[case] number: usize, #[case] filename: &str) {
 #[test]
 fn number0_png() {
     let outfile = NamedTempFile::new("glider.png").unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("-n0")
         .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
@@ -119,8 +114,7 @@ fn number0_png() {
 #[test]
 fn rle2plaintext() {
     let outfile = NamedTempFile::new("glider.cells").unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("-n0")
         .arg(Path::new(DATA_DIR).join("glider.rle"))
         .arg(outfile.path())
@@ -135,8 +129,7 @@ mod imgopts {
     #[test]
     fn live_color() {
         let outfile = NamedTempFile::new("glider.png").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--live-color")
             .arg("red")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -149,8 +142,7 @@ mod imgopts {
     #[test]
     fn gutter() {
         let outfile = NamedTempFile::new("glider.png").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--gutter")
             .arg("1")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -163,8 +155,7 @@ mod imgopts {
     #[test]
     fn cell_size() {
         let outfile = NamedTempFile::new("glider.png").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--cell-size")
             .arg("10")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -177,8 +168,7 @@ mod imgopts {
     #[test]
     fn cell_size_gutter() {
         let outfile = NamedTempFile::new("glider.png").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--cell-size")
             .arg("10")
             .arg("--gutter")
@@ -197,8 +187,7 @@ mod name {
     #[test]
     fn cells() {
         let outfile = NamedTempFile::new("glider1.cells").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--name")
             .arg("Glider + 1")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -211,8 +200,7 @@ mod name {
     #[test]
     fn rle() {
         let outfile = NamedTempFile::new("glider1.rle").unwrap();
-        Command::cargo_bin("tick")
-            .unwrap()
+        cargo_bin_cmd!("tick")
             .arg("--name")
             .arg("Glider + 1")
             .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -244,8 +232,7 @@ mod name {
 #[case(28, "wrapxy", "glider.rle")]
 fn edges_opt(#[case] number: usize, #[case] edges: &str, #[case] filename: &str) {
     let outfile = NamedTempFile::new("outfile.rle").unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg(format!("-n{number}"))
         .arg("--edges")
         .arg(edges)
@@ -259,8 +246,7 @@ fn edges_opt(#[case] number: usize, #[case] edges: &str, #[case] filename: &str)
 #[test]
 fn multiticks() {
     let tmpdir = TempDir::new().unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("-n")
         .arg("2-4")
         .arg("--name=Glider + %d")
@@ -288,8 +274,7 @@ fn multiticks() {
 #[test]
 fn multiticks_no_output_placeholder() {
     let tmpdir = TempDir::new().unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("-n")
         .arg("2-4")
         .arg("--name=Glider + %d")
@@ -309,8 +294,7 @@ fn multiticks_no_output_placeholder() {
 #[test]
 fn create_dir() {
     let tmpdir = TempDir::new().unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("--name")
         .arg("Glider + 1")
         .arg(Path::new(DATA_DIR).join("glider.cells"))
@@ -330,8 +314,7 @@ fn create_dir() {
 #[test]
 fn create_dirs() {
     let tmpdir = TempDir::new().unwrap();
-    Command::cargo_bin("tick")
-        .unwrap()
+    cargo_bin_cmd!("tick")
         .arg("--name")
         .arg("Glider + 1")
         .arg(Path::new(DATA_DIR).join("glider.cells"))
