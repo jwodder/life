@@ -60,7 +60,7 @@ impl<'a> Runner<'a> {
     }
 
     fn at_eol(&self) -> bool {
-        self.row.map_or(true, <[State]>::is_empty)
+        self.row.is_none_or(<[State]>::is_empty)
     }
 
     fn eol_run(&mut self) -> Option<Run> {
