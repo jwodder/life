@@ -4,11 +4,11 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use fs_err::{create_dir_all, File};
+use fs_err::{File, create_dir_all};
 use lifelib::{
-    formats::{Letter, Plaintext, Rle},
-    image::{image::ImageFormat, ImageBuilder},
     Edges, Pattern,
+    formats::{Letter, Plaintext, Rle},
+    image::{ImageBuilder, image::ImageFormat},
 };
 use std::io::{BufWriter, Write};
 use std::num::NonZeroU32;

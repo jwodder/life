@@ -374,11 +374,7 @@ impl CellParser<'_> {
             CellParser::DeadChars(s) => !s.contains(c),
             CellParser::LiveChars(s) => s.contains(c),
         };
-        if b {
-            State::Live
-        } else {
-            State::Dead
-        }
+        if b { State::Live } else { State::Dead }
     }
 }
 

@@ -3,7 +3,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use assert_fs::{NamedTempFile, TempDir};
 use lifelib::image::image::{ImageFormat, ImageReader};
 use rstest::rstest;
-use std::fs::{read_dir, read_to_string, File};
+use std::fs::{File, read_dir, read_to_string};
 use std::io::BufReader;
 use std::path::Path;
 
