@@ -1,7 +1,7 @@
 [![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
 [![CI Status](https://github.com/jwodder/life/actions/workflows/test.yml/badge.svg)](https://github.com/jwodder/life/actions/workflows/test.yml)
 [![codecov.io](https://codecov.io/gh/jwodder/life/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/life)
-[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.81-orange)](https://www.rust-lang.org)
+[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.85-orange)](https://www.rust-lang.org)
 [![MIT License](https://img.shields.io/github/license/jwodder/life.svg)](https://opensource.org/licenses/MIT)
 
 This is a Rust [workspace][] containing various packages for doing things with
