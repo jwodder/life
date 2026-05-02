@@ -50,7 +50,7 @@ be saved at the end.
 Options
 -------
 
-- `-E <VALUE>`, `--edges <VALUE>` — Configure the behavior of the edges of the
+- `-E VALUE`, `--edges VALUE` — Configure the behavior of the edges of the
   pattern's universe.  The allowed values (case insensitive) are:
 
     - `dead` *(default)*: Cells beyond the universe's bounds are dead and
@@ -64,31 +64,31 @@ Options
 
     - `wrapxy`: The universe's x- and y-axes both wrap around
 
-- `-n <NUMBERS>`, `--number <NUMBERS>` — Specify the number(s) of ticks to
-  advance the input pattern by in order to produce the output.  `<NUMBERS>`
-  consists of one or more nonnegative integers and/or hyphenated inclusive
-  ranges of nonnegative integers, all separated by commas.  If multiple tick
-  numbers are specified, multiple outputs are produced, one for each specified
-  tick number in the input pattern's history.  [default: 1]
+- `-n NUMBERS`, `--number NUMBERS` — Specify the number(s) of ticks to advance
+  the input pattern by in order to produce the output.  `NUMBERS` must consist
+  of one or more nonnegative integers and/or hyphenated inclusive ranges of
+  nonnegative integers, all separated by commas.  If multiple tick numbers are
+  specified, multiple outputs are produced, one for each specified tick number
+  in the input pattern's history.  [default: 1]
 
 The following option only has an effect when outputting to a plaintext or RLE
 file:
 
-- `-N <TEXT>`, `--name <TEXT>` — Set the pattern name to embed in the output
-  file.  `<TEXT>` may contain [tick placeholders](#tick-placeholders) but may
-  not contain newlines.
+- `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output file.
+  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
+  contain newlines.
 
 The following options only have an effect when outputting to an image file:
 
-- `-s <INT>`, `--cell-size <INT>` — Set the height & width of the cell squares
-  to the given number of pixels [default: 5]
+- `-s INT`, `--cell-size INT` — Set the height & width of the cell squares to
+  the given number of pixels [default: 5]
 
-- `-g <INT>`, `--gutter <INT>` — Insert the given number of pixels as padding
+- `-g INT`, `--gutter INT` — Insert the given number of pixels as padding
   between adjacent cell squares [default: 0]
 
-- `-C <COLOR>`, `--live-color <COLOR>` — Set the color of live cells.
-  `<COLOR>` can be a hex RGB string "`#rrggbb`" (with or without leading `#`)
-  or a [CSS color name][].  [default: `#000000`]
+- `-C COLOR`, `--live-color COLOR` — Set the color of live cells.  `COLOR` can
+  be a hex RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color
+  name][].  [default: `#000000`]
 
 [CSS color name]: https://www.w3.org/TR/css-color-4/#named-colors
 
