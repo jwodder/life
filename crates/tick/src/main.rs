@@ -132,10 +132,10 @@ enum Saver {
 
 impl Saver {
     fn save(&self, pattern: Pattern, path: &Path, index: usize) -> anyhow::Result<()> {
-        if let Some(parent) = path.parent() {
-            if parent != Path::new("") {
-                create_dir_all(parent)?;
-            }
+        if let Some(parent) = path.parent()
+            && parent != Path::new("")
+        {
+            create_dir_all(parent)?;
         }
         match self {
             Saver::Plaintext { name } => {
