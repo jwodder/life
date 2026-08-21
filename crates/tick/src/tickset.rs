@@ -76,6 +76,7 @@ pub(crate) enum ParseTickSetError {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::single_range_in_vec_init)]
     use super::*;
     use assert_matches::assert_matches;
     use rstest::rstest;
