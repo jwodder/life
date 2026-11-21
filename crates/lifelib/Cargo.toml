@@ -12,6 +12,7 @@ categories = ["mathematics", "parser-implementations", "simulation", "visualizat
 publish = false
 
 [dependencies]
+bit-vec = "0.10.2"
 image = { version = "0.25.2", optional = true, default-features = false }
 life-utils = { path = "../life-utils" }
 thiserror = "2.0.0"
