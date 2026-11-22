@@ -53,10 +53,13 @@ impl Document {
         }
     }
 
-    pub fn load_from_file(p: &Path, fc: FormatChoice) -> Result<Document, ReadDocumentError> {
+    pub fn load_from_file<P: AsRef<Path>>(
+        p: P,
+        fc: FormatChoice,
+    ) -> Result<Document, ReadDocumentError> {
         let format = match fc {
             FormatChoice::Autodetect => {
-                Format::identify(p).ok_or(ReadDocumentError::AutodetectFailed)?
+                Format::identify(&p).ok_or(ReadDocumentError::AutodetectFailed)?
             }
             FormatChoice::Fixed(f) => f,
         };
