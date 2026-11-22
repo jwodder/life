@@ -264,10 +264,10 @@ impl Pattern {
     pub fn step(&self) -> Pattern {
         let mut next_state = self.clone();
         for y in self.bounds.yrange() {
-            let yrange = self.edges.about_y(y, self.height());
+            let yrange = adjacent(self.bounds.yrange(), y, self.edges.wraps_y());
             for x in self.bounds.xrange() {
                 let mut alive = 0;
-                for x2 in self.edges.about_x(x, self.width()) {
+                for x2 in adjacent(self.bounds.xrange(), x, self.edges.wraps_x()) {
                     for &y2 in &yrange {
                         if self.is_live((y2, x2)) {
                             alive += 1;
@@ -314,18 +314,12 @@ pub enum Edges {
 }
 
 impl Edges {
-    fn about_x(&self, x: isize, limit: usize) -> Vec<isize> {
-        match self {
-            Edges::Dead | Edges::WrapY => range_about(x, limit),
-            Edges::WrapX | Edges::WrapXY => wrap_about(x, limit),
-        }
+    fn wraps_x(&self) -> bool {
+        matches!(self, Edges::WrapX | Edges::WrapXY)
     }
 
-    fn about_y(&self, y: isize, limit: usize) -> Vec<isize> {
-        match self {
-            Edges::Dead | Edges::WrapX => range_about(y, limit),
-            Edges::WrapY | Edges::WrapXY => wrap_about(y, limit),
-        }
+    fn wraps_y(&self) -> bool {
+        matches!(self, Edges::WrapY | Edges::WrapXY)
     }
 }
 
@@ -624,32 +618,24 @@ impl<'a> PatternParser<'a> {
     }
 }
 
-fn range_about(i: isize, limit: usize) -> Vec<isize> {
+fn adjacent(range: Range<isize>, i: isize, wrap: bool) -> Vec<isize> {
     let mut vals = Vec::with_capacity(3);
-    if let Some(a) = i.checked_sub(1) {
+    let mut a = i.checked_sub(1).filter(|&a| a >= range.start);
+    if a.is_none() && wrap {
+        a = Some(range.end - 1);
+    }
+    if let Some(a) = a {
         vals.push(a);
     }
     vals.push(i);
-    if let Some(b) = i
-        .checked_add(1)
-        .filter(|&b| isize::try_from(limit).ok().is_none_or(|lim| b < lim))
-    {
+    let mut b = i.checked_add(1).filter(|&b| b < range.end);
+    if b.is_none() && wrap {
+        b = Some(range.start);
+    }
+    if let Some(b) = b {
         vals.push(b);
     }
     vals
-}
-
-fn wrap_about(i: isize, limit: usize) -> Vec<isize> {
-    debug_assert!(limit > 0, "limit should be > 0");
-    vec![
-        i.checked_sub(1)
-            .or_else(|| isize::try_from(limit - 1).ok())
-            .unwrap_or(isize::MAX),
-        i,
-        i.checked_add(1)
-            .filter(|&b| isize::try_from(limit).ok().is_none_or(|lim| b < lim))
-            .unwrap_or(0),
-    ]
 }
 
 #[cfg(test)]
