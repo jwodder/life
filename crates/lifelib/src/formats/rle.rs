@@ -114,7 +114,7 @@ impl FromStr for Rle {
             match kind {
                 RunKind::Dead => x += length.get(),
                 RunKind::Live => {
-                    pattern.set_run(y, x, length.get(), State::Live);
+                    pattern.set_run((y, x), length.get(), State::Live);
                     x += length.get();
                 }
                 RunKind::Eol => {

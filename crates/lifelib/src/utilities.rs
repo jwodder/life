@@ -1,6 +1,6 @@
 //! Utility types (mostly iterators)
 use crate::errors::{LineFromStringError, ParseLineError};
-use crate::{Pattern, State};
+use crate::{Coords, Pattern, State};
 use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
@@ -190,9 +190,9 @@ impl<'a> Enumerate<'a> {
 }
 
 impl Iterator for Enumerate<'_> {
-    type Item = ((usize, usize), State);
+    type Item = (Coords, State);
 
-    fn next(&mut self) -> Option<((usize, usize), State)> {
+    fn next(&mut self) -> Option<(Coords, State)> {
         let b = self.inner.next()?;
         let old_y = self.y;
         let old_x = self.x;
@@ -203,7 +203,7 @@ impl Iterator for Enumerate<'_> {
             self.x = 0;
             self.y += 1;
         }
-        Some(((old_y, old_x), State::living(b)))
+        Some((Coords { y: old_y, x: old_x }, State::living(b)))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -230,9 +230,9 @@ impl<'a> IterLive<'a> {
 }
 
 impl Iterator for IterLive<'_> {
-    type Item = (usize, usize);
+    type Item = Coords;
 
-    fn next(&mut self) -> Option<(usize, usize)> {
+    fn next(&mut self) -> Option<Coords> {
         for (yx, b) in self.inner.by_ref() {
             if b.is_live() {
                 return Some(yx);
@@ -279,8 +279,8 @@ impl<'a> Draw<'a> {
 
 impl fmt::Display for Draw<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for ((y, x), b) in self.life.enumerate() {
-            if x == 0 && y > 0 {
+        for (c, b) in self.life.enumerate() {
+            if c.x == 0 && c.y > 0 {
                 f.write_char('\n')?;
             }
             f.write_char(if b.is_live() { self.live } else { self.dead })?;
