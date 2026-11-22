@@ -6,9 +6,10 @@ pub mod utilities;
 use crate::errors::*;
 use crate::formats::*;
 use crate::utilities::*;
+use bit_vec::BitVec;
 use std::fmt;
 use std::fs::read_to_string;
-use std::ops::{Index, IndexMut, Not};
+use std::ops::Not;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -20,6 +21,10 @@ pub enum State {
 }
 
 impl State {
+    pub fn living(alive: bool) -> State {
+        if alive { State::Live } else { State::Dead }
+    }
+
     pub fn is_live(self) -> bool {
         self == State::Live
     }
@@ -53,7 +58,7 @@ pub struct Pattern {
     height: usize,
     width: usize,
     edges: Edges,
-    cells: Vec<State>,
+    cells: BitVec,
 }
 
 impl Pattern {
@@ -68,7 +73,7 @@ impl Pattern {
         let area = width
             .checked_mul(height)
             .expect("width * height for new Pattern exceeds usize::MAX");
-        let cells = vec![State::Dead; area];
+        let cells = BitVec::from_elem(area, false);
         Pattern {
             height,
             width,
@@ -107,28 +112,30 @@ impl Pattern {
     }
 
     pub fn get(&self, y: usize, x: usize) -> Option<State> {
-        self.index(y, x).map(|i| self.cells[i])
+        self.index(y, x).map(|i| State::living(self.cells[i]))
     }
 
-    pub fn get_mut(&mut self, y: usize, x: usize) -> Option<&mut State> {
-        self.index(y, x).map(|i| &mut self.cells[i])
+    pub fn is_live(&self, y: usize, x: usize) -> bool {
+        self.get(y, x) == Some(State::Live)
     }
 
     pub fn birth(&mut self, y: usize, x: usize) {
-        if let Some(st) = self.get_mut(y, x) {
-            *st = State::Live;
+        if let Some(i) = self.index(y, x) {
+            self.cells.set(i, true);
         }
     }
 
     pub fn kill(&mut self, y: usize, x: usize) {
-        if let Some(st) = self.get_mut(y, x) {
-            *st = State::Dead;
+        if let Some(i) = self.index(y, x) {
+            self.cells.set(i, false);
         }
     }
 
     pub fn toggle(&mut self, y: usize, x: usize) {
-        if let Some(st) = self.get_mut(y, x) {
-            st.toggle();
+        if let Some(i) = self.index(y, x)
+            && let Some(mut b) = self.cells.get_mut(i)
+        {
+            *b = !*b;
         }
     }
 
@@ -140,7 +147,9 @@ impl Pattern {
     pub fn set_run(&mut self, y: usize, x: usize, length: usize, state: State) {
         if let Some(i) = self.index(y, x) {
             let length = length.min(self.width - x);
-            self.cells[i..i.saturating_add(length)].fill(state);
+            for j in i..i.saturating_add(length) {
+                self.cells.set(j, state.is_live());
+            }
         }
     }
 
@@ -168,7 +177,7 @@ impl Pattern {
                 let mut alive = 0;
                 for x2 in self.edges.about_x(x, self.width) {
                     for &y2 in &yrange {
-                        if self[(y2, x2)].is_live() {
+                        if self.get(y2, x2) == Some(State::Live) {
                             alive += 1;
                         }
                     }
@@ -200,26 +209,6 @@ impl Pattern {
             }
             _ => Err(FromFileError::InvalidExtension),
         }
-    }
-}
-
-impl Index<(usize, usize)> for Pattern {
-    type Output = State;
-
-    fn index(&self, (y, x): (usize, usize)) -> &State {
-        let i = self
-            .index(y, x)
-            .expect("(y, x) index should be in bounds for Pattern");
-        &self.cells[i]
-    }
-}
-
-impl IndexMut<(usize, usize)> for Pattern {
-    fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut State {
-        let i = self
-            .index(y, x)
-            .expect("(y, x) index should be in bounds for Pattern");
-        &mut self.cells[i]
     }
 }
 
@@ -409,9 +398,9 @@ impl<'a> PatternParser<'a> {
     ///
     /// let parser = PatternParser::dead_chars(" .");
     /// let life = parser.parse(".#?\n..#\n###\n");
-    /// assert!(!life[(0, 0)].is_live());
-    /// assert!(life[(0, 1)].is_live());
-    /// assert!(life[(0, 2)].is_live());
+    /// assert!(!life.is_live(0, 0));
+    /// assert!(life.is_live(0, 1));
+    /// assert!(life.is_live(0, 2));
     /// ```
     pub fn dead_chars(s: &'a str) -> PatternParser<'a> {
         PatternParser {
@@ -435,9 +424,9 @@ impl<'a> PatternParser<'a> {
     ///
     /// let parser = PatternParser::live_chars("+#");
     /// let life = parser.parse(".#?\n..#\n###\n");
-    /// assert!(!life[(0, 0)].is_live());
-    /// assert!(life[(0, 1)].is_live());
-    /// assert!(!life[(0, 2)].is_live());
+    /// assert!(!life.is_live(0, 0));
+    /// assert!(life.is_live(0, 1));
+    /// assert!(!life.is_live(0, 2));
     /// ```
     pub fn live_chars(s: &'a str) -> PatternParser<'a> {
         PatternParser {

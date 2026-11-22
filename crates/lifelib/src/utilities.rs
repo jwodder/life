@@ -1,6 +1,7 @@
 //! Utility types (mostly iterators)
 use crate::errors::{LineFromStringError, ParseLineError};
 use crate::{Pattern, State};
+use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
 use std::num::NonZeroUsize;
@@ -14,10 +15,10 @@ enum InnerRunLengths<'a> {
     Empty,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct Runner<'a> {
-    chunks: std::slice::ChunksExact<'a, State>,
-    row: Option<&'a [State]>,
+    chunks: RowIter<'a>,
+    row: Option<Vec<State>>,
 }
 
 impl<'a> RunLengths<'a> {
@@ -26,7 +27,7 @@ impl<'a> RunLengths<'a> {
             // Chunk size must be nonzero
             RunLengths(InnerRunLengths::Empty)
         } else {
-            let mut chunks = life.cells.chunks_exact(life.width);
+            let mut chunks = RowIter::new(&life.cells, life.width);
             let row = chunks.next();
             RunLengths(InnerRunLengths::Runner(Runner { chunks, row }))
         }
@@ -40,27 +41,31 @@ impl<'a> RunLengths<'a> {
     }
 }
 
-impl<'a> Runner<'a> {
-    fn next_row(&mut self) -> Option<&'a [State]> {
+impl Runner<'_> {
+    fn next_row(&mut self) -> Option<&[State]> {
         self.row = self.chunks.next();
-        self.row
+        self.row.as_deref()
     }
 
     fn next_run_in_row(&mut self) -> Option<Run> {
-        let (&current, rest) = self.row?.split_first()?;
-        let spanlen = rest.iter().take_while(|&&b| b == current).count();
-        self.row = Some(&rest[spanlen..]);
-        let Some(length) = NonZeroUsize::new(spanlen + 1) else {
-            unreachable!("1 plus value less than isize::MAX should be nonzero");
-        };
-        Some(Run {
-            length,
-            kind: current.into(),
-        })
+        if let Some(ref mut row) = self.row {
+            let (&current, rest) = row.split_first()?;
+            let spanlen = rest.iter().take_while(|&&b| b == current).count();
+            row.drain(0..=spanlen);
+            let Some(length) = NonZeroUsize::new(spanlen + 1) else {
+                unreachable!("1 plus value less than isize::MAX should be nonzero");
+            };
+            Some(Run {
+                length,
+                kind: current.into(),
+            })
+        } else {
+            None
+        }
     }
 
     fn at_eol(&self) -> bool {
-        self.row.is_none_or(<[State]>::is_empty)
+        self.row.as_ref().is_none_or(Vec::is_empty)
     }
 
     fn eol_run(&mut self) -> Option<Run> {
@@ -164,12 +169,13 @@ impl From<State> for RunKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[expect(missing_debug_implementations)]
+#[derive(Clone)]
 pub struct Enumerate<'a> {
     y: usize,
     x: usize,
     width: usize,
-    inner: std::slice::Iter<'a, State>,
+    inner: bit_vec::Iter<'a, u32>,
 }
 
 impl<'a> Enumerate<'a> {
@@ -187,7 +193,7 @@ impl Iterator for Enumerate<'_> {
     type Item = ((usize, usize), State);
 
     fn next(&mut self) -> Option<((usize, usize), State)> {
-        let &b = self.inner.next()?;
+        let b = self.inner.next()?;
         let old_y = self.y;
         let old_x = self.x;
         // These operations won't overflow, as neither of x and y will get past
@@ -197,7 +203,7 @@ impl Iterator for Enumerate<'_> {
             self.x = 0;
             self.y += 1;
         }
-        Some(((old_y, old_x), b))
+        Some(((old_y, old_x), State::living(b)))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -209,7 +215,8 @@ impl ExactSizeIterator for Enumerate<'_> {}
 
 impl FusedIterator for Enumerate<'_> {}
 
-#[derive(Clone, Debug)]
+#[expect(missing_debug_implementations)]
+#[derive(Clone)]
 pub struct IterLive<'a> {
     inner: Enumerate<'a>,
 }
@@ -357,6 +364,34 @@ impl TryFrom<String> for Line {
             Ok(()) => Ok(Line(string)),
             Err(source) => Err(LineFromStringError { source, string }),
         }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RowIter<'a> {
+    cells: &'a BitVec,
+    width: usize,
+    i: usize,
+}
+
+impl<'a> RowIter<'a> {
+    fn new(cells: &'a BitVec, width: usize) -> Self {
+        RowIter { cells, width, i: 0 }
+    }
+}
+
+impl Iterator for RowIter<'_> {
+    type Item = Vec<State>;
+
+    fn next(&mut self) -> Option<Vec<State>> {
+        (self.i < self.cells.len()).then(|| {
+            let mut row = Vec::with_capacity(self.width);
+            for _ in 0..self.width {
+                row.push(State::living(self.cells[self.i]));
+                self.i += 1;
+            }
+            row
+        })
     }
 }
 
