@@ -64,7 +64,7 @@ pub struct Pattern {
 impl Pattern {
     /// # Panics
     ///
-    /// Panics if ``width * height`` exceeds the maximum capacity of a [`Vec`].
+    /// Panics if `width * height` exceeds the maximum capacity of a [`Vec`].
     pub fn new(mut height: usize, mut width: usize) -> Pattern {
         if height == 0 || width == 0 {
             height = 0;
