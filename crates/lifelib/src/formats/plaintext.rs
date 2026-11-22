@@ -47,9 +47,9 @@ impl FromStr for Plaintext {
     ///
     /// # Errors
     ///
-    /// `Err` is returned if the input does not begin with `"!Name: "` or if
-    /// the pattern drawing contains any characters other than `.`, `O`, and
-    /// newline sequences.
+    /// `Err` is returned if the pattern drawing contains any characters other
+    /// than `.`, `O`, & newline sequences or if any pattern drawing line
+    /// contains more than [`isize::MAX`] characters.
     fn from_str(s: &str) -> Result<Plaintext, PlaintextError> {
         let mut name = None;
         let mut comments = Vec::new();
