@@ -167,8 +167,8 @@ pub enum RleError {
 
     /// Returned if the header line specified a rule other than Conway's Game
     /// of Life
-    #[error("header specifies unsupported rule")]
-    UnsupportedRule,
+    #[error("header specifies unsupported rule: {0:?}")]
+    UnsupportedRule(String),
 
     /// Returned if a number in the header or data exceeded [`usize::MAX`]
     #[error("numeric value exceeds integer bounds")]
@@ -294,10 +294,10 @@ fn parse_header(header: &str) -> Result<(usize, usize), RleError> {
         scanner.skip_spaces_and_tabs();
         scanner.expect_char('=')?;
         scanner.skip_spaces_and_tabs();
-        scanner
-            .expect_str("B3/S23")
-            .or_else(|_| scanner.expect_str("23/3"))
-            .map_err(|_| RleError::UnsupportedRule)?;
+        let rule = scanner.scan_word();
+        if rule != "B3/S23" && rule != "23/3" {
+            return Err(RleError::UnsupportedRule(rule.into()));
+        }
         scanner.skip_spaces_and_tabs();
         if !scanner.is_empty() {
             return Err(RleError::InvalidHeader);
@@ -747,8 +747,11 @@ mod tests {
                 ".E$.A$3A3$3A$.A$.A$.A$.A$3A3$3A$.A$.A!\n",
             );
             let e = s.parse::<Rle>().unwrap_err();
-            assert_eq!(e, RleError::UnsupportedRule);
-            assert_eq!(e.to_string(), "header specifies unsupported rule");
+            assert_eq!(e, RleError::UnsupportedRule("LifeHistory".into()));
+            assert_eq!(
+                e.to_string(),
+                "header specifies unsupported rule: \"LifeHistory\""
+            );
         }
 
         #[test]
@@ -811,8 +814,11 @@ mod tests {
                 "6b2o3b$ob2obobo3b$2obobo5b$4b2o5b$5bo5b2$7b2o2b$7bo3b$8b3o$10bo!\n",
             );
             let e = s.parse::<Rle>().unwrap_err();
-            assert_eq!(e, RleError::UnsupportedRule);
-            assert_eq!(e.to_string(), "header specifies unsupported rule");
+            assert_eq!(e, RleError::UnsupportedRule("b3/s23".into()));
+            assert_eq!(
+                e.to_string(),
+                "header specifies unsupported rule: \"b3/s23\""
+            );
         }
 
         #[test]

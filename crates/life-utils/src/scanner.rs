@@ -107,6 +107,13 @@ impl<'a> Scanner<'a> {
             s
         })
     }
+
+    pub fn scan_word(&mut self) -> &str {
+        let i = self.0.find([' ', '\t', '\n', '\r']).unwrap_or(self.0.len());
+        let s = &self.0[..i];
+        self.0 = &self.0[i..];
+        s
+    }
 }
 
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
