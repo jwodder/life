@@ -4,6 +4,7 @@ use super::Pattern;
 pub use image;
 use image::{Rgb, RgbImage};
 use std::num::NonZeroU32;
+use thiserror::Error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct ImageBuilder {
@@ -39,32 +40,41 @@ impl ImageBuilder {
         self
     }
 
+    /// # Errors
+    ///
+    /// Returns `Err(RenderError::TooLarge)` if the width or height of the
+    /// image would exceed `u32::MAX`
+    ///
     /// # Panics
     ///
-    /// Panics if the image width or image height does not fit in a `u32`, or
-    /// when [`image::ImageBuffer::new()`] panics.
-    pub fn render(&self, life: &Pattern) -> RgbImage {
+    /// Panics when [`image::ImageBuffer::new()`] panics
+    pub fn render(&self, life: &Pattern) -> Result<RgbImage, RenderError> {
         let cell_size = self.cell_size.get();
-        let pat_width = u32::try_from(life.width()).expect("Pattern width should fit in a u32");
-        let pat_height = u32::try_from(life.height()).expect("Pattern height should fit in a u32");
+        let Ok(pat_width) = u32::try_from(life.width()) else {
+            return Err(RenderError::TooLarge);
+        };
+        let Ok(pat_height) = u32::try_from(life.height()) else {
+            return Err(RenderError::TooLarge);
+        };
         let guttered_size = cell_size
             .checked_add(self.gutter)
-            .expect("cell_size + gutter should not overflow");
+            .ok_or(RenderError::TooLarge)?;
         let img_width = guttered_size
             .checked_mul(pat_width)
             .and_then(|w| w.checked_sub(self.gutter))
-            .expect("image size should not overflow u32");
+            .ok_or(RenderError::TooLarge)?;
         let img_height = guttered_size
             .checked_mul(pat_height)
             .and_then(|h| h.checked_sub(self.gutter))
-            .expect("image size should not overflow u32");
+            .ok_or(RenderError::TooLarge)?;
         let mut img = RgbImage::from_fn(img_width, img_height, |_, _| [0xFF, 0xFF, 0xFF].into());
+        let ul = life.upper_left();
         for c in life.iter_live() {
-            let xstart = match u32::try_from(c.x) {
+            let xstart = match u32::try_from(c.x.abs_diff(ul.x)) {
                 Ok(x) => x * guttered_size,
                 _ => unreachable!("width fit in a u32, so x should too"),
             };
-            let ystart = match u32::try_from(c.y) {
+            let ystart = match u32::try_from(c.y.abs_diff(ul.y)) {
                 Ok(y) => y * guttered_size,
                 _ => unreachable!("height fit in a u32, so y should too"),
             };
@@ -74,7 +84,7 @@ impl ImageBuilder {
                 }
             }
         }
-        img
+        Ok(img)
     }
 }
 
@@ -82,6 +92,12 @@ impl Default for ImageBuilder {
     fn default() -> ImageBuilder {
         ImageBuilder::new()
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub enum RenderError {
+    #[error("image dimensions too large")]
+    TooLarge,
 }
 
 #[cfg(test)]
@@ -102,7 +118,7 @@ mod tests {
     fn test_image1() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new().cell_size(NonZeroU32::new(5).unwrap());
-        let img = painter.render(&life);
+        let img = painter.render(&life).unwrap();
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
@@ -116,7 +132,7 @@ mod tests {
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .live_color([0xFF, 0, 0].into());
-        let img = painter.render(&life);
+        let img = painter.render(&life).unwrap();
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
@@ -130,7 +146,7 @@ mod tests {
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .gutter(1);
-        let img = painter.render(&life);
+        let img = painter.render(&life).unwrap();
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
