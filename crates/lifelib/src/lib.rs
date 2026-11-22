@@ -1,17 +1,13 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+pub mod document;
 pub mod errors;
 pub mod formats;
 pub mod image;
 pub mod utilities;
-use crate::errors::*;
-use crate::formats::*;
 use crate::utilities::*;
 use bit_vec::BitVec;
-use std::fmt;
-use std::fs::read_to_string;
 use std::ops::{Not, Range};
-use std::path::Path;
-use std::str::FromStr;
+use strum::{Display, EnumString};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum State {
@@ -344,24 +340,12 @@ impl Pattern {
     pub fn into_generations(self) -> Generations {
         Generations(self)
     }
-
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Pattern, FromFileError> {
-        let path = path.as_ref();
-        match path.extension().and_then(|s| s.to_str()) {
-            Some("cells") => {
-                let s = read_to_string(path)?;
-                Ok(s.parse::<Plaintext>()?.into())
-            }
-            Some("rle") => {
-                let s = read_to_string(path)?;
-                Ok(s.parse::<Rle>()?.into())
-            }
-            _ => Err(FromFileError::InvalidExtension),
-        }
-    }
 }
 
-#[derive(Copy, Clone, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Copy, Clone, Debug, Default, Display, EnumString, Hash, Eq, Ord, PartialEq, PartialOrd,
+)]
+#[strum(ascii_case_insensitive, serialize_all = "lowercase")]
 pub enum Edges {
     #[default]
     Dead,
@@ -388,45 +372,6 @@ impl Edges {
 
     fn grows_y(&self) -> bool {
         matches!(self, Edges::GrowY | Edges::GrowXY)
-    }
-}
-
-impl fmt::Display for Edges {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Edges::Dead => "dead",
-            Edges::WrapX => "wrapx",
-            Edges::WrapY => "wrapy",
-            Edges::WrapXY => "wrapxy",
-            Edges::GrowX => "growx",
-            Edges::GrowY => "growy",
-            Edges::GrowXY => "growxy",
-        };
-        write!(f, "{s}")
-    }
-}
-
-impl FromStr for Edges {
-    type Err = ParseEdgesError;
-
-    fn from_str(s: &str) -> Result<Edges, ParseEdgesError> {
-        if s.eq_ignore_ascii_case("dead") {
-            Ok(Edges::Dead)
-        } else if s.eq_ignore_ascii_case("wrapx") {
-            Ok(Edges::WrapX)
-        } else if s.eq_ignore_ascii_case("wrapy") {
-            Ok(Edges::WrapY)
-        } else if s.eq_ignore_ascii_case("wrapxy") {
-            Ok(Edges::WrapXY)
-        } else if s.eq_ignore_ascii_case("growx") {
-            Ok(Edges::GrowX)
-        } else if s.eq_ignore_ascii_case("growy") {
-            Ok(Edges::GrowY)
-        } else if s.eq_ignore_ascii_case("growxy") {
-            Ok(Edges::GrowXY)
-        } else {
-            Err(ParseEdgesError)
-        }
     }
 }
 
