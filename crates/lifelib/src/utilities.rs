@@ -393,14 +393,22 @@ impl Iterator for BoundsIntoIter {
         Some(c)
     }
 
-    /*
     fn size_hint(&self) -> (usize, Option<usize>) {
-        todo!()
+        let lr = self.bounds.lower_right();
+        let sz = if self.y >= lr.y {
+            0
+        } else {
+            lr.x.abs_diff(self.x).saturating_add(
+                self.bounds
+                    .width
+                    .saturating_mul(lr.y.abs_diff(self.y.saturating_add(1))),
+            )
+        };
+        (sz, Some(sz))
     }
-    */
 }
 
-//impl ExactSizeIterator for BoundsIntoIter {}
+impl ExactSizeIterator for BoundsIntoIter {}
 
 impl FusedIterator for BoundsIntoIter {}
 

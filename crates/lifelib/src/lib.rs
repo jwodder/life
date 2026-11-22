@@ -1478,4 +1478,40 @@ mod tests {
             assert_eq!(value.to_string().parse::<Edges>().unwrap(), value);
         }
     }
+
+    mod bounds {
+        use super::*;
+
+        #[test]
+        fn iter_empty() {
+            let bounds = Bounds::new(0, 0);
+            let mut iter = bounds.into_iter();
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+        }
+
+        #[test]
+        fn iter3x2() {
+            let bounds = Bounds::new(3, 2);
+            let mut iter = bounds.into_iter();
+            assert_eq!(iter.size_hint(), (6, Some(6)));
+            assert_eq!(iter.next(), Some(Coords { y: 0, x: 0 }));
+            assert_eq!(iter.size_hint(), (5, Some(5)));
+            assert_eq!(iter.next(), Some(Coords { y: 0, x: 1 }));
+            assert_eq!(iter.size_hint(), (4, Some(4)));
+            assert_eq!(iter.next(), Some(Coords { y: 1, x: 0 }));
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert_eq!(iter.next(), Some(Coords { y: 1, x: 1 }));
+            assert_eq!(iter.size_hint(), (2, Some(2)));
+            assert_eq!(iter.next(), Some(Coords { y: 2, x: 0 }));
+            assert_eq!(iter.size_hint(), (1, Some(1)));
+            assert_eq!(iter.next(), Some(Coords { y: 2, x: 1 }));
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+        }
+    }
 }
