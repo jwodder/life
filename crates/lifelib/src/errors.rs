@@ -28,3 +28,11 @@ pub struct LineFromStringError {
     pub source: ParseLineError,
     pub string: String,
 }
+
+#[cfg(feature = "image")]
+#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub enum RenderError {
+    #[error("image dimensions too large")]
+    TooLarge,
+}
