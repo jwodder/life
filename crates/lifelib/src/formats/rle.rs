@@ -631,6 +631,15 @@ mod tests {
     }
 
     #[test]
+    fn trailing_text() {
+        let s = "x = 3, y = 3\nbo$2bo$3o!\n#C This is a glider.\n";
+        let rle = s.parse::<Rle>().unwrap();
+        assert!(rle.comments.is_empty());
+        assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(rle.to_string(), "x = 3, y = 3\nbo$2bo$3o!\n");
+    }
+
+    #[test]
     fn test_get_set_multi_name() {
         let s = concat!(
             "#N beehiveoncap.rle\n",
