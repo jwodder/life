@@ -9,7 +9,7 @@ use crate::utilities::*;
 use bit_vec::BitVec;
 use std::fmt;
 use std::fs::read_to_string;
-use std::ops::Not;
+use std::ops::{Not, Range};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -55,32 +55,92 @@ impl Not for &State {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Coords {
-    pub y: usize,
-    pub x: usize,
+    pub y: isize,
+    pub x: isize,
 }
 
 impl Coords {
-    pub fn new(y: usize, x: usize) -> Coords {
+    pub fn new(y: isize, x: isize) -> Coords {
         Coords { y, x }
     }
 }
 
-impl From<(usize, usize)> for Coords {
-    fn from((y, x): (usize, usize)) -> Coords {
+impl From<(isize, isize)> for Coords {
+    fn from((y, x): (isize, isize)) -> Coords {
         Coords::new(y, x)
     }
 }
 
-impl From<Coords> for (usize, usize) {
-    fn from(coords: Coords) -> (usize, usize) {
+impl From<Coords> for (isize, isize) {
+    fn from(coords: Coords) -> (isize, isize) {
         (coords.y, coords.x)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct Bounds {
+    upper_left: Coords,
+    width: usize,
+    height: usize,
+}
+
+impl Bounds {
+    fn contains<C: Into<Coords>>(&self, c: C) -> bool {
+        let c = c.into();
+        self.xrange().contains(&c.x) && self.yrange().contains(&c.y)
+    }
+
+    fn index<C: Into<Coords>>(&self, c: C) -> Option<usize> {
+        let c = c.into();
+        if self.contains(c) {
+            let y = c.y.abs_diff(self.upper_left.y);
+            let x = c.x.abs_diff(self.upper_left.x);
+            y.checked_mul(self.width)?.checked_add(x)
+        } else {
+            None
+        }
+    }
+
+    fn ybound(&self) -> isize {
+        // TODO: Add checks on construction to ensure that this doesn't
+        // overflow:
+        self.upper_left.y.strict_add_unsigned(self.height)
+    }
+
+    fn xbound(&self) -> isize {
+        // TODO: Add checks on construction to ensure that this doesn't
+        // overflow:
+        self.upper_left.x.strict_add_unsigned(self.width)
+    }
+
+    fn lower_right(&self) -> Coords {
+        Coords {
+            y: self.ybound(),
+            x: self.xbound(),
+        }
+    }
+
+    fn yrange(&self) -> Range<isize> {
+        self.upper_left.y..self.ybound()
+    }
+
+    fn xrange(&self) -> Range<isize> {
+        self.upper_left.x..self.xbound()
+    }
+}
+
+impl IntoIterator for Bounds {
+    type Item = Coords;
+    type IntoIter = BoundsIntoIter;
+
+    fn into_iter(self) -> BoundsIntoIter {
+        BoundsIntoIter::new(self)
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pattern {
-    height: usize,
-    width: usize,
+    bounds: Bounds,
     edges: Edges,
     cells: BitVec,
 }
@@ -99,19 +159,26 @@ impl Pattern {
             .expect("width * height for new Pattern exceeds usize::MAX");
         let cells = BitVec::from_elem(area, false);
         Pattern {
-            height,
-            width,
+            bounds: Bounds {
+                upper_left: Coords { y: 0, x: 0 },
+                height,
+                width,
+            },
             edges: Edges::default(),
             cells,
         }
     }
 
     pub fn height(&self) -> usize {
-        self.height
+        self.bounds.height
     }
 
     pub fn width(&self) -> usize {
-        self.width
+        self.bounds.width
+    }
+
+    pub fn upper_left(&self) -> Coords {
+        self.bounds.upper_left
     }
 
     pub fn edges(&self) -> Edges {
@@ -124,17 +191,11 @@ impl Pattern {
     }
 
     pub fn contains<C: Into<Coords>>(&self, c: C) -> bool {
-        let c = c.into();
-        (0..self.height).contains(&c.y) && (0..self.width).contains(&c.x)
+        self.bounds.contains(c)
     }
 
     fn index<C: Into<Coords>>(&self, c: C) -> Option<usize> {
-        let c = c.into();
-        if self.contains(c) {
-            c.y.checked_mul(self.width)?.checked_add(c.x)
-        } else {
-            None
-        }
+        self.bounds.index(c)
     }
 
     pub fn get<C: Into<Coords>>(&self, c: C) -> Option<State> {
@@ -170,10 +231,14 @@ impl Pattern {
     /// If `c` is not within the bounds of the `Pattern`, nothing happens.
     ///
     /// At most `width - c.x` cells are set, even if `length` is larger.
-    pub fn set_run<C: Into<Coords>>(&mut self, c: C, length: usize, state: State) {
+    pub fn set_run<C: Into<Coords>>(&mut self, c: C, mut length: usize, state: State) {
         let c = c.into();
         if let Some(i) = self.index(c) {
-            let length = length.min(self.width - c.x);
+            if let Some(rowrem) = self.width().checked_sub_signed(c.x)
+                && rowrem < length
+            {
+                length = rowrem;
+            }
             for j in i..i.saturating_add(length) {
                 self.cells.set(j, state.is_live());
             }
@@ -198,11 +263,11 @@ impl Pattern {
 
     pub fn step(&self) -> Pattern {
         let mut next_state = self.clone();
-        for y in 0..self.height {
-            let yrange = self.edges.about_y(y, self.height);
-            for x in 0..self.width {
+        for y in self.bounds.yrange() {
+            let yrange = self.edges.about_y(y, self.height());
+            for x in self.bounds.xrange() {
                 let mut alive = 0;
-                for x2 in self.edges.about_x(x, self.width) {
+                for x2 in self.edges.about_x(x, self.width()) {
                     for &y2 in &yrange {
                         if self.is_live((y2, x2)) {
                             alive += 1;
@@ -249,14 +314,14 @@ pub enum Edges {
 }
 
 impl Edges {
-    fn about_x(&self, x: usize, limit: usize) -> Vec<usize> {
+    fn about_x(&self, x: isize, limit: usize) -> Vec<isize> {
         match self {
             Edges::Dead | Edges::WrapY => range_about(x, limit),
             Edges::WrapX | Edges::WrapXY => wrap_about(x, limit),
         }
     }
 
-    fn about_y(&self, y: usize, limit: usize) -> Vec<usize> {
+    fn about_y(&self, y: isize, limit: usize) -> Vec<isize> {
         match self {
             Edges::Dead | Edges::WrapX => range_about(y, limit),
             Edges::WrapY | Edges::WrapXY => wrap_about(y, limit),
@@ -333,34 +398,43 @@ impl PatternBuilder {
 
     pub fn max_height(mut self, height: usize) -> Self {
         self.max_height = height;
-        self.live.retain(|c| c.y < height);
+        if let Ok(h) = isize::try_from(height) {
+            self.live.retain(|c| c.y < h);
+        }
         self
     }
 
     pub fn max_width(mut self, width: usize) -> Self {
         self.max_width = width;
-        self.live.retain(|c| c.x < width);
+        if let Ok(w) = isize::try_from(width) {
+            self.live.retain(|c| c.x < w);
+        }
         self
     }
 
-    pub fn push(&mut self, y: usize, x: usize) {
-        if (0..self.max_height).contains(&y) && (0..self.max_width).contains(&x) {
+    pub fn push<C: Into<Coords>>(&mut self, c: C) {
+        let c = c.into();
+        if let Ok(y) = usize::try_from(c.y)
+            && let Ok(x) = usize::try_from(c.x)
+            && (0..self.max_height).contains(&y)
+            && (0..self.max_width).contains(&x)
+        {
             if y >= self.height {
                 self.height = y + 1;
             }
             if x >= self.width {
                 self.width = x + 1;
             }
-            self.live.push(Coords { y, x });
+            self.live.push(c);
         }
     }
 
     pub fn build(self) -> Pattern {
-        let mut life = Pattern::new(self.height, self.width).with_edges(self.edges);
+        let mut pat = Pattern::new(self.height, self.width).with_edges(self.edges);
         for c in self.live {
-            life.birth(c);
+            pat.birth(c);
         }
-        life
+        pat
     }
 }
 
@@ -370,10 +444,10 @@ impl Default for PatternBuilder {
     }
 }
 
-impl Extend<(usize, usize)> for PatternBuilder {
-    fn extend<I: IntoIterator<Item = (usize, usize)>>(&mut self, iter: I) {
-        for (y, x) in iter {
-            self.push(y, x);
+impl<C: Into<Coords>> Extend<C> for PatternBuilder {
+    fn extend<I: IntoIterator<Item = C>>(&mut self, iter: I) {
+        for c in iter {
+            self.push(c);
         }
     }
 }
@@ -536,8 +610,13 @@ impl<'a> PatternParser<'a> {
             for (x, ch) in line.chars().enumerate().take(self.max_width) {
                 // Ensure that trailing dead cells count towards the width:
                 builder = builder.min_width(x + 1);
-                if self.cell_parser.parse(ch).is_live() {
-                    builder.push(y, x);
+                // TODO: Return Err on large input?
+                // TODO: Document behavior for large input
+                if self.cell_parser.parse(ch).is_live()
+                    && let Ok(yi) = isize::try_from(y)
+                    && let Ok(xi) = isize::try_from(x)
+                {
+                    builder.push((yi, xi));
                 }
             }
         }
@@ -545,24 +624,31 @@ impl<'a> PatternParser<'a> {
     }
 }
 
-fn range_about(i: usize, limit: usize) -> Vec<usize> {
+fn range_about(i: isize, limit: usize) -> Vec<isize> {
     let mut vals = Vec::with_capacity(3);
     if let Some(a) = i.checked_sub(1) {
         vals.push(a);
     }
     vals.push(i);
-    if let Some(b) = i.checked_add(1).filter(|&b| b < limit) {
+    if let Some(b) = i
+        .checked_add(1)
+        .filter(|&b| isize::try_from(limit).ok().is_none_or(|lim| b < lim))
+    {
         vals.push(b);
     }
     vals
 }
 
-fn wrap_about(i: usize, limit: usize) -> Vec<usize> {
+fn wrap_about(i: isize, limit: usize) -> Vec<isize> {
     debug_assert!(limit > 0, "limit should be > 0");
     vec![
-        i.checked_sub(1).unwrap_or(limit - 1),
+        i.checked_sub(1)
+            .or_else(|| isize::try_from(limit - 1).ok())
+            .unwrap_or(isize::MAX),
         i,
-        i.checked_add(1).filter(|&b| b < limit).unwrap_or(0),
+        i.checked_add(1)
+            .filter(|&b| isize::try_from(limit).ok().is_none_or(|lim| b < lim))
+            .unwrap_or(0),
     ]
 }
 
