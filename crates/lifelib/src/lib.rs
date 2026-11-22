@@ -177,7 +177,7 @@ impl Pattern {
                 let mut alive = 0;
                 for x2 in self.edges.about_x(x, self.width) {
                     for &y2 in &yrange {
-                        if self.get(y2, x2) == Some(State::Live) {
+                        if self.is_live(y2, x2) {
                             alive += 1;
                         }
                     }
