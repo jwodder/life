@@ -100,11 +100,11 @@ impl Bounds {
         );
         assert!(
             upper_left.y.checked_add_unsigned(height).is_some(),
-            "maximum y coordinate of new Pattern exceeds isize::MAX"
+            "maximum y-coordinate of new Pattern exceeds isize::MAX"
         );
         assert!(
             upper_left.x.checked_add_unsigned(width).is_some(),
-            "maximum x coordinate of new Pattern exceeds isize::MAX"
+            "maximum x-coordinate of new Pattern exceeds isize::MAX"
         );
         Bounds {
             height,
@@ -180,7 +180,8 @@ pub struct Pattern {
 impl Pattern {
     /// # Panics
     ///
-    /// Panics if `width * height` exceeds the maximum capacity of a [`Vec`].
+    /// Panics if either `width` or `height` exceeds [`isize::MAX`] or if
+    /// `width * height` exceeds [`usize::MAX`]
     pub fn new(height: usize, width: usize) -> Pattern {
         let bounds = Bounds::new(height, width);
         let cells = BitVec::from_elem(height * width, false);

@@ -149,3 +149,17 @@ An RLE document representing the [glider](https://conwaylife.com/wiki/Glider):
 x = 3, y = 3
 bo$2bo$3o!
 ```
+
+Implementation Limits
+---------------------
+
+`lifelib` only accepts patterns where the width & height are each no larger
+than Rust's [`isize::MAX`][] and where the product of the width & height is no
+larger than Rust's [`usize::MAX`][].  On most modern computers, these values
+are $2^{63} - 1$ (approx. 9 quintillion) and $2^{64} - 1$ (approx. 18
+quintillion), respectively.  Providing a too-large pattern will result in an
+error, not necessarily a graceful one (assuming you don't eat up all of your
+system's RAM first).
+
+[`isize::MAX`]: https://doc.rust-lang.org/std/primitive.isize.html#associatedconstant.MAX
+[`usize::MAX`]: https://doc.rust-lang.org/std/primitive.usize.html#associatedconstant.MAX
