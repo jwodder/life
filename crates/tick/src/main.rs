@@ -170,6 +170,7 @@ impl Saver {
             }
             Saver::Image { builder } => builder
                 .render(&pattern)
+                .context("failed to render image")?
                 .save(path)
                 .context("failed to write image file")?,
         }
