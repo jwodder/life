@@ -54,7 +54,7 @@ impl FromStr for Plaintext {
         let mut name = None;
         let mut comments = Vec::new();
         let mut builder = PatternBuilder::new();
-        let mut y = 0;
+        let mut y = 0isize;
         for ln in ascii_lines(s) {
             if let Some(comm) = ln.strip_prefix('!') {
                 if y == 0 {
@@ -74,17 +74,22 @@ impl FromStr for Plaintext {
                 for (x, ch) in ln.chars().enumerate() {
                     // Ensure that trailing dead cells count towards the width:
                     builder = builder.min_width(x.saturating_add(1));
+                    let Ok(xi) = isize::try_from(x) else {
+                        return Err(PlaintextError::LineTooLong);
+                    };
                     match ch {
-                        'O' => builder.push(y, x),
+                        'O' => builder.push((y, xi)),
                         '.' => (),
                         ch => return Err(PlaintextError::InvalidChar(ch)),
                     }
                 }
+                // TODO: Handle numeric overflow:
                 y += 1;
             }
         }
         // Ensure that trailing dead rows count towards the height:
-        builder = builder.min_height(y);
+        builder = builder
+            .min_height(usize::try_from(y).expect("nonnegative isize should be a valid usize"));
         Ok(Plaintext {
             name,
             comments,
@@ -110,6 +115,9 @@ pub enum PlaintextError {
     /// `O`, and newline sequences
     #[error("plaintext drawing contains invalid character {0:?}")]
     InvalidChar(char),
+
+    #[error("plaintext drawing line exceeded maximum allowed length")]
+    LineTooLong,
 }
 
 #[cfg(test)]

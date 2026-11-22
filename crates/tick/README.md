@@ -1,4 +1,4 @@
-[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.88-orange)](https://www.rust-lang.org)
+[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.91-orange)](https://www.rust-lang.org)
 [![MIT License](https://img.shields.io/github/license/jwodder/life.svg)](https://opensource.org/licenses/MIT)
 
 `tick` is a program for advancing a pattern in [Conway's Game of Life][].  An
@@ -63,6 +63,14 @@ Options
       connected to the bottom edge
 
     - `wrapxy`: The universe's x- and y-axes both wrap around
+
+    - `growx`: The universe's x-axis will be extended to the left or right as
+      necessary in order to accomodate new live cells
+
+    - `growy`: The universe's y-axis will be extended to the top or bottom as
+      necessary in order to accomodate new live cells
+
+    - `growxy`: The universe's x- and y-axes will both be extended as necessary
 
 - `-n NUMBERS`, `--number NUMBERS` — Specify the number(s) of ticks to advance
   the input pattern by in order to produce the output.  `NUMBERS` must consist

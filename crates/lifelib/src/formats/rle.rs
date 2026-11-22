@@ -107,18 +107,19 @@ impl FromStr for Rle {
         };
         let (width, height) = parse_header(header)?;
         let mut pattern = Pattern::new(height, width);
-        let mut y = 0;
-        let mut x = 0;
+        let mut y = 0isize;
+        let mut x = 0isize;
         for run in parse_runs(data) {
             let Run { length, kind } = run?;
+            // TODO: Handle numeric overflow in this block:
             match kind {
-                RunKind::Dead => x += length.get(),
+                RunKind::Dead => x = x.saturating_add_unsigned(length.get()),
                 RunKind::Live => {
                     pattern.set_run((y, x), length.get(), State::Live);
-                    x += length.get();
+                    x = x.saturating_add_unsigned(length.get());
                 }
                 RunKind::Eol => {
-                    y += length.get();
+                    y = y.saturating_add_unsigned(length.get());
                     x = 0;
                 }
             }

@@ -1,6 +1,6 @@
 //! Utility types (mostly iterators)
 use crate::errors::{LineFromStringError, ParseLineError};
-use crate::{Coords, Pattern, State};
+use crate::{Bounds, Coords, Pattern, State};
 use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
@@ -23,11 +23,11 @@ struct Runner<'a> {
 
 impl<'a> RunLengths<'a> {
     pub(crate) fn new(life: &'a Pattern) -> RunLengths<'a> {
-        if life.width == 0 {
+        if life.width() == 0 {
             // Chunk size must be nonzero
             RunLengths(InnerRunLengths::Empty)
         } else {
-            let mut chunks = RowIter::new(&life.cells, life.width);
+            let mut chunks = RowIter::new(&life.cells, life.width());
             let row = chunks.next();
             RunLengths(InnerRunLengths::Runner(Runner { chunks, row }))
         }
@@ -172,18 +172,14 @@ impl From<State> for RunKind {
 #[expect(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct Enumerate<'a> {
-    y: usize,
-    x: usize,
-    width: usize,
+    coords: BoundsIntoIter,
     inner: bit_vec::Iter<'a, u32>,
 }
 
 impl<'a> Enumerate<'a> {
     pub(crate) fn new(life: &'a Pattern) -> Enumerate<'a> {
         Enumerate {
-            y: 0,
-            x: 0,
-            width: life.width(),
+            coords: life.bounds.into_iter(),
             inner: life.cells.iter(),
         }
     }
@@ -193,17 +189,9 @@ impl Iterator for Enumerate<'_> {
     type Item = (Coords, State);
 
     fn next(&mut self) -> Option<(Coords, State)> {
+        let c = self.coords.next()?;
         let b = self.inner.next()?;
-        let old_y = self.y;
-        let old_x = self.x;
-        // These operations won't overflow, as neither of x and y will get past
-        // isize::MAX, the maximum capacity of a Vec.
-        self.x += 1;
-        if self.x >= self.width {
-            self.x = 0;
-            self.y += 1;
-        }
-        Some((Coords { y: old_y, x: old_x }, State::living(b)))
+        Some((c, State::living(b)))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -279,8 +267,9 @@ impl<'a> Draw<'a> {
 
 impl fmt::Display for Draw<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ul = self.life.upper_left();
         for (c, b) in self.life.enumerate() {
-            if c.x == 0 && c.y > 0 {
+            if c.x == ul.x && c.y > ul.y {
                 f.write_char('\n')?;
             }
             f.write_char(if b.is_live() { self.live } else { self.dead })?;
@@ -366,6 +355,54 @@ impl TryFrom<String> for Line {
         }
     }
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BoundsIntoIter {
+    bounds: Bounds,
+    y: isize,
+    x: isize,
+}
+
+impl BoundsIntoIter {
+    pub(crate) fn new(bounds: Bounds) -> BoundsIntoIter {
+        BoundsIntoIter {
+            bounds,
+            y: bounds.upper_left.y,
+            x: bounds.upper_left.x,
+        }
+    }
+}
+
+impl Iterator for BoundsIntoIter {
+    type Item = Coords;
+
+    fn next(&mut self) -> Option<Coords> {
+        let lr = self.bounds.lower_right();
+        if self.y >= lr.y {
+            return None;
+        }
+        let c = Coords {
+            y: self.y,
+            x: self.x,
+        };
+        self.x += 1;
+        if self.x >= lr.x {
+            self.x = self.bounds.upper_left.x;
+            self.y += 1;
+        }
+        Some(c)
+    }
+
+    /*
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        todo!()
+    }
+    */
+}
+
+//impl ExactSizeIterator for BoundsIntoIter {}
+
+impl FusedIterator for BoundsIntoIter {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RowIter<'a> {
