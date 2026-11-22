@@ -163,3 +163,38 @@ system's RAM first).
 
 [`isize::MAX`]: https://doc.rust-lang.org/std/primitive.isize.html#associatedconstant.MAX
 [`usize::MAX`]: https://doc.rust-lang.org/std/primitive.usize.html#associatedconstant.MAX
+
+"Canonical" Output Profile
+--------------------------
+
+RLE documents emitted by `lifelib` adhere to the following additional
+constraints:
+
+- Lines are terminated by LF, including the last line.
+
+- In the header line, there is exactly one (1) `SP` character on either side of
+  each `=` character and another `SP` character after the comma.  There is no
+  other whitespace in the line, aside from the terminating newline.
+
+- The header line does not contain a rule.
+
+- The `<pattern>` element is broken into maximal lines at most 70 characters
+  long (not counting terminating newlines), with line breaks inserted between
+  run items and/or between the last run item and the terminating `!`.  Each
+  line break consists of exactly one LF.
+
+- There is no whitespace between run items aside from newlines.
+
+- Run items are maximal, i.e., there are no occurrences of two or more
+  consecutive run items with the same tag.
+
+- Run counts of 1 are omitted.
+
+- There are no run items with a run count of zero.
+
+- Run items with tag `b` at the end of a pattern row are not emitted.
+
+- The run item with tag `$` at the end of a pattern is not emitted.
+
+- There are no characters after the terminating `!` other than the final
+  newline.
