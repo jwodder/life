@@ -7,6 +7,7 @@ use clap::Parser;
 use fs_err::{File, create_dir_all};
 use lifelib::{
     Edges, Pattern,
+    document::{Document, FormatChoice},
     formats::{Letter, Plaintext, Rle},
     image::{ImageBuilder, image::ImageFormat},
 };
@@ -187,7 +188,9 @@ fn main() -> anyhow::Result<()> {
     }
     let saver = args.saver()?;
     let maxtick = args.ticks.maxvalue();
-    let pattern = Pattern::from_file(&args.infile)?.with_edges(args.edges);
+    let pattern = Document::load_from_file(&args.infile, FormatChoice::Autodetect)?
+        .pattern
+        .with_edges(args.edges);
     for (i, pat) in pattern
         .into_generations()
         .take(maxtick.saturating_add(1))

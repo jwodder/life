@@ -1,15 +1,12 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+pub mod document;
 pub mod errors;
 pub mod formats;
 pub mod image;
 pub mod utilities;
-use crate::errors::*;
-use crate::formats::*;
 use crate::utilities::*;
 use bit_vec::BitVec;
-use std::fs::read_to_string;
 use std::ops::{Not, Range};
-use std::path::Path;
 use strum::{Display, EnumString};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -342,21 +339,6 @@ impl Pattern {
 
     pub fn into_generations(self) -> Generations {
         Generations(self)
-    }
-
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Pattern, FromFileError> {
-        let path = path.as_ref();
-        match path.extension().and_then(|s| s.to_str()) {
-            Some("cells") => {
-                let s = read_to_string(path)?;
-                Ok(s.parse::<Plaintext>()?.into())
-            }
-            Some("rle") => {
-                let s = read_to_string(path)?;
-                Ok(s.parse::<Rle>()?.into())
-            }
-            _ => Err(FromFileError::InvalidExtension),
-        }
     }
 }
 
