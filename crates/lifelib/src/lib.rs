@@ -283,6 +283,11 @@ impl Pattern {
         Draw::new(self, dead, live)
     }
 
+    /// # Panics
+    ///
+    /// Panics if [`Pattern::edges()`] is [`Edges::GrowX`], [`Edges::GrowY`],
+    /// or [`Edges::GrowXY`] and growing the pattern by the necessary amount
+    /// would cause a bounds overflow
     pub fn step(&self) -> Pattern {
         let mut next_state = self.clone();
         let yrange = grow_range(self.bounds.yrange(), self.edges.grows_y());
