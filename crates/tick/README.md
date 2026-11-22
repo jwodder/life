@@ -64,6 +64,14 @@ Options
 
     - `wrapxy`: The universe's x- and y-axes both wrap around
 
+    - `growx`: The universe's x-axis will be extended to the left or right as
+      necessary in order to accomodate new live cells
+
+    - `growy`: The universe's y-axis will be extended to the top or bottom as
+      necessary in order to accomodate new live cells
+
+    - `growxy`: The universe's x- and y-axes will both be extended as necessary
+
 - `-n NUMBERS`, `--number NUMBERS` — Specify the number(s) of ticks to advance
   the input pattern by in order to produce the output.  `NUMBERS` must consist
   of one or more nonnegative integers and/or hyphenated inclusive ranges of

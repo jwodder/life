@@ -39,11 +39,20 @@ struct Arguments {
     ///   connected to the bottom edge
     ///
     /// - wrapxy: The universe's x- and y-axes both wrap around
+    ///
+    /// - growx: The universe's x-axis will be extended to the left or right as
+    ///   necessary in order to accomodate new live cells
+    ///
+    /// - growy: The universe's y-axis will be extended to the top or bottom as
+    ///   necessary in order to accomodate new live cells
+    ///
+    /// - growxy: The universe's x- and y-axes will both be extended as
+    ///   necessary
     #[arg(
         short = 'E',
         long,
         default_value_t,
-        value_name = "dead|wrapx|wrapy|wrapxy"
+        value_name = "dead|wrapx|wrapy|wrapxy|growx|growy|growxy"
     )]
     edges: Edges,
 
