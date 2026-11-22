@@ -1,10 +1,10 @@
 #![cfg(feature = "image")]
 #![cfg_attr(docsrs, doc(cfg(feature = "image")))]
 use crate::Pattern;
-use crate::errors::RenderError;
 pub use image;
 use image::{Rgb, RgbImage};
 use std::num::NonZeroU32;
+use thiserror::Error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct ImageBuilder {
@@ -92,6 +92,12 @@ impl Default for ImageBuilder {
     fn default() -> ImageBuilder {
         ImageBuilder::new()
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub enum RenderError {
+    #[error("image dimensions too large")]
+    TooLarge,
 }
 
 #[cfg(test)]

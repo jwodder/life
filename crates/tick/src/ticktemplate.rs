@@ -1,5 +1,5 @@
 use life_utils::{Scanner, ScannerError};
-use lifelib::{errors::ParseLineError, utilities::Line};
+use lifelib::utilities::{Line, ParseLineError};
 use std::fmt::Write;
 use std::path::MAIN_SEPARATOR;
 use std::str::FromStr;

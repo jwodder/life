@@ -1,6 +1,5 @@
 use super::util::split_at_newline;
-use crate::errors::ParseLineError;
-use crate::utilities::Line;
+use crate::utilities::{Line, ParseLineError};
 use crate::{Pattern, Run, RunKind, State};
 use life_utils::{Scanner, ScannerError};
 use std::fmt;

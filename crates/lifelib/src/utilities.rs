@@ -1,10 +1,10 @@
 //! Utility types (mostly iterators)
-use crate::errors::{LineFromStringError, ParseLineError};
 use crate::{Bounds, Coords, Pattern, State};
 use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
 use std::num::NonZeroUsize;
+use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub struct RunLengths<'a>(InnerRunLengths<'a>);
@@ -354,6 +354,17 @@ impl TryFrom<String> for Line {
             Err(source) => Err(LineFromStringError { source, string }),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[error("newline character {0:?} is not allowed inside a line")]
+pub struct ParseLineError(pub char);
+
+#[derive(Clone, Debug, Eq, Error, PartialEq)]
+#[error("{source}: {string:?}")]
+pub struct LineFromStringError {
+    pub source: ParseLineError,
+    pub string: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

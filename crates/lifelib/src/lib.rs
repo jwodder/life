@@ -1,6 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 pub mod document;
-pub mod errors;
 pub mod formats;
 pub mod image;
 pub mod utilities;
