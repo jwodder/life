@@ -106,6 +106,7 @@ impl FromStr for Rle {
             _ => return Err(RleError::NoData),
         };
         let (width, height) = parse_header(header)?;
+        // TODO: Gracefully handle overly-large pattern sizes:
         let mut pattern = Pattern::new(height, width);
         let mut y = 0isize;
         let mut x = 0isize;
