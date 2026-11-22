@@ -53,6 +53,19 @@ mod default_number {
     }
 
     #[test]
+    fn cells_stdin() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        cargo_bin_cmd!("tick")
+            .pipe_stdin(Path::new(DATA_DIR).join("glider.cells"))
+            .unwrap()
+            .arg("-")
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1.cells"), &outfile);
+    }
+
+    #[test]
     fn rle() {
         let outfile = NamedTempFile::new("glider1.rle").unwrap();
         cargo_bin_cmd!("tick")

@@ -10,6 +10,7 @@ use lifelib::{
     formats::Format,
     image::{ImageBuilder, image::ImageFormat},
 };
+use patharg::InputArg;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
@@ -95,8 +96,10 @@ struct Arguments {
     ///
     /// The file must either be in plaintext format with a `.cells` file
     /// extension or be in Run Length Encoded format with an `.rle` file
-    /// extension.
-    infile: PathBuf,
+    /// extension.  Alternatively, `-` can be specified in order to read from
+    /// standard input, in which case the format will be guessed based on
+    /// initial content.
+    infile: InputArg,
 
     /// Path at which to write the output pattern(s).
     ///
@@ -180,10 +183,18 @@ fn main() -> anyhow::Result<()> {
     }
     let saver = args.saver()?;
     let maxtick = args.ticks.maxvalue();
-    let pattern = Document::load_from_file(&args.infile, FormatChoice::Autodetect)
-        .with_context(|| format!("failed to read pattern from {}", args.infile.display()))?
-        .pattern
-        .with_edges(args.edges);
+    let doc = match args.infile {
+        stdin @ InputArg::Stdin => {
+            let docstr = stdin
+                .read_to_string()
+                .context("failed to read pattern from standard input")?;
+            Document::load_from_str(&docstr, FormatChoice::Autodetect)
+                .context("failed to parse input pattern")?
+        }
+        InputArg::Path(p) => Document::load_from_file(&p, FormatChoice::Autodetect)
+            .with_context(|| format!("failed to read pattern from {}", p.display()))?,
+    };
+    let pattern = doc.pattern.with_edges(args.edges);
     for (i, pat) in pattern
         .into_generations()
         .take(maxtick.saturating_add(1))
