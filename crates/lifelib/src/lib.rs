@@ -809,290 +809,513 @@ mod tests {
         assert_eq!(life.draw('.', '#').to_string(), ".#.\n..#\n###");
     }
 
-    #[test]
-    fn test_step1() {
-        // .#.
-        // ..#
-        // ###
-        let mut life = Pattern::new(3, 3);
-        life.birth((0, 1));
-        life.birth((1, 2));
-        life.birth((2, 0));
-        life.birth((2, 1));
-        life.birth((2, 2));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
+    mod step {
+        use super::*;
+
+        #[test]
+        fn test_step1() {
+            // .#.
+            // ..#
+            // ###
+            let mut life = Pattern::new(3, 3);
+            life.birth((0, 1));
+            life.birth((1, 2));
+            life.birth((2, 0));
+            life.birth((2, 1));
+            life.birth((2, 2));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##");
+        }
+
+        #[test]
+        fn test_step1_wrapx() {
+            // ..#..
+            // +..#.
+            // +###+
+            let mut life = Pattern::new(3, 3).with_edges(Edges::WrapX);
+            life.birth((0, 1));
+            life.birth((1, 2));
+            life.birth((2, 0));
+            life.birth((2, 1));
+            life.birth((2, 2));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
+        }
+
+        #[test]
+        fn test_step1_wrapy() {
+            // +++
+            // .#.
+            // ..#
+            // ###
+            // .+.
+            let mut life = Pattern::new(3, 3).with_edges(Edges::WrapY);
+            life.birth((0, 1));
+            life.birth((1, 2));
+            life.birth((2, 0));
+            life.birth((2, 1));
+            life.birth((2, 2));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
+        }
+
+        #[test]
+        fn test_step1_wrapxy() {
+            // +++++
+            // ..#..
+            // +..#.
+            // +###+
+            // ..+..
+            let mut life = Pattern::new(3, 3).with_edges(Edges::WrapXY);
+            life.birth((0, 1));
+            life.birth((1, 2));
+            life.birth((2, 0));
+            life.birth((2, 1));
+            life.birth((2, 2));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
+        }
+
+        #[test]
+        fn test_step2() {
+            let mut life = Pattern::new(5, 5);
+            life.birth((1, 2));
+            life.birth((2, 3));
+            life.birth((3, 1));
+            life.birth((3, 2));
+            life.birth((3, 3));
+            let life2 = life.step();
+            assert_eq!(
+                life2.draw('.', '#').to_string(),
+                ".....\n.....\n.#.#.\n..##.\n..#.."
+            );
+        }
+
+        #[rstest]
+        #[case(Edges::Dead, ".")]
+        #[case(Edges::WrapX, "#")]
+        #[case(Edges::WrapY, "#")]
+        #[case(Edges::WrapXY, ".")]
+        fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
+            let mut life = Pattern::new(1, 1).with_edges(edges);
+            life.birth((0, 0));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), after);
+        }
+
+        #[rstest]
+        #[case(Edges::Dead, "..")]
+        #[case(Edges::WrapX, "..")]
+        #[case(Edges::WrapY, "##")]
+        #[case(Edges::WrapXY, "#.")]
+        fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
+            let mut life = Pattern::new(1, 2).with_edges(edges);
+            life.birth((0, 0));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), after);
+        }
+
+        #[rstest]
+        #[case(Edges::Dead, ".\n.")]
+        #[case(Edges::WrapX, "#\n#")]
+        #[case(Edges::WrapY, ".\n.")]
+        #[case(Edges::WrapXY, "#\n.")]
+        fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
+            let mut life = Pattern::new(2, 1).with_edges(edges);
+            life.birth((0, 0));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), after);
+        }
+
+        #[rstest]
+        #[case(Edges::Dead, "..\n..")]
+        #[case(Edges::WrapX, "##\n##")]
+        #[case(Edges::WrapY, "##\n##")]
+        #[case(Edges::WrapXY, "..\n..")]
+        fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
+            let mut life = Pattern::new(2, 2).with_edges(edges);
+            life.birth((0, 0));
+            life.birth((1, 1));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), after);
+        }
+
+        #[test]
+        fn grow_glider() {
+            // .#.
+            // ..#
+            // ###
+            let mut life = Pattern::new(3, 3).with_edges(Edges::GrowXY);
+            life.birth((0, 1));
+            life.birth((1, 2));
+            life.birth((2, 0));
+            life.birth((2, 1));
+            life.birth((2, 2));
+            let life2 = life.step();
+            assert_eq!(life2.draw('.', '#').to_string(), "...\n#.#\n.##\n.#.");
+            assert_eq!(life2.height(), 4);
+            assert_eq!(life2.width(), 3);
+            assert_eq!(life2.upper_left(), Coords { y: 0, x: 0 });
+            let life3 = life2.step();
+            assert_eq!(life3.draw('.', '#').to_string(), "...\n..#\n#.#\n.##");
+            assert_eq!(life3.height(), 4);
+            assert_eq!(life3.width(), 3);
+            assert_eq!(life3.upper_left(), Coords { y: 0, x: 0 });
+            let life4 = life3.step();
+            assert_eq!(life4.draw('.', '#').to_string(), "....\n.#..\n..##\n.##.");
+            assert_eq!(life4.height(), 4);
+            assert_eq!(life4.width(), 4);
+            assert_eq!(life4.upper_left(), Coords { y: 0, x: 0 });
+            let life5 = life4.step();
+            assert_eq!(life5.draw('.', '#').to_string(), "....\n..#.\n...#\n.###");
+            assert_eq!(life5.height(), 4);
+            assert_eq!(life5.width(), 4);
+            assert_eq!(life5.upper_left(), Coords { y: 0, x: 0 });
+        }
+
+        #[test]
+        fn grow_lightweight_spaceship() {
+            // <https://conwaylife.com/wiki/Lightweight_spaceship>
+            // .#..#
+            // #....
+            // #...#
+            // ####.
+            let mut life = Pattern::new(4, 5).with_edges(Edges::GrowXY);
+            life.birth((0, 1));
+            life.birth((0, 4));
+            life.birth((1, 0));
+            life.birth((2, 0));
+            life.birth((2, 4));
+            life.birth((3, 0));
+            life.birth((3, 1));
+            life.birth((3, 2));
+            life.birth((3, 3));
+            let life2 = life.step();
+            assert_eq!(life2.height(), 5);
+            assert_eq!(life2.width(), 6);
+            assert_eq!(life2.upper_left(), Coords { y: 0, x: -1 });
+            assert_eq!(
+                life2.draw('.', '#').to_string(),
+                "......\n.##...\n##.##.\n.####.\n..##.."
+            );
+            let life3 = life2.step();
+            assert_eq!(life3.height(), 5);
+            assert_eq!(life3.width(), 6);
+            assert_eq!(life3.upper_left(), Coords { y: 0, x: -1 });
+            assert_eq!(
+                life3.draw('.', '#').to_string(),
+                "......\n####..\n#...#.\n#.....\n.#..#."
+            );
+            let life4 = life3.step();
+            assert_eq!(life4.height(), 5);
+            assert_eq!(life4.width(), 7);
+            assert_eq!(life4.upper_left(), Coords { y: 0, x: -2 });
+            assert_eq!(
+                life4.draw('.', '#').to_string(),
+                "..##...\n.####..\n##.##..\n.##....\n......."
+            );
+            let life5 = life4.step();
+            assert_eq!(life5.height(), 5);
+            assert_eq!(life5.width(), 7);
+            assert_eq!(life5.upper_left(), Coords { y: 0, x: -2 });
+            assert_eq!(
+                life5.draw('.', '#').to_string(),
+                ".#..#..\n#......\n#...#..\n####...\n......."
+            );
+        }
+
+        #[test]
+        fn grow_crab() {
+            // <https://conwaylife.com/wiki/Crab>
+            let life = PatternParser::live_chars("#")
+                .edges(Edges::GrowXY)
+                .parse(concat!(
+                    "........##...\n",
+                    ".......##....\n",
+                    ".........#...\n",
+                    "...........##\n",
+                    "..........#..\n",
+                    ".............\n",
+                    ".........#..#\n",
+                    ".##.....##...\n",
+                    "##.....#.....\n",
+                    "..#....#.#...\n",
+                    "....##..#....\n",
+                    "....##.......\n",
+                ));
+            let life2 = life.step();
+            assert_eq!(life2.height(), 12);
+            assert_eq!(life2.width(), 13);
+            assert_eq!(life2.upper_left(), Coords { y: 0, x: 0 });
+            assert_eq!(
+                life2.draw('.', '#').to_string(),
+                concat!(
+                    ".......###...\n",
+                    ".......#.....\n",
+                    "........#....\n",
+                    "..........##.\n",
+                    "...........#.\n",
+                    ".............\n",
+                    "........##...\n",
+                    "###.....##...\n",
+                    "#......#.#...\n",
+                    ".#....##.....\n",
+                    "...####.#....\n",
+                    "....##.......",
+                )
+            );
+            let life3 = life2.step();
+            assert_eq!(life3.height(), 13);
+            assert_eq!(life3.width(), 13);
+            assert_eq!(life3.upper_left(), Coords { y: -1, x: 0 });
+            assert_eq!(
+                life3.draw('.', '#').to_string(),
+                concat!(
+                    "........#....\n",
+                    ".......##....\n",
+                    ".......#.#...\n",
+                    ".............\n",
+                    "..........##.\n",
+                    "..........##.\n",
+                    ".............\n",
+                    ".#......##...\n",
+                    "##.....#..#..\n",
+                    "#.#...##.#...\n",
+                    "....#........\n",
+                    "...#.........\n",
+                    "...#..#......",
+                )
+            );
+            let life4 = life3.step();
+            assert_eq!(life4.height(), 13);
+            assert_eq!(life4.width(), 13);
+            assert_eq!(life4.upper_left(), Coords { y: -1, x: 0 });
+            assert_eq!(
+                life4.draw('.', '#').to_string(),
+                concat!(
+                    ".......##....\n",
+                    ".......#.#...\n",
+                    ".......#.....\n",
+                    "..........#..\n",
+                    "..........##.\n",
+                    "..........##.\n",
+                    ".........##..\n",
+                    "##......##...\n",
+                    "#.#...##..#..\n",
+                    "#.....###....\n",
+                    "...#.........\n",
+                    "...##........\n",
+                    ".............",
+                )
+            );
+            let life5 = life4.step();
+            assert_eq!(life5.height(), 13);
+            assert_eq!(life5.width(), 14);
+            assert_eq!(life5.upper_left(), Coords { y: -1, x: -1 });
+            assert_eq!(
+                life5.draw('.', '#').to_string(),
+                concat!(
+                    "........##....\n",
+                    ".......##.....\n",
+                    ".........#....\n",
+                    "...........##.\n",
+                    "..........#...\n",
+                    "..............\n",
+                    ".........#..#.\n",
+                    ".##.....##....\n",
+                    "##.....#......\n",
+                    "..#....#.#....\n",
+                    "....##..#.....\n",
+                    "....##........\n",
+                    "..............",
+                )
+            );
+            let life9 = life4.into_generations().nth(5).unwrap();
+            assert_eq!(life9.height(), 14);
+            assert_eq!(life9.width(), 15);
+            assert_eq!(life9.upper_left(), Coords { y: -2, x: -2 });
+            assert_eq!(
+                life9.draw('.', '#').to_string(),
+                concat!(
+                    "........##.....\n",
+                    ".......##......\n",
+                    ".........#.....\n",
+                    "...........##..\n",
+                    "..........#....\n",
+                    "...............\n",
+                    ".........#..#..\n",
+                    ".##.....##.....\n",
+                    "##.....#.......\n",
+                    "..#....#.#.....\n",
+                    "....##..#......\n",
+                    "....##.........\n",
+                    "...............\n",
+                    "...............",
+                )
+            );
+        }
     }
 
-    #[test]
-    fn test_step1_wrapx() {
-        // ..#..
-        // +..#.
-        // +###+
-        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapX);
-        life.birth((0, 1));
-        life.birth((1, 2));
-        life.birth((2, 0));
-        life.birth((2, 1));
-        life.birth((2, 2));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n###");
-    }
+    mod parse {
+        use super::*;
 
-    #[test]
-    fn test_step1_wrapy() {
-        // +++
-        // .#.
-        // ..#
-        // ###
-        // .+.
-        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapY);
-        life.birth((0, 1));
-        life.birth((1, 2));
-        life.birth((2, 0));
-        life.birth((2, 1));
-        life.birth((2, 2));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), "#..\n#.#\n#.#");
-    }
+        #[test]
+        fn test_parse1() {
+            let parser = PatternParser::dead_chars(" .");
+            let life = parser.parse(".#.\n..#\n###\n");
+            assert_eq!(life.height(), 3);
+            assert_eq!(life.width(), 3);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 0, x: 1 },
+                    Coords { y: 1, x: 2 },
+                    Coords { y: 2, x: 0 },
+                    Coords { y: 2, x: 1 },
+                    Coords { y: 2, x: 2 }
+                ]
+            );
+        }
 
-    #[test]
-    fn test_step1_wrapxy() {
-        // +++++
-        // ..#..
-        // +..#.
-        // +###+
-        // ..+..
-        let mut life = Pattern::new(3, 3).with_edges(Edges::WrapXY);
-        life.birth((0, 1));
-        life.birth((1, 2));
-        life.birth((2, 0));
-        life.birth((2, 1));
-        life.birth((2, 2));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), "...\n...\n...");
-    }
+        #[test]
+        fn test_parse1_live_chars() {
+            let parser = PatternParser::live_chars("+#");
+            let life = parser.parse(".#.\n..#\n###\n");
+            assert_eq!(life.height(), 3);
+            assert_eq!(life.width(), 3);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 0, x: 1 },
+                    Coords { y: 1, x: 2 },
+                    Coords { y: 2, x: 0 },
+                    Coords { y: 2, x: 1 },
+                    Coords { y: 2, x: 2 }
+                ]
+            );
+        }
 
-    #[test]
-    fn test_step2() {
-        let mut life = Pattern::new(5, 5);
-        life.birth((1, 2));
-        life.birth((2, 3));
-        life.birth((3, 1));
-        life.birth((3, 2));
-        life.birth((3, 3));
-        let life2 = life.step();
-        assert_eq!(
-            life2.draw('.', '#').to_string(),
-            ".....\n.....\n.#.#.\n..##.\n..#.."
-        );
-    }
+        #[test]
+        fn test_parse2() {
+            let parser = PatternParser::dead_chars(" .");
+            let life = parser.parse(".....\n..#..\n...#.\n.###.\n.....");
+            assert_eq!(life.height(), 5);
+            assert_eq!(life.width(), 5);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 1, x: 2 },
+                    Coords { y: 2, x: 3 },
+                    Coords { y: 3, x: 1 },
+                    Coords { y: 3, x: 2 },
+                    Coords { y: 3, x: 3 }
+                ]
+            );
+        }
 
-    #[rstest]
-    #[case(Edges::Dead, ".")]
-    #[case(Edges::WrapX, "#")]
-    #[case(Edges::WrapY, "#")]
-    #[case(Edges::WrapXY, ".")]
-    fn test_step_dot(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(1, 1).with_edges(edges);
-        life.birth((0, 0));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), after);
-    }
+        #[test]
+        fn test_parse2_ragged() {
+            let parser = PatternParser::dead_chars(" .");
+            let life = parser.parse("\n..#\n...#\n.###\n");
+            assert_eq!(life.height(), 4);
+            assert_eq!(life.width(), 4);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 1, x: 2 },
+                    Coords { y: 2, x: 3 },
+                    Coords { y: 3, x: 1 },
+                    Coords { y: 3, x: 2 },
+                    Coords { y: 3, x: 3 }
+                ]
+            );
+        }
 
-    #[rstest]
-    #[case(Edges::Dead, "..")]
-    #[case(Edges::WrapX, "..")]
-    #[case(Edges::WrapY, "##")]
-    #[case(Edges::WrapXY, "#.")]
-    fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(1, 2).with_edges(edges);
-        life.birth((0, 0));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), after);
-    }
+        #[test]
+        fn test_parse2_ragged_min_size() {
+            let parser = PatternParser::dead_chars(" .").min_width(5).min_height(5);
+            let life = parser.parse("\n..#\n...#\n.###\n");
+            assert_eq!(life.height(), 5);
+            assert_eq!(life.width(), 5);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 1, x: 2 },
+                    Coords { y: 2, x: 3 },
+                    Coords { y: 3, x: 1 },
+                    Coords { y: 3, x: 2 },
+                    Coords { y: 3, x: 3 }
+                ]
+            );
+        }
 
-    #[rstest]
-    #[case(Edges::Dead, ".\n.")]
-    #[case(Edges::WrapX, "#\n#")]
-    #[case(Edges::WrapY, ".\n.")]
-    #[case(Edges::WrapXY, "#\n.")]
-    fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(2, 1).with_edges(edges);
-        life.birth((0, 0));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), after);
-    }
+        #[test]
+        fn test_parse3() {
+            let parser = PatternParser::dead_chars(" .")
+                .min_width(5)
+                .min_height(5)
+                .max_height(5)
+                .max_width(5);
+            let life = parser.parse(" +\n   +\n++  +++\n");
+            assert_eq!(life.height(), 5);
+            assert_eq!(life.width(), 5);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 0, x: 1 },
+                    Coords { y: 1, x: 3 },
+                    Coords { y: 2, x: 0 },
+                    Coords { y: 2, x: 1 },
+                    Coords { y: 2, x: 4 }
+                ],
+            );
+        }
 
-    #[rstest]
-    #[case(Edges::Dead, "..\n..")]
-    #[case(Edges::WrapX, "##\n##")]
-    #[case(Edges::WrapY, "##\n##")]
-    #[case(Edges::WrapXY, "..\n..")]
-    fn test_step_square_diag(#[case] edges: Edges, #[case] after: &str) {
-        let mut life = Pattern::new(2, 2).with_edges(edges);
-        life.birth((0, 0));
-        life.birth((1, 1));
-        let life2 = life.step();
-        assert_eq!(life2.draw('.', '#').to_string(), after);
-    }
+        #[test]
+        fn test_parse4() {
+            let parser = PatternParser::dead_chars(" .").max_height(3);
+            let life = parser.parse(" +\n   +\n++  +++\n+ + + + + + +\n");
+            assert_eq!(life.height(), 3);
+            assert_eq!(life.width(), 7);
+            assert_eq!(
+                life.iter_live().collect::<Vec<_>>(),
+                [
+                    Coords { y: 0, x: 1 },
+                    Coords { y: 1, x: 3 },
+                    Coords { y: 2, x: 0 },
+                    Coords { y: 2, x: 1 },
+                    Coords { y: 2, x: 4 },
+                    Coords { y: 2, x: 5 },
+                    Coords { y: 2, x: 6 }
+                ],
+            );
+        }
 
-    #[test]
-    fn test_parse1() {
-        let parser = PatternParser::dead_chars(" .");
-        let life = parser.parse(".#.\n..#\n###\n");
-        assert_eq!(life.height(), 3);
-        assert_eq!(life.width(), 3);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 0, x: 1 },
-                Coords { y: 1, x: 2 },
-                Coords { y: 2, x: 0 },
-                Coords { y: 2, x: 1 },
-                Coords { y: 2, x: 2 }
-            ]
-        );
-    }
-
-    #[test]
-    fn test_parse1_live_chars() {
-        let parser = PatternParser::live_chars("+#");
-        let life = parser.parse(".#.\n..#\n###\n");
-        assert_eq!(life.height(), 3);
-        assert_eq!(life.width(), 3);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 0, x: 1 },
-                Coords { y: 1, x: 2 },
-                Coords { y: 2, x: 0 },
-                Coords { y: 2, x: 1 },
-                Coords { y: 2, x: 2 }
-            ]
-        );
-    }
-
-    #[test]
-    fn test_parse2() {
-        let parser = PatternParser::dead_chars(" .");
-        let life = parser.parse(".....\n..#..\n...#.\n.###.\n.....");
-        assert_eq!(life.height(), 5);
-        assert_eq!(life.width(), 5);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 1, x: 2 },
-                Coords { y: 2, x: 3 },
-                Coords { y: 3, x: 1 },
-                Coords { y: 3, x: 2 },
-                Coords { y: 3, x: 3 }
-            ]
-        );
-    }
-
-    #[test]
-    fn test_parse2_ragged() {
-        let parser = PatternParser::dead_chars(" .");
-        let life = parser.parse("\n..#\n...#\n.###\n");
-        assert_eq!(life.height(), 4);
-        assert_eq!(life.width(), 4);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 1, x: 2 },
-                Coords { y: 2, x: 3 },
-                Coords { y: 3, x: 1 },
-                Coords { y: 3, x: 2 },
-                Coords { y: 3, x: 3 }
-            ]
-        );
-    }
-
-    #[test]
-    fn test_parse2_ragged_min_size() {
-        let parser = PatternParser::dead_chars(" .").min_width(5).min_height(5);
-        let life = parser.parse("\n..#\n...#\n.###\n");
-        assert_eq!(life.height(), 5);
-        assert_eq!(life.width(), 5);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 1, x: 2 },
-                Coords { y: 2, x: 3 },
-                Coords { y: 3, x: 1 },
-                Coords { y: 3, x: 2 },
-                Coords { y: 3, x: 3 }
-            ]
-        );
-    }
-
-    #[test]
-    fn test_parse3() {
-        let parser = PatternParser::dead_chars(" .")
-            .min_width(5)
-            .min_height(5)
-            .max_height(5)
-            .max_width(5);
-        let life = parser.parse(" +\n   +\n++  +++\n");
-        assert_eq!(life.height(), 5);
-        assert_eq!(life.width(), 5);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 0, x: 1 },
-                Coords { y: 1, x: 3 },
-                Coords { y: 2, x: 0 },
-                Coords { y: 2, x: 1 },
-                Coords { y: 2, x: 4 }
-            ],
-        );
-    }
-
-    #[test]
-    fn test_parse4() {
-        let parser = PatternParser::dead_chars(" .").max_height(3);
-        let life = parser.parse(" +\n   +\n++  +++\n+ + + + + + +\n");
-        assert_eq!(life.height(), 3);
-        assert_eq!(life.width(), 7);
-        assert_eq!(
-            life.iter_live().collect::<Vec<_>>(),
-            [
-                Coords { y: 0, x: 1 },
-                Coords { y: 1, x: 3 },
-                Coords { y: 2, x: 0 },
-                Coords { y: 2, x: 1 },
-                Coords { y: 2, x: 4 },
-                Coords { y: 2, x: 5 },
-                Coords { y: 2, x: 6 }
-            ],
-        );
-    }
-
-    #[test]
-    #[rustfmt::skip]
-    fn test_parse_middle_blank_line() {
-        let parser = PatternParser::dead_chars(" .");
-        let life = parser.parse(concat!(
-            "...OO\n",
-            "..O..O\n",
-            "...OO\n",
-            "\n",
-            ".OOOO\n",
-            "O....O\n",
-            "OO..OO\n",
-        ));
-        assert_eq!(life.height(), 7);
-        assert_eq!(life.width(), 6);
-        assert_eq!(life.draw('.', 'O').to_string(), concat!(
-            "...OO.\n",
-            "..O..O\n",
-            "...OO.\n",
-            "......\n",
-            ".OOOO.\n",
-            "O....O\n",
-            "OO..OO",
-        ));
+        #[test]
+        #[rustfmt::skip]
+        fn test_parse_middle_blank_line() {
+            let parser = PatternParser::dead_chars(" .");
+            let life = parser.parse(concat!(
+                "...OO\n",
+                "..O..O\n",
+                "...OO\n",
+                "\n",
+                ".OOOO\n",
+                "O....O\n",
+                "OO..OO\n",
+            ));
+            assert_eq!(life.height(), 7);
+            assert_eq!(life.width(), 6);
+            assert_eq!(life.draw('.', 'O').to_string(), concat!(
+                "...OO.\n",
+                "..O..O\n",
+                "...OO.\n",
+                "......\n",
+                ".OOOO.\n",
+                "O....O\n",
+                "OO..OO",
+            ));
+        }
     }
 
     #[test]
@@ -1194,47 +1417,60 @@ mod tests {
         assert_eq!(life.draw('.', '#').to_string(), "");
     }
 
-    #[rstest]
-    #[case("dead", Some(Edges::Dead))]
-    #[case("Dead", Some(Edges::Dead))]
-    #[case("DEAD", Some(Edges::Dead))]
-    #[case("wrapx", Some(Edges::WrapX))]
-    #[case("Wrapx", Some(Edges::WrapX))]
-    #[case("WrapX", Some(Edges::WrapX))]
-    #[case("WRAPX", Some(Edges::WrapX))]
-    #[case("wrap-x", None)]
-    #[case("wrapy", Some(Edges::WrapY))]
-    #[case("Wrapy", Some(Edges::WrapY))]
-    #[case("WrapY", Some(Edges::WrapY))]
-    #[case("WRAPY", Some(Edges::WrapY))]
-    #[case("wrap-y", None)]
-    #[case("wrapxy", Some(Edges::WrapXY))]
-    #[case("Wrapxy", Some(Edges::WrapXY))]
-    #[case("WrapXy", Some(Edges::WrapXY))]
-    #[case("WrapxY", Some(Edges::WrapXY))]
-    #[case("WrapXY", Some(Edges::WrapXY))]
-    #[case("WRAPXY", Some(Edges::WrapXY))]
-    #[case("wrap-xy", None)]
-    #[case("wrap-x-y", None)]
-    fn test_edges_from_str(#[case] s: &str, #[case] parsed: Option<Edges>) {
-        assert_eq!(s.parse::<Edges>().ok(), parsed);
-    }
+    mod edges {
+        use super::*;
 
-    #[rstest]
-    #[case(Edges::Dead, "dead")]
-    #[case(Edges::WrapX, "wrapx")]
-    #[case(Edges::WrapY, "wrapy")]
-    #[case(Edges::WrapXY, "wrapxy")]
-    fn test_display_edges(#[case] value: Edges, #[case] s: &str) {
-        assert_eq!(value.to_string(), s);
-    }
+        #[rstest]
+        #[case("dead", Some(Edges::Dead))]
+        #[case("Dead", Some(Edges::Dead))]
+        #[case("DEAD", Some(Edges::Dead))]
+        #[case("wrapx", Some(Edges::WrapX))]
+        #[case("Wrapx", Some(Edges::WrapX))]
+        #[case("WrapX", Some(Edges::WrapX))]
+        #[case("WRAPX", Some(Edges::WrapX))]
+        #[case("wrap-x", None)]
+        #[case("wrapy", Some(Edges::WrapY))]
+        #[case("Wrapy", Some(Edges::WrapY))]
+        #[case("WrapY", Some(Edges::WrapY))]
+        #[case("WRAPY", Some(Edges::WrapY))]
+        #[case("wrap-y", None)]
+        #[case("wrapxy", Some(Edges::WrapXY))]
+        #[case("Wrapxy", Some(Edges::WrapXY))]
+        #[case("WrapXy", Some(Edges::WrapXY))]
+        #[case("WrapxY", Some(Edges::WrapXY))]
+        #[case("WrapXY", Some(Edges::WrapXY))]
+        #[case("WRAPXY", Some(Edges::WrapXY))]
+        #[case("wrap-xy", None)]
+        #[case("wrap-x-y", None)]
+        #[case("growx", Some(Edges::GrowX))]
+        #[case("growy", Some(Edges::GrowY))]
+        #[case("growxy", Some(Edges::GrowXY))]
+        fn test_edges_from_str(#[case] s: &str, #[case] parsed: Option<Edges>) {
+            assert_eq!(s.parse::<Edges>().ok(), parsed);
+        }
 
-    #[rstest]
-    #[case(Edges::Dead)]
-    #[case(Edges::WrapX)]
-    #[case(Edges::WrapY)]
-    #[case(Edges::WrapXY)]
-    fn test_display_then_parse_edges(#[case] value: Edges) {
-        assert_eq!(value.to_string().parse::<Edges>().unwrap(), value);
+        #[rstest]
+        #[case(Edges::Dead, "dead")]
+        #[case(Edges::WrapX, "wrapx")]
+        #[case(Edges::WrapY, "wrapy")]
+        #[case(Edges::WrapXY, "wrapxy")]
+        #[case(Edges::GrowX, "growx")]
+        #[case(Edges::GrowY, "growy")]
+        #[case(Edges::GrowXY, "growxy")]
+        fn test_display_edges(#[case] value: Edges, #[case] s: &str) {
+            assert_eq!(value.to_string(), s);
+        }
+
+        #[rstest]
+        #[case(Edges::Dead)]
+        #[case(Edges::WrapX)]
+        #[case(Edges::WrapY)]
+        #[case(Edges::WrapXY)]
+        #[case(Edges::GrowX)]
+        #[case(Edges::GrowY)]
+        #[case(Edges::GrowXY)]
+        fn test_display_then_parse_edges(#[case] value: Edges) {
+            assert_eq!(value.to_string().parse::<Edges>().unwrap(), value);
+        }
     }
 }

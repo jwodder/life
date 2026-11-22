@@ -267,8 +267,9 @@ impl<'a> Draw<'a> {
 
 impl fmt::Display for Draw<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ul = self.life.upper_left();
         for (c, b) in self.life.enumerate() {
-            if c.x == 0 && c.y > 0 {
+            if c.x == ul.x && c.y > ul.y {
                 f.write_char('\n')?;
             }
             f.write_char(if b.is_live() { self.live } else { self.dead })?;
