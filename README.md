@@ -14,6 +14,9 @@ The packages are:
 
 - [`tick`][] — Program for advancing Game of Life patterns
 
+- [`parse-check`][] — Program for checking whether given pattern files can be
+  parsed by `lifelib`
+
 - [`life-utils`][] — Internal utilities used by multiple packages
 
 This workspace as a whole is a hobby project for personal experimentation &
@@ -24,4 +27,5 @@ anything here at your own risk.
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
 [`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib
 [`tick`]: https://github.com/jwodder/life/tree/master/crates/tick
+[`parse-check`]: https://github.com/jwodder/life/tree/master/crates/parse-check
 [`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils

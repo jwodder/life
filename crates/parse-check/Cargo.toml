@@ -1,0 +1,16 @@
+[package]
+name = "parse-check"
+edition.workspace = true
+rust-version.workspace = true
+description = "Check parseability of Game of Life patterns"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow = "1.0.82"
+lifelib = { path = "../lifelib" }
+
+[lints]
+workspace = true
