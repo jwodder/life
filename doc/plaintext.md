@@ -77,3 +77,19 @@ system's RAM first).
 
 [`isize::MAX`]: https://doc.rust-lang.org/std/primitive.isize.html#associatedconstant.MAX
 [`usize::MAX`]: https://doc.rust-lang.org/std/primitive.usize.html#associatedconstant.MAX
+
+"Canonical" Output Profile
+--------------------------
+
+Plaintext documents emitted by `lifelib` adhere to the following additional
+constraints:
+
+- Lines are terminated by LF, including the last line.
+
+- If the pattern has a name, there will be exactly one (1) space character
+  between `!Name:` and the name.
+
+- All lines of the pattern drawing are the same length.
+
+- There are no empty lines; the empty pattern is represented by an empty
+  pattern drawing.
