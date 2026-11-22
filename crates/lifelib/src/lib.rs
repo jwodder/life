@@ -85,6 +85,34 @@ struct Bounds {
 }
 
 impl Bounds {
+    fn new(height: usize, width: usize) -> Bounds {
+        Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
+    }
+
+    fn new_with_upper_left(mut height: usize, mut width: usize, upper_left: Coords) -> Bounds {
+        if height == 0 || width == 0 {
+            height = 0;
+            width = 0;
+        }
+        assert!(
+            width.checked_mul(height).is_some(),
+            "width * height for new Pattern exceeds usize::MAX"
+        );
+        assert!(
+            upper_left.y.checked_add_unsigned(height).is_some(),
+            "maximum y coordinate of new Pattern exceeds isize::MAX"
+        );
+        assert!(
+            upper_left.x.checked_add_unsigned(width).is_some(),
+            "maximum x coordinate of new Pattern exceeds isize::MAX"
+        );
+        Bounds {
+            height,
+            width,
+            upper_left,
+        }
+    }
+
     fn contains<C: Into<Coords>>(&self, c: C) -> bool {
         let c = c.into();
         self.xrange().contains(&c.x) && self.yrange().contains(&c.y)
@@ -101,15 +129,19 @@ impl Bounds {
         }
     }
 
+    fn unindex(&self, i: usize) -> Option<Coords> {
+        (i < (self.height * self.width)).then(|| {
+            let y = self.upper_left.y.strict_add_unsigned(i / self.width);
+            let x = self.upper_left.x.strict_add_unsigned(i % self.width);
+            Coords { y, x }
+        })
+    }
+
     fn ybound(&self) -> isize {
-        // TODO: Add checks on construction to ensure that this doesn't
-        // overflow:
         self.upper_left.y.strict_add_unsigned(self.height)
     }
 
     fn xbound(&self) -> isize {
-        // TODO: Add checks on construction to ensure that this doesn't
-        // overflow:
         self.upper_left.x.strict_add_unsigned(self.width)
     }
 
@@ -149,21 +181,11 @@ impl Pattern {
     /// # Panics
     ///
     /// Panics if `width * height` exceeds the maximum capacity of a [`Vec`].
-    pub fn new(mut height: usize, mut width: usize) -> Pattern {
-        if height == 0 || width == 0 {
-            height = 0;
-            width = 0;
-        }
-        let area = width
-            .checked_mul(height)
-            .expect("width * height for new Pattern exceeds usize::MAX");
-        let cells = BitVec::from_elem(area, false);
+    pub fn new(height: usize, width: usize) -> Pattern {
+        let bounds = Bounds::new(height, width);
+        let cells = BitVec::from_elem(height * width, false);
         Pattern {
-            bounds: Bounds {
-                upper_left: Coords { y: 0, x: 0 },
-                height,
-                width,
-            },
+            bounds,
             edges: Edges::default(),
             cells,
         }
@@ -263,25 +285,54 @@ impl Pattern {
 
     pub fn step(&self) -> Pattern {
         let mut next_state = self.clone();
-        for y in self.bounds.yrange() {
-            let yrange = adjacent(self.bounds.yrange(), y, self.edges.wraps_y());
-            for x in self.bounds.xrange() {
+        let yrange = grow_range(self.bounds.yrange(), self.edges.grows_y());
+        let xrange = grow_range(self.bounds.xrange(), self.edges.grows_x());
+        for y in yrange.clone() {
+            let yrng = adjacent(yrange.clone(), y, self.edges.wraps_y());
+            for x in xrange.clone() {
                 let mut alive = 0;
-                for x2 in adjacent(self.bounds.xrange(), x, self.edges.wraps_x()) {
-                    for &y2 in &yrange {
+                for x2 in adjacent(xrange.clone(), x, self.edges.wraps_x()) {
+                    for &y2 in &yrng {
                         if self.is_live((y2, x2)) {
                             alive += 1;
                         }
                     }
                 }
+                let c = Coords { y, x };
                 match alive {
-                    3 => next_state.birth((y, x)),
+                    3 => {
+                        next_state.ensure_contains(c);
+                        next_state.birth(c);
+                    }
                     4 => (),
-                    _ => next_state.kill((y, x)),
+                    _ => next_state.kill(c),
                 }
             }
         }
         next_state
+    }
+
+    fn ensure_contains<C: Into<Coords>>(&mut self, c: C) {
+        let c = c.into();
+        let top = greater_by(c.y, self.bounds.upper_left.y);
+        let left = greater_by(c.x, self.bounds.upper_left.x);
+        // TODO: Only panic when strictly necessary:
+        let bottom = greater_by(self.bounds.ybound().strict_sub(1), c.y);
+        let right = greater_by(self.bounds.xbound().strict_sub(1), c.x);
+        if top > 0 || left > 0 || bottom > 0 || right > 0 {
+            let new_ul = Coords {
+                y: self.bounds.upper_left.y.strict_sub_unsigned(top),
+                x: self.bounds.upper_left.x.strict_sub_unsigned(left),
+            };
+            let new_height = self.bounds.height.strict_add(top).strict_add(bottom);
+            let new_width = self.bounds.width.strict_add(left).strict_add(right);
+            let new_bounds = Bounds::new_with_upper_left(new_height, new_width, new_ul);
+            let new_cells = BitVec::from_fn(new_height * new_width, |i| {
+                new_bounds.unindex(i).is_some_and(|c| self.is_live(c))
+            });
+            self.bounds = new_bounds;
+            self.cells = new_cells;
+        }
     }
 
     pub fn into_generations(self) -> Generations {
@@ -311,6 +362,9 @@ pub enum Edges {
     WrapX,
     WrapY,
     WrapXY,
+    GrowX,
+    GrowY,
+    GrowXY,
 }
 
 impl Edges {
@@ -321,6 +375,14 @@ impl Edges {
     fn wraps_y(&self) -> bool {
         matches!(self, Edges::WrapY | Edges::WrapXY)
     }
+
+    fn grows_x(&self) -> bool {
+        matches!(self, Edges::GrowX | Edges::GrowXY)
+    }
+
+    fn grows_y(&self) -> bool {
+        matches!(self, Edges::GrowY | Edges::GrowXY)
+    }
 }
 
 impl fmt::Display for Edges {
@@ -330,6 +392,9 @@ impl fmt::Display for Edges {
             Edges::WrapX => "wrapx",
             Edges::WrapY => "wrapy",
             Edges::WrapXY => "wrapxy",
+            Edges::GrowX => "growx",
+            Edges::GrowY => "growy",
+            Edges::GrowXY => "growxy",
         };
         write!(f, "{s}")
     }
@@ -347,6 +412,12 @@ impl FromStr for Edges {
             Ok(Edges::WrapY)
         } else if s.eq_ignore_ascii_case("wrapxy") {
             Ok(Edges::WrapXY)
+        } else if s.eq_ignore_ascii_case("growx") {
+            Ok(Edges::GrowX)
+        } else if s.eq_ignore_ascii_case("growy") {
+            Ok(Edges::GrowY)
+        } else if s.eq_ignore_ascii_case("growxy") {
+            Ok(Edges::GrowXY)
         } else {
             Err(ParseEdgesError)
         }
@@ -636,6 +707,23 @@ fn adjacent(range: Range<isize>, i: isize, wrap: bool) -> Vec<isize> {
         vals.push(b);
     }
     vals
+}
+
+fn grow_range(mut range: Range<isize>, grow: bool) -> Range<isize> {
+    if grow {
+        // TODO: Handle numeric overflow
+        range.start -= 1;
+        range.end += 1;
+    }
+    range
+}
+
+fn greater_by(lesser: isize, greater: isize) -> usize {
+    if lesser < greater {
+        lesser.abs_diff(greater)
+    } else {
+        0
+    }
 }
 
 #[cfg(test)]
