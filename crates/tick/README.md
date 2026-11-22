@@ -18,18 +18,21 @@ Usage
 
 `tick` reads a Game of Life pattern from `<infile>`, which must either be a
 plaintext file with a "`.cells`" file extension or a Run Length Encoded file
-with an "`.rle`" file extension.  The pattern is advanced by a number of ticks
-given by the `-n`/`--number` option [default: 1], and the result is written to
-`<outfile>`.  The file extension of the output path must be "`.cells`" (to
-produce a plaintext file), "`.rle`" (to produce a Run Length Encoded file), or
-an image file extension supported by the [`image`][] crate (to produce an
-image).
+with an "`.rle`" file extension.  Alternatively, `<infile>` can be `-` in order
+to read from standard input, in which case the format will be guessed based on
+initial content.
+
+The input pattern is advanced by a number of ticks given by the `-n`/`--number`
+option [default: 1], and the result is written to `<outfile>`.  The file
+extension of the output path must be "`.cells`" (to produce a plaintext file),
+"`.rle`" (to produce a Run Length Encoded file), or an image file extension
+supported by the [`image`][] crate (to produce an image).
 
 Patterns are placed on a [bounded grid][] with the same dimensions as the
 pattern read from `<infile>`.  By default, a [finite plane][] (in which all
 cells outside the grid are dead and cannot come to life) is used, but the
-`-E`/`--edges` option can be used to wrap the grid along the x- and/or y-axis
-instead.
+`-E`/`--edges` option can be used to either wrap or automatically grow the grid
+along the x- and/or y-axis instead.
 
 [bounded grid]: https://conwaylife.com/wiki/Bounded_grids
 [finite plane]: https://conwaylife.com/wiki/Finite_plane
