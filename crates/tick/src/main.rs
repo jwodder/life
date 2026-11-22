@@ -4,14 +4,12 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use fs_err::{File, create_dir_all};
 use lifelib::{
     Edges, Pattern,
     document::{Document, FormatChoice},
-    formats::{Letter, Plaintext, Rle},
+    formats::Format,
     image::{ImageBuilder, image::ImageFormat},
 };
-use std::io::{BufWriter, Write};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
@@ -114,11 +112,13 @@ struct Arguments {
 impl Arguments {
     fn saver(&mut self) -> anyhow::Result<Saver> {
         match self.outfile.extension() {
-            Some("cells") => Ok(Saver::Plaintext {
+            Some("cells") => Ok(Saver::Pattern {
                 name: self.name.take(),
+                format: Format::Plaintext,
             }),
-            Some("rle") => Ok(Saver::Rle {
+            Some("rle") => Ok(Saver::Pattern {
                 name: self.name.take(),
+                format: Format::Rle,
             }),
             Some(ext) if ImageFormat::from_extension(ext).is_some() => {
                 let [r, g, b, _] = self.live_color.to_rgba8();
@@ -135,9 +135,13 @@ impl Arguments {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Saver {
-    Plaintext { name: Option<TickTemplate> },
-    Rle { name: Option<TickTemplate> },
-    Image { builder: ImageBuilder },
+    Pattern {
+        name: Option<TickTemplate>,
+        format: Format,
+    },
+    Image {
+        builder: ImageBuilder,
+    },
 }
 
 impl Saver {
@@ -145,35 +149,23 @@ impl Saver {
         if let Some(parent) = path.parent()
             && parent != Path::new("")
         {
-            create_dir_all(parent)?;
+            fs_err::create_dir_all(parent)?;
         }
         match self {
-            Saver::Plaintext { name } => {
-                let pt = Plaintext {
+            Saver::Pattern { name, format } => {
+                let doc = Document {
                     name: name.as_ref().map(|tmplt| tmplt.render(index)),
                     comments: Vec::new(),
                     pattern,
                 };
-                let mut fp = BufWriter::new(File::create(path)?);
-                write!(fp, "{pt}")?;
-                fp.flush()?;
-            }
-            Saver::Rle { name } => {
-                let comments = if let Some(tmplt) = name {
-                    vec![(Letter::NAME_TYPE, tmplt.render(index))]
-                } else {
-                    Vec::new()
-                };
-                let rle = Rle { comments, pattern };
-                let mut fp = BufWriter::new(File::create(path)?);
-                write!(fp, "{rle}")?;
-                fp.flush()?;
+                doc.dump_to_file(path, FormatChoice::Fixed(*format))
+                    .with_context(|| format!("failed to write pattern to {}", path.display()))?;
             }
             Saver::Image { builder } => builder
                 .render(&pattern)
                 .context("failed to render image")?
                 .save(path)
-                .context("failed to write image file")?,
+                .with_context(|| format!("failed to write image to {}", path.display()))?,
         }
         Ok(())
     }
@@ -188,7 +180,8 @@ fn main() -> anyhow::Result<()> {
     }
     let saver = args.saver()?;
     let maxtick = args.ticks.maxvalue();
-    let pattern = Document::load_from_file(&args.infile, FormatChoice::Autodetect)?
+    let pattern = Document::load_from_file(&args.infile, FormatChoice::Autodetect)
+        .with_context(|| format!("failed to read pattern from {}", args.infile.display()))?
         .pattern
         .with_edges(args.edges);
     for (i, pat) in pattern
