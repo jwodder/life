@@ -59,12 +59,12 @@ impl ImageBuilder {
             .and_then(|h| h.checked_sub(self.gutter))
             .expect("image size should not overflow u32");
         let mut img = RgbImage::from_fn(img_width, img_height, |_, _| [0xFF, 0xFF, 0xFF].into());
-        for (y, x) in life.iter_live() {
-            let xstart = match u32::try_from(x) {
+        for c in life.iter_live() {
+            let xstart = match u32::try_from(c.x) {
                 Ok(x) => x * guttered_size,
                 _ => unreachable!("width fit in a u32, so x should too"),
             };
-            let ystart = match u32::try_from(y) {
+            let ystart = match u32::try_from(c.y) {
                 Ok(y) => y * guttered_size,
                 _ => unreachable!("height fit in a u32, so y should too"),
             };
