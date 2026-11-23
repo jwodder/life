@@ -9,6 +9,12 @@ authors = ["John Thorvald Wodder II <life-rust@varonathe.org>"]
 repository = "https://github.com/jwodder/life"
 license = "MIT"
 
+[workspace.dependencies]
+anyhow = "1.0.82"
+pretty_assertions = "1.4.0"
+rstest = { version = "0.29.0", default-features = false }
+thiserror = "2.0.0"
+
 [workspace.lints.rust]
 # Lint groups:
 deprecated_safe = { level = "deny", priority = -1 }

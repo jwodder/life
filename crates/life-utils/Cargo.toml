@@ -10,7 +10,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-thiserror = "2.0.0"
+thiserror.workspace = true
 
 [lints]
 workspace = true
