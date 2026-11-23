@@ -11,13 +11,13 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-csscolorparser = "0.9.0"
+csscolorparser.workspace = true
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 patharg.workspace = true
 
 [dev-dependencies]
-assert_cmd = "2.1.0"
-assert_fs = "1.1.1"
+assert_cmd.workspace = true
+assert_fs.workspace = true
 
 [lints]
 workspace = true

@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-fs-err = "3.0.0"
+fs-err.workspace = true
 life-utils = { path = "../life-utils" }
 lifelib = { path = "../lifelib" }
 patharg.workspace = true
@@ -19,8 +19,8 @@ rangemap = "1.5.1"
 thiserror.workspace = true
 
 [dev-dependencies]
-assert_cmd = "2.1.0"
-assert_fs = "1.1.1"
+assert_cmd.workspace = true
+assert_fs.workspace = true
 assert_matches = "1.5.0"
 pretty_assertions.workspace = true
 rstest.workspace = true

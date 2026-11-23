@@ -1,0 +1,24 @@
+[package]
+name = "evolve"
+edition.workspace = true
+rust-version.workspace = true
+description = "Generate a GIF of a Game of Life pattern's generations"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+csscolorparser.workspace = true
+lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
+patharg.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+assert_fs.workspace = true
+itertools = "0.15.0"
+
+[lints]
+workspace = true

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 /// Render Conway's Game of Life patterns as images
 ///
-/// See <https://github.com/jwodder/life/tree/master/pat2img> for more
+/// See <https://github.com/jwodder/life/tree/master/crates/pat2img> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {

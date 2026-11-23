@@ -6,6 +6,10 @@ use rand::distr::{Bernoulli, Distribution};
 use std::io::Write;
 use thiserror::Error;
 
+/// Generate a random Game of Life pattern
+///
+/// See <https://github.com/jwodder/life/tree/master/crates/soup> for more
+/// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {
     /// Embed the given comment in the output file.

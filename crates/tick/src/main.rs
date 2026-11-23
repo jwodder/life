@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 
 /// Advance Conway's Game of Life patterns
 ///
-/// See <https://github.com/jwodder/life/tree/master/tick> for more
+/// See <https://github.com/jwodder/life/tree/master/crates/tick> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {
