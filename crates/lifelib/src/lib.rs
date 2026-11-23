@@ -156,33 +156,40 @@ impl From<Coords> for (isize, isize) {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-struct Bounds {
+pub struct Bounds {
     upper_left: Coords,
     width: usize,
     height: usize,
 }
 
 impl Bounds {
-    fn new(height: usize, width: usize) -> Bounds {
+    pub fn new(height: usize, width: usize) -> Bounds {
         Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
     }
 
-    fn new_with_upper_left(mut height: usize, mut width: usize, upper_left: Coords) -> Bounds {
+    /// # Panics
+    ///
+    /// Panics if any of the following are true:
+    ///
+    /// - `width * height` exceeds [`usize::MAX`]
+    /// - `upper_left.y + height` exceeds [`isize::MAX`]
+    /// - `upper_left.x + width` exceeds [`isize::MAX`]
+    pub fn new_with_upper_left(mut height: usize, mut width: usize, upper_left: Coords) -> Bounds {
         if height == 0 || width == 0 {
             height = 0;
             width = 0;
         }
         assert!(
             width.checked_mul(height).is_some(),
-            "width * height for new Pattern exceeds usize::MAX"
+            "width * height exceeds usize::MAX"
         );
         assert!(
             upper_left.y.checked_add_unsigned(height).is_some(),
-            "maximum y-coordinate of new Pattern exceeds isize::MAX"
+            "maximum y-coordinate exceeds isize::MAX"
         );
         assert!(
             upper_left.x.checked_add_unsigned(width).is_some(),
-            "maximum x-coordinate of new Pattern exceeds isize::MAX"
+            "maximum x-coordinate exceeds isize::MAX"
         );
         Bounds {
             height,
@@ -191,7 +198,19 @@ impl Bounds {
         }
     }
 
-    fn contains<C: Into<Coords>>(&self, c: C) -> bool {
+    pub fn empty() -> Bounds {
+        Bounds {
+            upper_left: Coords { y: 0, x: 0 },
+            width: 0,
+            height: 0,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.width == 0 || self.height == 0
+    }
+
+    pub fn contains<C: Into<Coords>>(&self, c: C) -> bool {
         let c = c.into();
         self.xrange().contains(&c.x) && self.yrange().contains(&c.y)
     }
@@ -215,27 +234,39 @@ impl Bounds {
         })
     }
 
-    fn ybound(&self) -> isize {
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn upper_left(&self) -> Coords {
+        self.upper_left
+    }
+
+    fn yend(&self) -> isize {
         self.upper_left.y.strict_add_unsigned(self.height)
     }
 
-    fn xbound(&self) -> isize {
+    fn xend(&self) -> isize {
         self.upper_left.x.strict_add_unsigned(self.width)
     }
 
-    fn lower_right(&self) -> Coords {
+    pub fn lower_right(&self) -> Coords {
         Coords {
-            y: self.ybound(),
-            x: self.xbound(),
+            y: self.yend(),
+            x: self.xend(),
         }
     }
 
-    fn yrange(&self) -> Range<isize> {
-        self.upper_left.y..self.ybound()
+    pub fn yrange(&self) -> Range<isize> {
+        self.upper_left.y..self.yend()
     }
 
-    fn xrange(&self) -> Range<isize> {
-        self.upper_left.x..self.xbound()
+    pub fn xrange(&self) -> Range<isize> {
+        self.upper_left.x..self.xend()
     }
 }
 
@@ -405,8 +436,8 @@ impl Pattern {
         let top = greater_by(c.y, self.bounds.upper_left.y);
         let left = greater_by(c.x, self.bounds.upper_left.x);
         // TODO: Only panic when strictly necessary:
-        let bottom = greater_by(self.bounds.ybound().strict_sub(1), c.y);
-        let right = greater_by(self.bounds.xbound().strict_sub(1), c.x);
+        let bottom = greater_by(self.bounds.yend().strict_sub(1), c.y);
+        let right = greater_by(self.bounds.xend().strict_sub(1), c.x);
         if top > 0 || left > 0 || bottom > 0 || right > 0 {
             let new_ul = Coords {
                 y: self.bounds.upper_left.y.strict_sub_unsigned(top),
