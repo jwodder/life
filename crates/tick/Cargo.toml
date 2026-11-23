@@ -16,7 +16,7 @@ csscolorparser = "0.9.0"
 fs-err = "3.0.0"
 life-utils = { path = "../life-utils" }
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
-patharg = "0.4.1"
+patharg.workspace = true
 rangemap = "1.5.1"
 thiserror.workspace = true
 
@@ -24,7 +24,6 @@ thiserror.workspace = true
 assert_cmd = "2.1.0"
 assert_fs = "1.1.1"
 assert_matches = "1.5.0"
-predicates = { version = "3.1.0", default-features = false }
 pretty_assertions.workspace = true
 rstest.workspace = true
 

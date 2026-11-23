@@ -17,6 +17,8 @@ The packages are:
 - [`parse-check`][] — Program for checking whether given pattern files can be
   parsed by `lifelib`
 
+- [`pat2img`][] — Program for rendering patterns as images
+
 - [`life-utils`][] — Internal utilities used by multiple packages
 
 This workspace as a whole is a hobby project for personal experimentation &
@@ -28,4 +30,5 @@ anything here at your own risk.
 [`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib
 [`tick`]: https://github.com/jwodder/life/tree/master/crates/tick
 [`parse-check`]: https://github.com/jwodder/life/tree/master/crates/parse-check
+[`pat2img`]: https://github.com/jwodder/life/tree/master/crates/pat2img
 [`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils

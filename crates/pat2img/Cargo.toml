@@ -1,0 +1,23 @@
+[package]
+name = "pat2img"
+edition.workspace = true
+rust-version.workspace = true
+description = "Convert a Game of Life pattern to an image"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+csscolorparser = "0.9.0"
+lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
+patharg.workspace = true
+
+[dev-dependencies]
+assert_cmd = "2.1.0"
+assert_fs = "1.1.1"
+
+[lints]
+workspace = true
