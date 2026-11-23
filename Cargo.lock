@@ -456,6 +456,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "evolve"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "csscolorparser",
+ "lifelib",
+ "patharg",
+]
+
+[[package]]
 name = "exr"
 version = "1.74.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

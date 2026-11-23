@@ -9,19 +9,25 @@ This is a Rust [workspace][] containing various packages for doing things with
 
 The packages are:
 
-- [`lifelib`][] — Core library implementing the Game of Life and related
-  functionality
+- Libraries:
 
-- [`tick`][] — Program for advancing Game of Life patterns
+    - [`lifelib`][] — Core library implementing the Game of Life and related
+      functionality
 
-- [`parse-check`][] — Program for checking whether given pattern files can be
-  parsed by `lifelib`
+    - [`life-utils`][] — Internal utilities used by multiple packages
 
-- [`pat2img`][] — Program for rendering patterns as images
+- Programs:
 
-- [`soup`][] — Program for generating a random pattern
+    - [`evolve`][] — Create GIFs of pattern generations
 
-- [`life-utils`][] — Internal utilities used by multiple packages
+    - [`tick`][] — Advance Game of Life patterns
+
+    - [`parse-check`][] — Check whether pattern files can be parsed by
+      `lifelib`
+
+    - [`pat2img`][] — Render patterns as images
+
+    - [`soup`][] — Generate a random pattern
 
 This workspace as a whole is a hobby project for personal experimentation &
 edification and is not intended to be generally/widely used by others.  Use
@@ -29,9 +35,10 @@ anything here at your own risk.
 
 [workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
+[`evolve`]: https://github.com/jwodder/life/tree/master/crates/evolve
+[`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils
 [`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib
-[`tick`]: https://github.com/jwodder/life/tree/master/crates/tick
 [`parse-check`]: https://github.com/jwodder/life/tree/master/crates/parse-check
 [`pat2img`]: https://github.com/jwodder/life/tree/master/crates/pat2img
 [`soup`]: https://github.com/jwodder/life/tree/master/crates/soup
-[`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils
+[`tick`]: https://github.com/jwodder/life/tree/master/crates/tick
