@@ -860,6 +860,14 @@ impl<'a> PatternParser<'a> {
     }
 }
 
+pub fn sync_bounds(patterns: &[Pattern]) -> Vec<Pattern> {
+    let Some((p0, rest)) = patterns.split_first() else {
+        return Vec::new();
+    };
+    let bounds = rest.iter().fold(p0.bounds(), |b, p| b | p.bounds());
+    patterns.iter().map(|p| p.resize(bounds)).collect()
+}
+
 fn adjacent(range: Range<isize>, i: isize, wrap: bool) -> Vec<isize> {
     let mut vals = Vec::with_capacity(3);
     let mut a = i.checked_sub(1).filter(|&a| a >= range.start);
