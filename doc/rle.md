@@ -172,6 +172,8 @@ constraints:
 
 - Lines are terminated by LF, including the last line.
 
+- `#` lines have exactly one (1) `SP` character after the `<LETTER>` element.
+
 - In the header line, there is exactly one (1) `SP` character on either side of
   each `=` character and another `SP` character after the comma.  There is no
   other whitespace in the line, aside from the terminating newline.
