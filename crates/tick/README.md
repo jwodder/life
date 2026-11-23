@@ -4,12 +4,11 @@
 `tick` is a program for advancing a pattern in [Conway's Game of Life][].  An
 input pattern is read from a [plaintext][] or [Run Length Encoded][] file, and
 the resulting pattern after some number of ticks is written out in plaintext or
-RLE or as an image.
+RLE.
 
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
 [plaintext]: https://conwaylife.com/wiki/Plaintext
 [Run Length Encoded]: https://conwaylife.com/wiki/Run_Length_Encoded
-[`image`]: https://github.com/image-rs/image
 
 Usage
 =====
@@ -24,9 +23,8 @@ initial content.
 
 The input pattern is advanced by a number of ticks given by the `-n`/`--number`
 option [default: 1], and the result is written to `<outfile>`.  The file
-extension of the output path must be "`.cells`" (to produce a plaintext file),
-"`.rle`" (to produce a Run Length Encoded file), or an image file extension
-supported by the [`image`][] crate (to produce an image).
+extension of the output path must be "`.cells`" (to produce a plaintext file)
+or "`.rle`" (to produce a Run Length Encoded file).
 
 Patterns are placed on a [bounded grid][] with the same dimensions as the
 pattern read from `<infile>`.  By default, a [finite plane][] (in which all
@@ -52,6 +50,10 @@ be saved at the end.
 
 Options
 -------
+
+- `-c TEXT`, `--comment TEXT` — Embed the comment `TEXT` in the output files.
+  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
+  contain newlines.  This option may be specified multiple times.
 
 - `-E VALUE`, `--edges VALUE` — Configure the behavior of the edges of the
   pattern's universe.  The allowed values (case insensitive) are:
@@ -82,30 +84,9 @@ Options
   specified, multiple outputs are produced, one for each specified tick number
   in the input pattern's history.  [default: 1]
 
-The following option only has an effect when outputting to a plaintext or RLE
-file:
-
-- `-c TEXT`, `--comment TEXT` — Embed the comment `TEXT` in the output file.
-  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
-  contain newlines.  This option may be specified multiple times.
-
-- `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output file.
+- `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output files.
   `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
   contain newlines.
-
-The following options only have an effect when outputting to an image file:
-
-- `-s INT`, `--cell-size INT` — Set the height & width of the cell squares to
-  the given number of pixels [default: 5]
-
-- `-g INT`, `--gutter INT` — Insert the given number of pixels as padding
-  between adjacent cell squares [default: 0]
-
-- `-C COLOR`, `--live-color COLOR` — Set the color of live cells.  `COLOR` can
-  be a hex RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color
-  name][].  [default: `#000000`]
-
-[CSS color name]: https://www.w3.org/TR/css-color-4/#named-colors
 
 Tick Placeholders
 -----------------

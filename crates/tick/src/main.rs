@@ -8,10 +8,8 @@ use lifelib::{
     Edges, Pattern,
     document::{Document, FormatChoice},
     formats::Format,
-    image::{ImageBuilder, image::ImageFormat},
 };
 use patharg::InputArg;
-use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
 /// Advance Conway's Game of Life patterns
@@ -20,12 +18,7 @@ use std::path::{Path, PathBuf};
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
 struct Arguments {
-    /// (Image output only) Set the height & width of the cell squares to the
-    /// given number of pixels
-    #[arg(short = 's', long, default_value = "5", value_name = "INT")]
-    cell_size: NonZeroU32,
-
-    /// (Non-image output only) Embed the given comment in the output file.
+    /// Embed the given comment in the output file.
     ///
     /// The name may contain `%d` placeholders which will be replaced by the
     /// tick number.
@@ -65,20 +58,7 @@ struct Arguments {
     )]
     edges: Edges,
 
-    /// (Image output only) Insert the given number of pixels as padding
-    /// between adjacent cell squares
-    #[arg(short, long, default_value_t = 0, value_name = "INT")]
-    gutter: u32,
-
-    /// (Image output only) Set the color of live cells.
-    ///
-    /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
-    /// or a CSS color name.
-    #[arg(short = 'C', long, default_value = "#000000", value_name = "COLOR")]
-    live_color: csscolorparser::Color,
-
-    /// (Non-image output only) Set the pattern name to embed in the output
-    /// file.
+    /// Set the pattern name to embed in the output file.
     ///
     /// The name may contain `%d` placeholders which will be replaced by the
     /// tick number.
@@ -113,8 +93,7 @@ struct Arguments {
     /// Path at which to write the output pattern(s).
     ///
     /// The path's file extension must be `.cells` (to produce a plaintext
-    /// file), `.rle` (to produce an RLE file), or an image extension (to
-    /// produce an image).
+    /// file) or `.rle` (to produce an RLE file).
     ///
     /// The path may contain `%d` placeholders which will be replaced by the
     /// tick number.
@@ -123,40 +102,25 @@ struct Arguments {
 
 impl Arguments {
     fn saver(&mut self) -> anyhow::Result<Saver> {
-        match self.outfile.extension() {
-            Some("cells") => Ok(Saver::Pattern {
+        if let Some(ext) = self.outfile.extension()
+            && let Some(format) = Format::iter().find(|f| f.has_extension(ext))
+        {
+            Ok(Saver {
                 name: self.name.take(),
                 comments: std::mem::take(&mut self.comment),
-                format: Format::Plaintext,
-            }),
-            Some("rle") => Ok(Saver::Pattern {
-                name: self.name.take(),
-                comments: std::mem::take(&mut self.comment),
-                format: Format::Rle,
-            }),
-            Some(ext) if ImageFormat::from_extension(ext).is_some() => {
-                let [r, g, b, _] = self.live_color.to_rgba8();
-                let builder = ImageBuilder::new()
-                    .cell_size(self.cell_size)
-                    .live_color([r, g, b].into())
-                    .gutter(self.gutter);
-                Ok(Saver::Image { builder })
-            }
-            _ => anyhow::bail!("output path does not have a supported file extension"),
+                format,
+            })
+        } else {
+            anyhow::bail!("output path does not have a supported file extension");
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum Saver {
-    Pattern {
-        name: Option<TickTemplate>,
-        comments: Vec<TickTemplate>,
-        format: Format,
-    },
-    Image {
-        builder: ImageBuilder,
-    },
+struct Saver {
+    name: Option<TickTemplate>,
+    comments: Vec<TickTemplate>,
+    format: Format,
 }
 
 impl Saver {
@@ -166,26 +130,17 @@ impl Saver {
         {
             fs_err::create_dir_all(parent)?;
         }
-        match self {
-            Saver::Pattern {
-                name,
-                comments,
-                format,
-            } => {
-                let doc = Document {
-                    name: name.as_ref().map(|tmplt| tmplt.render(index)),
-                    comments: comments.iter().map(|tmplt| tmplt.render(index)).collect(),
-                    pattern,
-                };
-                doc.dump_to_file(path, FormatChoice::Fixed(*format))
-                    .with_context(|| format!("failed to write pattern to {}", path.display()))?;
-            }
-            Saver::Image { builder } => builder
-                .render(&pattern)
-                .context("failed to render image")?
-                .save(path)
-                .with_context(|| format!("failed to write image to {}", path.display()))?,
-        }
+        let doc = Document {
+            name: self.name.as_ref().map(|tmplt| tmplt.render(index)),
+            comments: self
+                .comments
+                .iter()
+                .map(|tmplt| tmplt.render(index))
+                .collect(),
+            pattern,
+        };
+        doc.dump_to_file(path, FormatChoice::Fixed(self.format))
+            .with_context(|| format!("failed to write pattern to {}", path.display()))?;
         Ok(())
     }
 }

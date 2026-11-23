@@ -1,10 +1,8 @@
 #![cfg(test)]
 use assert_cmd::cargo::cargo_bin_cmd;
 use assert_fs::{NamedTempFile, TempDir};
-use lifelib::image::image::{ImageFormat, ImageReader};
 use rstest::rstest;
-use std::fs::{File, read_dir, read_to_string};
-use std::io::BufReader;
+use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
 static DATA_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data");
@@ -13,18 +11,6 @@ fn assert_str_files_eq(file1: &Path, file2: &Path) {
     let str1 = read_to_string(file1).unwrap();
     let str2 = read_to_string(file2).unwrap();
     pretty_assertions::assert_eq!(str1, str2);
-}
-
-fn assert_png_files_eq(file1: &Path, file2: &Path) {
-    let img1 =
-        ImageReader::with_format(BufReader::new(File::open(file1).unwrap()), ImageFormat::Png)
-            .decode()
-            .unwrap();
-    let img2 =
-        ImageReader::with_format(BufReader::new(File::open(file2).unwrap()), ImageFormat::Png)
-            .decode()
-            .unwrap();
-    assert_eq!(img1, img2);
 }
 
 fn listdir(dirpath: &Path) -> Vec<String> {
@@ -75,17 +61,6 @@ mod default_number {
             .success();
         assert_str_files_eq(&Path::new(DATA_DIR).join("glider1.rle"), &outfile);
     }
-
-    #[test]
-    fn png() {
-        let outfile = NamedTempFile::new("glider1.png").unwrap();
-        cargo_bin_cmd!("tick")
-            .arg(Path::new(DATA_DIR).join("glider.cells"))
-            .arg(outfile.path())
-            .assert()
-            .success();
-        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1.png"), &outfile);
-    }
 }
 
 #[rstest]
@@ -113,18 +88,6 @@ fn numbers(#[case] number: usize, #[case] filename: &str) {
 }
 
 #[test]
-fn number0_png() {
-    let outfile = NamedTempFile::new("glider.png").unwrap();
-    cargo_bin_cmd!("tick")
-        .arg("-n0")
-        .arg(Path::new(DATA_DIR).join("glider.cells"))
-        .arg(outfile.path())
-        .assert()
-        .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider.png"), &outfile);
-}
-
-#[test]
 fn rle2plaintext() {
     let outfile = NamedTempFile::new("glider.cells").unwrap();
     cargo_bin_cmd!("tick")
@@ -134,64 +97,6 @@ fn rle2plaintext() {
         .assert()
         .success();
     assert_str_files_eq(&Path::new(DATA_DIR).join("glider.cells"), &outfile);
-}
-
-mod imgopts {
-    use super::*;
-
-    #[test]
-    fn live_color() {
-        let outfile = NamedTempFile::new("glider.png").unwrap();
-        cargo_bin_cmd!("tick")
-            .arg("--live-color")
-            .arg("red")
-            .arg(Path::new(DATA_DIR).join("glider.cells"))
-            .arg(outfile.path())
-            .assert()
-            .success();
-        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-red.png"), &outfile);
-    }
-
-    #[test]
-    fn gutter() {
-        let outfile = NamedTempFile::new("glider.png").unwrap();
-        cargo_bin_cmd!("tick")
-            .arg("--gutter")
-            .arg("1")
-            .arg(Path::new(DATA_DIR).join("glider.cells"))
-            .arg(outfile.path())
-            .assert()
-            .success();
-        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-g1.png"), &outfile);
-    }
-
-    #[test]
-    fn cell_size() {
-        let outfile = NamedTempFile::new("glider.png").unwrap();
-        cargo_bin_cmd!("tick")
-            .arg("--cell-size")
-            .arg("10")
-            .arg(Path::new(DATA_DIR).join("glider.cells"))
-            .arg(outfile.path())
-            .assert()
-            .success();
-        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10.png"), &outfile);
-    }
-
-    #[test]
-    fn cell_size_gutter() {
-        let outfile = NamedTempFile::new("glider.png").unwrap();
-        cargo_bin_cmd!("tick")
-            .arg("--cell-size")
-            .arg("10")
-            .arg("--gutter")
-            .arg("2")
-            .arg(Path::new(DATA_DIR).join("glider.cells"))
-            .arg(outfile.path())
-            .assert()
-            .success();
-        assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10-g2.png"), &outfile);
-    }
 }
 
 mod name {
