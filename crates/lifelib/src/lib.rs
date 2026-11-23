@@ -325,22 +325,28 @@ impl BitOr for Bounds {
     type Output = Bounds;
 
     fn bitor(self, other: Bounds) -> Bounds {
-        let xstart = std::cmp::min(self.upper_left.x, other.upper_left.x);
-        let ystart = std::cmp::min(self.upper_left.y, other.upper_left.y);
-        let xend = std::cmp::max(self.xend(), other.xend());
-        let yend = std::cmp::max(self.yend(), other.yend());
-        if xstart >= xend || ystart >= yend {
-            Bounds::empty()
+        if self.is_empty() {
+            other
+        } else if other.is_empty() {
+            self
         } else {
-            let width = xstart.abs_diff(xend);
-            let height = ystart.abs_diff(yend);
-            Bounds {
-                upper_left: Coords {
-                    y: ystart,
-                    x: xstart,
-                },
-                width,
-                height,
+            let xstart = std::cmp::min(self.upper_left.x, other.upper_left.x);
+            let ystart = std::cmp::min(self.upper_left.y, other.upper_left.y);
+            let xend = std::cmp::max(self.xend(), other.xend());
+            let yend = std::cmp::max(self.yend(), other.yend());
+            if xstart >= xend || ystart >= yend {
+                Bounds::empty()
+            } else {
+                let width = xstart.abs_diff(xend);
+                let height = ystart.abs_diff(yend);
+                Bounds {
+                    upper_left: Coords {
+                        y: ystart,
+                        x: xstart,
+                    },
+                    width,
+                    height,
+                }
             }
         }
     }
@@ -1731,6 +1737,24 @@ mod tests {
         }
 
         #[test]
+        fn union_empty_and_nonempty() {
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::empty();
+            let b3 = b1 | b2;
+            assert!(!b3.is_empty());
+            assert_eq!(b3, b1);
+        }
+
+        #[test]
+        fn union_empty_and_empty() {
+            let b1 = Bounds::empty();
+            let b2 = Bounds::empty();
+            let b3 = b1 | b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
         fn intersection_overlapping() {
             // .........
             // .#####...
@@ -1787,6 +1811,24 @@ mod tests {
             // .............
             let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
             let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
+        fn intersection_empty_and_nonempty() {
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::empty();
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
+        fn intersection_empty_and_empty() {
+            let b1 = Bounds::empty();
+            let b2 = Bounds::empty();
             let b3 = b1 & b2;
             assert!(b3.is_empty());
             assert_eq!(b3, Bounds::empty());
