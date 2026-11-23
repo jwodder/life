@@ -1,0 +1,20 @@
+[package]
+name = "soup"
+edition.workspace = true
+rust-version.workspace = true
+description = "Generate a random Game of Life pattern"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+lifelib = { path = "../lifelib" }
+patharg.workspace = true
+rand = "0.10.4"
+thiserror.workspace = true
+
+[lints]
+workspace = true

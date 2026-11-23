@@ -172,7 +172,7 @@ impl From<State> for RunKind {
 #[expect(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct Enumerate<'a> {
-    coords: BoundsIntoIter,
+    coords: IterCoords,
     inner: bit_vec::Iter<'a, u32>,
 }
 
@@ -368,15 +368,15 @@ pub struct LineFromStringError {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BoundsIntoIter {
+pub struct IterCoords {
     bounds: Bounds,
     y: isize,
     x: isize,
 }
 
-impl BoundsIntoIter {
-    pub(crate) fn new(bounds: Bounds) -> BoundsIntoIter {
-        BoundsIntoIter {
+impl IterCoords {
+    pub(crate) fn new(bounds: Bounds) -> IterCoords {
+        IterCoords {
             bounds,
             y: bounds.upper_left.y,
             x: bounds.upper_left.x,
@@ -384,7 +384,7 @@ impl BoundsIntoIter {
     }
 }
 
-impl Iterator for BoundsIntoIter {
+impl Iterator for IterCoords {
     type Item = Coords;
 
     fn next(&mut self) -> Option<Coords> {
@@ -419,9 +419,9 @@ impl Iterator for BoundsIntoIter {
     }
 }
 
-impl ExactSizeIterator for BoundsIntoIter {}
+impl ExactSizeIterator for IterCoords {}
 
-impl FusedIterator for BoundsIntoIter {}
+impl FusedIterator for IterCoords {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct RowIter<'a> {

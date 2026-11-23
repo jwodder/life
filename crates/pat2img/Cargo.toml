@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+clap.workspace = true
 csscolorparser = "0.9.0"
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 patharg.workspace = true
