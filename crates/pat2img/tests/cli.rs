@@ -21,80 +21,80 @@ fn assert_png_files_eq(file1: &Path, file2: &Path) {
 }
 
 #[test]
-fn png() {
+fn defaults() {
     let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("defaults.png"), &outfile);
 }
 
 #[test]
 fn live_color() {
-    let outfile = NamedTempFile::new("glider1.png").unwrap();
+    let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg("--live-color")
         .arg("red")
-        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-red.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("live_color.png"), &outfile);
 }
 
 #[test]
 fn gutter() {
-    let outfile = NamedTempFile::new("glider1.png").unwrap();
+    let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg("--gutter")
         .arg("1")
-        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-g1.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("gutter.png"), &outfile);
 }
 
 #[test]
 fn gutter_color() {
-    let outfile = NamedTempFile::new("glider1.png").unwrap();
+    let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg("--gutter")
         .arg("1")
         .arg("--gutter-color=CCCCCC")
-        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-g1color.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("gutter_color.png"), &outfile);
 }
 
 #[test]
-fn cell_size() {
-    let outfile = NamedTempFile::new("glider1.png").unwrap();
+fn size10() {
+    let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg("--cell-size")
         .arg("10")
-        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("size10.png"), &outfile);
 }
 
 #[test]
-fn cell_size_gutter() {
-    let outfile = NamedTempFile::new("glider1.png").unwrap();
+fn size10_gutter2() {
+    let outfile = NamedTempFile::new("glider.png").unwrap();
     cargo_bin_cmd!("pat2img")
         .arg("--cell-size")
         .arg("10")
         .arg("--gutter")
         .arg("2")
-        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
         .arg(outfile.path())
         .assert()
         .success();
-    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-s10-g2.png"), &outfile);
+    assert_png_files_eq(&Path::new(DATA_DIR).join("size10_gutter2.png"), &outfile);
 }
