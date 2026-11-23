@@ -174,10 +174,9 @@ impl Bounds {
     /// - `width * height` exceeds [`usize::MAX`]
     /// - `upper_left.y + height` exceeds [`isize::MAX`]
     /// - `upper_left.x + width` exceeds [`isize::MAX`]
-    pub fn new_with_upper_left(mut height: usize, mut width: usize, upper_left: Coords) -> Bounds {
+    pub fn new_with_upper_left(height: usize, width: usize, upper_left: Coords) -> Bounds {
         if height == 0 || width == 0 {
-            height = 0;
-            width = 0;
+            return Bounds::empty();
         }
         assert!(
             width.checked_mul(height).is_some(),
