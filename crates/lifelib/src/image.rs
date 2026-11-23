@@ -6,11 +6,15 @@ use image::{Rgb, RgbImage};
 use std::num::NonZeroU32;
 use thiserror::Error;
 
+const WHITE: Rgb<u8> = Rgb([0xFF, 0xFF, 0xFF]);
+const BLACK: Rgb<u8> = Rgb([0, 0, 0]);
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct ImageBuilder {
     cell_size: NonZeroU32,
     live_color: Rgb<u8>,
     gutter: u32,
+    gutter_color: Rgb<u8>,
 }
 
 impl ImageBuilder {
@@ -20,8 +24,9 @@ impl ImageBuilder {
         };
         ImageBuilder {
             cell_size,
-            live_color: [0, 0, 0].into(),
+            live_color: BLACK,
             gutter: 0,
+            gutter_color: WHITE,
         }
     }
 
@@ -37,6 +42,11 @@ impl ImageBuilder {
 
     pub fn gutter(mut self, gutter: u32) -> Self {
         self.gutter = gutter;
+        self
+    }
+
+    pub fn gutter_color(mut self, color: Rgb<u8>) -> Self {
+        self.gutter_color = color;
         self
     }
 
@@ -67,7 +77,7 @@ impl ImageBuilder {
             .checked_mul(pat_height)
             .and_then(|h| h.checked_sub(self.gutter))
             .ok_or(RenderError::TooLarge)?;
-        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| [0xFF, 0xFF, 0xFF].into());
+        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| WHITE);
         let ul = life.upper_left();
         for c in life.iter_live() {
             let xstart = match u32::try_from(c.x.abs_diff(ul.x)) {
@@ -81,6 +91,24 @@ impl ImageBuilder {
             for i in 0..cell_size {
                 for j in 0..cell_size {
                     img.put_pixel(xstart + i, ystart + j, self.live_color);
+                }
+            }
+        }
+        if self.gutter > 0 && self.gutter_color != WHITE {
+            for row in 1..pat_height {
+                let offset = row * guttered_size - self.gutter;
+                for y in offset..offset.saturating_add(self.gutter) {
+                    for x in 0..img_width {
+                        img.put_pixel(x, y, self.gutter_color);
+                    }
+                }
+            }
+            for column in 1..pat_width {
+                let offset = column * guttered_size - self.gutter;
+                for x in offset..offset.saturating_add(self.gutter) {
+                    for y in 0..img_height {
+                        img.put_pixel(x, y, self.gutter_color);
+                    }
                 }
             }
         }
@@ -115,7 +143,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image1() {
+    fn size5() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new().cell_size(NonZeroU32::new(5).unwrap());
         let img = painter.render(&life).unwrap();
@@ -127,7 +155,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image_color() {
+    fn image_color() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
@@ -141,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image_gutter() {
+    fn image_gutter() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
@@ -151,6 +179,37 @@ mod tests {
         assert_eq!(
             imgdata,
             include_str!("testdata/test_image_gutter.ppm").trim_end_matches('\n')
+        );
+    }
+
+    #[test]
+    fn gutter_color() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .gutter(1)
+            .gutter_color(Rgb([0xCC, 0xCC, 0xCC]));
+        let img = painter.render(&life).unwrap();
+        let imgdata = img2ppm(img);
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/test_image_gutter_color.ppm").trim_end_matches('\n')
+        );
+    }
+
+    #[test]
+    fn size25_gutter5() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(25).unwrap())
+            .live_color(Rgb([0xFF, 0, 0]))
+            .gutter(5)
+            .gutter_color(Rgb([0xCC, 0xCC, 0xCC]));
+        let img = painter.render(&life).unwrap();
+        let imgdata = img2ppm(img);
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/test_image_large.ppm").trim_end_matches('\n')
         );
     }
 }
