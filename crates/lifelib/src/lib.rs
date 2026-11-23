@@ -241,10 +241,10 @@ impl Bounds {
 
 impl IntoIterator for Bounds {
     type Item = Coords;
-    type IntoIter = BoundsIntoIter;
+    type IntoIter = IterCoords;
 
-    fn into_iter(self) -> BoundsIntoIter {
-        BoundsIntoIter::new(self)
+    fn into_iter(self) -> IterCoords {
+        IterCoords::new(self)
     }
 }
 
@@ -356,6 +356,10 @@ impl Pattern {
 
     pub fn iter_live(&self) -> IterLive<'_> {
         IterLive::new(self)
+    }
+
+    pub fn iter_coords(&self) -> IterCoords {
+        self.bounds.into_iter()
     }
 
     pub fn draw(&self, dead: char, live: char) -> Draw<'_> {

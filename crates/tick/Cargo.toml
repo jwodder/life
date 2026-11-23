@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+clap.workspace = true
 fs-err = "3.0.0"
 life-utils = { path = "../life-utils" }
 lifelib = { path = "../lifelib" }
