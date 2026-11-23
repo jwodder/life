@@ -85,6 +85,10 @@ Options
 The following option only has an effect when outputting to a plaintext or RLE
 file:
 
+- `-c TEXT`, `--comment TEXT` — Embed the comment `TEXT` in the output file.
+  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
+  contain newlines.  This option may be specified multiple times.
+
 - `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output file.
   `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
   contain newlines.
@@ -106,9 +110,9 @@ The following options only have an effect when outputting to an image file:
 Tick Placeholders
 -----------------
 
-Output paths and `--name` arguments can contain any number of printf-style `%d`
-placeholders that will be replaced by the tick number when generating an output
-file.  The format of such placeholders is:
+Output paths, `--comment` arguments, and `--name` arguments can contain any
+number of printf-style `%d` placeholders that will be replaced by the tick
+number when generating an output file.  The format of such placeholders is:
 
 ```text
 %[<flag>][<width>][.<precision>]d

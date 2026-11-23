@@ -224,6 +224,108 @@ mod name {
     }
 }
 
+mod comments {
+    use super::*;
+
+    #[test]
+    fn literal_comment_cells() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Look at it go!")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-comment.cells"), &outfile);
+    }
+
+    #[test]
+    fn literal_comment_rle() {
+        let outfile = NamedTempFile::new("glider1.rle").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Look at it go!")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-comment.rle"), &outfile);
+    }
+
+    #[test]
+    fn template_comment_cells() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Generation %d")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(
+            &Path::new(DATA_DIR).join("glider1-tcomment.cells"),
+            &outfile,
+        );
+    }
+
+    #[test]
+    fn template_comment_rle() {
+        let outfile = NamedTempFile::new("glider1.rle").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Generation %d")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-tcomment.rle"), &outfile);
+    }
+
+    #[test]
+    fn multi_comment_cells() {
+        let outfile = NamedTempFile::new("glider1.cells").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Generation %d")
+            .arg("-cLook at it go!")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(
+            &Path::new(DATA_DIR).join("glider1-mcomment.cells"),
+            &outfile,
+        );
+    }
+
+    #[test]
+    fn multi_comment_rle() {
+        let outfile = NamedTempFile::new("glider1.rle").unwrap();
+        cargo_bin_cmd!("tick")
+            .arg("--name")
+            .arg("Glider + 1")
+            .arg("--comment")
+            .arg("Generation %d")
+            .arg("-cLook at it go!")
+            .arg(Path::new(DATA_DIR).join("glider.cells"))
+            .arg(outfile.path())
+            .assert()
+            .success();
+        assert_str_files_eq(&Path::new(DATA_DIR).join("glider1-mcomment.rle"), &outfile);
+    }
+}
+
 #[rstest]
 #[case(10, "dead", "glider10.rle")]
 #[case(11, "dead", "glider11.rle")]
