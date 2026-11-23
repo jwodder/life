@@ -24,6 +24,13 @@ struct Arguments {
     #[arg(short, long, default_value_t = 0, value_name = "INT")]
     gutter: u32,
 
+    /// Set the color of the gutter.
+    ///
+    /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
+    /// or a CSS color name.
+    #[arg(long, value_name = "COLOR")]
+    gutter_color: Option<csscolorparser::Color>,
+
     /// Set the color of live cells.
     ///
     /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
@@ -49,10 +56,14 @@ struct Arguments {
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
     let [r, g, b, _] = args.live_color.to_rgba8();
-    let builder = ImageBuilder::new()
+    let mut builder = ImageBuilder::new()
         .cell_size(args.cell_size)
         .live_color([r, g, b].into())
         .gutter(args.gutter);
+    if let Some(c) = args.gutter_color {
+        let [r, g, b, _] = c.to_rgba8();
+        builder = builder.gutter_color([r, g, b].into());
+    }
     let doc = match args.infile {
         stdin @ InputArg::Stdin => {
             let docstr = stdin

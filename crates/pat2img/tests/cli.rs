@@ -58,6 +58,20 @@ fn gutter() {
 }
 
 #[test]
+fn gutter_color() {
+    let outfile = NamedTempFile::new("glider1.png").unwrap();
+    cargo_bin_cmd!("pat2img")
+        .arg("--gutter")
+        .arg("1")
+        .arg("--gutter-color=CCCCCC")
+        .arg(Path::new(DATA_DIR).join("glider1.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_png_files_eq(&Path::new(DATA_DIR).join("glider1-g1color.png"), &outfile);
+}
+
+#[test]
 fn cell_size() {
     let outfile = NamedTempFile::new("glider1.png").unwrap();
     cargo_bin_cmd!("pat2img")
