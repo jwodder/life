@@ -1,5 +1,7 @@
 use crate::Pattern;
-use crate::formats::{Format, Letter, Plaintext, PlaintextError, Rle, RleError};
+use crate::formats::{
+    Format, Letter, Plaintext, PlaintextError, PlaintextRef, Rle, RleError, RleRef,
+};
 use crate::utilities::Line;
 use std::fmt;
 use std::io::{BufWriter, Write};
@@ -82,6 +84,24 @@ impl Document {
         fp.flush()?;
         Ok(())
     }
+
+    fn rle_comments(&self) -> Vec<(Letter, Line)> {
+        let mut comments = Vec::with_capacity(
+            self.comments
+                .len()
+                .saturating_add(usize::from(self.name.is_some())),
+        );
+        if let Some(name) = self.name.clone() {
+            comments.push((Letter::NAME_TYPE, name));
+        }
+        comments.extend(
+            self.comments
+                .iter()
+                .cloned()
+                .map(|c| (Letter::COMMENT_TYPE, c)),
+        );
+        comments
+    }
 }
 
 impl From<Plaintext> for Document {
@@ -106,23 +126,8 @@ impl From<Document> for Plaintext {
 
 impl From<Document> for Rle {
     fn from(value: Document) -> Rle {
-        let mut comments = Vec::with_capacity(
-            value
-                .comments
-                .len()
-                .saturating_add(usize::from(value.name.is_some())),
-        );
-        if let Some(name) = value.name {
-            comments.push((Letter::NAME_TYPE, name));
-        }
-        comments.extend(
-            value
-                .comments
-                .into_iter()
-                .map(|c| (Letter::COMMENT_TYPE, c)),
-        );
         Rle {
-            comments,
+            comments: value.rle_comments(),
             pattern: value.pattern,
         }
     }
@@ -137,9 +142,22 @@ pub struct DisplayDocument<'a> {
 impl fmt::Display for DisplayDocument<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.format {
-            // TODO: Do this without cloning everything:
-            Format::Plaintext => write!(f, "{}", Plaintext::from(self.doc.clone())),
-            Format::Rle => write!(f, "{}", Rle::from(self.doc.clone())),
+            Format::Plaintext => {
+                let ptref = PlaintextRef {
+                    name: self.doc.name.as_ref(),
+                    comments: &self.doc.comments,
+                    pattern: &self.doc.pattern,
+                };
+                write!(f, "{ptref}")
+            }
+            Format::Rle => {
+                let comments = self.doc.rle_comments();
+                let rleref = RleRef {
+                    comments: &comments,
+                    pattern: &self.doc.pattern,
+                };
+                write!(f, "{rleref}")
+            }
         }
     }
 }

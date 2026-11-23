@@ -53,34 +53,18 @@ impl Rle {
             self.comments.push((Letter::NAME_TYPE, n));
         }
     }
+
+    fn as_reftype(&self) -> RleRef<'_> {
+        RleRef {
+            comments: &self.comments,
+            pattern: &self.pattern,
+        }
+    }
 }
 
 impl fmt::Display for Rle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (ty, text) in &self.comments {
-            writeln!(f, "#{ty} {text}")?;
-        }
-        writeln!(
-            f,
-            "x = {}, y = {}",
-            self.pattern.width(),
-            self.pattern.height()
-        )?;
-        let mut linelen = 0;
-        for item in self.pattern.run_lengths() {
-            let len = item.display_len();
-            if linelen + len > 70 {
-                writeln!(f)?;
-                linelen = 0;
-            }
-            write!(f, "{item}")?;
-            linelen += len;
-        }
-        if linelen + 1 > 70 {
-            writeln!(f)?;
-        }
-        writeln!(f, "!")?;
-        Ok(())
+        write!(f, "{}", self.as_reftype())
     }
 }
 
@@ -233,6 +217,41 @@ impl fmt::Display for Letter {
 #[derive(Clone, Copy, Debug, Eq, Error, Hash, Ord, PartialEq, PartialOrd)]
 #[error("{0:?} is not an ASCII letter")]
 pub struct ParseLetterError(char);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RleRef<'a> {
+    pub(crate) comments: &'a [(Letter, Line)],
+    pub(crate) pattern: &'a Pattern,
+}
+
+impl fmt::Display for RleRef<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (ty, text) in self.comments {
+            writeln!(f, "#{ty} {text}")?;
+        }
+        writeln!(
+            f,
+            "x = {}, y = {}",
+            self.pattern.width(),
+            self.pattern.height()
+        )?;
+        let mut linelen = 0;
+        for item in self.pattern.run_lengths() {
+            let len = item.display_len();
+            if linelen + len > 70 {
+                writeln!(f)?;
+                linelen = 0;
+            }
+            write!(f, "{item}")?;
+            linelen += len;
+        }
+        if linelen + 1 > 70 {
+            writeln!(f)?;
+        }
+        writeln!(f, "!")?;
+        Ok(())
+    }
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct CommentParser<'a>(&'a str);
