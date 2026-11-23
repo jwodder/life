@@ -25,6 +25,15 @@ struct Arguments {
     #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
 
+    /// (Non-image output only) Embed the given comment in the output file.
+    ///
+    /// The name may contain `%d` placeholders which will be replaced by the
+    /// tick number.
+    ///
+    /// This option may be specified multiple times.
+    #[arg(short, long, value_name = "TEXT")]
+    comment: Vec<TickTemplate>,
+
     /// Configure the behavior of the edges of the pattern's universe.
     ///
     /// Possible values (case insensitive):
@@ -117,10 +126,12 @@ impl Arguments {
         match self.outfile.extension() {
             Some("cells") => Ok(Saver::Pattern {
                 name: self.name.take(),
+                comments: std::mem::take(&mut self.comment),
                 format: Format::Plaintext,
             }),
             Some("rle") => Ok(Saver::Pattern {
                 name: self.name.take(),
+                comments: std::mem::take(&mut self.comment),
                 format: Format::Rle,
             }),
             Some(ext) if ImageFormat::from_extension(ext).is_some() => {
@@ -140,6 +151,7 @@ impl Arguments {
 enum Saver {
     Pattern {
         name: Option<TickTemplate>,
+        comments: Vec<TickTemplate>,
         format: Format,
     },
     Image {
@@ -155,10 +167,14 @@ impl Saver {
             fs_err::create_dir_all(parent)?;
         }
         match self {
-            Saver::Pattern { name, format } => {
+            Saver::Pattern {
+                name,
+                comments,
+                format,
+            } => {
                 let doc = Document {
                     name: name.as_ref().map(|tmplt| tmplt.render(index)),
-                    comments: Vec::new(),
+                    comments: comments.iter().map(|tmplt| tmplt.render(index)).collect(),
                     pattern,
                 };
                 doc.dump_to_file(path, FormatChoice::Fixed(*format))
