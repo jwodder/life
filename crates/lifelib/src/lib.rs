@@ -389,6 +389,10 @@ impl Pattern {
         }
     }
 
+    pub fn bounds(&self) -> Bounds {
+        self.bounds
+    }
+
     pub fn height(&self) -> usize {
         self.bounds.height
     }
@@ -534,11 +538,7 @@ impl Pattern {
             let new_height = self.bounds.height.strict_add(top).strict_add(bottom);
             let new_width = self.bounds.width.strict_add(left).strict_add(right);
             let new_bounds = Bounds::new_with_upper_left(new_height, new_width, new_ul);
-            let new_cells = BitVec::from_fn(new_height * new_width, |i| {
-                new_bounds.unindex(i).is_some_and(|c| self.is_live(c))
-            });
-            self.bounds = new_bounds;
-            self.cells = new_cells;
+            *self = self.resize(new_bounds);
         }
     }
 
@@ -548,6 +548,17 @@ impl Pattern {
 
     pub fn population(&self) -> u64 {
         self.cells.count_ones()
+    }
+
+    pub fn resize(&self, bounds: Bounds) -> Pattern {
+        let cells = BitVec::from_fn(bounds.height * bounds.width, |i| {
+            bounds.unindex(i).is_some_and(|c| self.is_live(c))
+        });
+        Pattern {
+            cells,
+            bounds,
+            edges: self.edges,
+        }
     }
 }
 
