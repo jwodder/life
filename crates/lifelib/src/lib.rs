@@ -426,6 +426,10 @@ impl Pattern {
     pub fn into_generations(self) -> Generations {
         Generations(self)
     }
+
+    pub fn population(&self) -> u64 {
+        self.cells.count_ones()
+    }
 }
 
 #[derive(
