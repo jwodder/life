@@ -15,5 +15,10 @@ csscolorparser.workspace = true
 lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
 patharg.workspace = true
 
+[dev-dependencies]
+assert_cmd.workspace = true
+assert_fs.workspace = true
+itertools = "0.15.0"
+
 [lints]
 workspace = true
