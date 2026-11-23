@@ -91,9 +91,10 @@ Options
 Tick Placeholders
 -----------------
 
-Output paths, `--comment` arguments, and `--name` arguments can contain any
-number of printf-style `%d` placeholders that will be replaced by the tick
-number when generating an output file.  The format of such placeholders is:
+Output paths, `--comment` arguments, and `--name` arguments are templates that
+can contain any number of printf-style `%d` placeholders, which are replaced by
+the tick number when generating an output file.  The format of such
+placeholders is:
 
 ```text
 %[<flag>][<width>][.<precision>]d
@@ -114,4 +115,4 @@ where:
   minimum number of digits to output [default: 0].  If a precision is given, a
   flag of `0` is ignored.
 
-To include a literal `%` in an output path or `--name` argument, write `%%`.
+To include a literal `%` in a template, write `%%`.
