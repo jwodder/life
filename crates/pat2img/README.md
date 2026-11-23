@@ -34,6 +34,10 @@ Options
 - `-g INT`, `--gutter INT` — Insert the given number of pixels as padding
   between adjacent cell squares [default: 0]
 
+- `--gutter-color COLOR` — Set the color of the gutter.  `COLOR` can be a hex
+  RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color name][].
+  [default: `#FFFFFF`]
+
 - `-C COLOR`, `--live-color COLOR` — Set the color of live cells.  `COLOR` can
   be a hex RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color
   name][].  [default: `#000000`]
