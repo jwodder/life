@@ -1,6 +1,5 @@
 [package]
 name = "tick"
-version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Command for advancing Game of Life patterns"
@@ -12,10 +11,9 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap = { version = "4.5.4", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
-csscolorparser = "0.9.0"
 fs-err = "3.0.0"
 life-utils = { path = "../life-utils" }
-lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
+lifelib = { path = "../lifelib" }
 patharg.workspace = true
 rangemap = "1.5.1"
 thiserror.workspace = true

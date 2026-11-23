@@ -1548,7 +1548,6 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "clap",
- "csscolorparser",
  "fs-err",
  "life-utils",
  "lifelib",
