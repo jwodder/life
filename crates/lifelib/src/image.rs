@@ -150,12 +150,12 @@ mod tests {
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
-            include_str!("testdata/test_image1.ppm").trim_end_matches('\n')
+            include_str!("testdata/size5.ppm").trim_end_matches('\n')
         );
     }
 
     #[test]
-    fn image_color() {
+    fn live_color() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
@@ -164,12 +164,12 @@ mod tests {
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
-            include_str!("testdata/test_image_color.ppm").trim_end_matches('\n')
+            include_str!("testdata/live_color.ppm").trim_end_matches('\n')
         );
     }
 
     #[test]
-    fn image_gutter() {
+    fn gutter() {
         let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
@@ -178,7 +178,7 @@ mod tests {
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
-            include_str!("testdata/test_image_gutter.ppm").trim_end_matches('\n')
+            include_str!("testdata/gutter.ppm").trim_end_matches('\n')
         );
     }
 
@@ -193,7 +193,7 @@ mod tests {
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
-            include_str!("testdata/test_image_gutter_color.ppm").trim_end_matches('\n')
+            include_str!("testdata/gutter_color.ppm").trim_end_matches('\n')
         );
     }
 
@@ -209,7 +209,7 @@ mod tests {
         let imgdata = img2ppm(img);
         assert_eq!(
             imgdata,
-            include_str!("testdata/test_image_large.ppm").trim_end_matches('\n')
+            include_str!("testdata/size25_gutter5.ppm").trim_end_matches('\n')
         );
     }
 }
