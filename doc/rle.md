@@ -185,6 +185,8 @@ constraints:
 
 - There is no whitespace between run items aside from newlines.
 
+- `<integer>` elements do not have leading zeroes.
+
 - Run items are maximal, i.e., there are no occurrences of two or more
   consecutive run items with the same tag.
 
@@ -195,6 +197,8 @@ constraints:
 - Run items with tag `b` at the end of a pattern row are not emitted.
 
 - The run item with tag `$` at the end of a pattern is not emitted.
+
+- Run items do not specify any cells outside the dimensions of the pattern.
 
 - There are no characters after the terminating `!` other than the final
   newline.
