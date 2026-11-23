@@ -26,16 +26,19 @@ pub struct Plaintext {
     pub pattern: Pattern,
 }
 
+impl Plaintext {
+    fn as_reftype(&self) -> PlaintextRef<'_> {
+        PlaintextRef {
+            name: self.name.as_ref(),
+            comments: &self.comments,
+            pattern: &self.pattern,
+        }
+    }
+}
+
 impl fmt::Display for Plaintext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(ref name) = self.name {
-            writeln!(f, "!Name: {name}")?;
-        }
-        for c in &self.comments {
-            writeln!(f, "!{c}")?;
-        }
-        writeln!(f, "{}", self.pattern.draw('.', 'O'))?;
-        Ok(())
+        write!(f, "{}", self.as_reftype())
     }
 }
 
@@ -117,6 +120,26 @@ pub enum PlaintextError {
 
     #[error("plaintext drawing line exceeded maximum allowed length")]
     LineTooLong,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct PlaintextRef<'a> {
+    pub(crate) name: Option<&'a Line>,
+    pub(crate) comments: &'a [Line],
+    pub(crate) pattern: &'a Pattern,
+}
+
+impl fmt::Display for PlaintextRef<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(name) = self.name {
+            writeln!(f, "!Name: {name}")?;
+        }
+        for c in self.comments {
+            writeln!(f, "!{c}")?;
+        }
+        writeln!(f, "{}", self.pattern.draw('.', 'O'))?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
