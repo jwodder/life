@@ -189,7 +189,9 @@ mod tests {
 
     #[test]
     fn size5() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new().cell_size(NonZeroU32::new(5).unwrap());
         let img = painter.render(&life).unwrap();
         let imgdata = img2ppm(img);
@@ -201,7 +203,9 @@ mod tests {
 
     #[test]
     fn live_color() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .live_color([0xFF, 0, 0].into());
@@ -215,7 +219,9 @@ mod tests {
 
     #[test]
     fn gutter() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .gutter(1);
@@ -229,7 +235,9 @@ mod tests {
 
     #[test]
     fn gutter_color() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .gutter(1)
@@ -244,7 +252,9 @@ mod tests {
 
     #[test]
     fn size25_gutter5() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(25).unwrap())
             .live_color(Rgb([0xFF, 0, 0]))
@@ -260,7 +270,9 @@ mod tests {
 
     #[test]
     fn margin() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .margin(2)
@@ -275,7 +287,9 @@ mod tests {
 
     #[test]
     fn margin_gutter() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .margin(2)
@@ -292,7 +306,9 @@ mod tests {
 
     #[test]
     fn dead_margin_gutter() {
-        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let life = PatternParser::dead_chars(" .")
+            .parse(".#.\n..#\n###\n")
+            .unwrap();
         let painter = ImageBuilder::new()
             .cell_size(NonZeroU32::new(5).unwrap())
             .dead_color(Rgb([0, 0xFF, 0xFF]))

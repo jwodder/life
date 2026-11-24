@@ -575,7 +575,8 @@ mod tests {
                     "..#....#.#...\n",
                     "....##..#....\n",
                     "....##.......\n",
-                ));
+                ))
+                .unwrap();
             let life2 = life.step();
             assert_eq!(life2.height(), 12);
             assert_eq!(life2.width(), 13);
@@ -710,7 +711,7 @@ mod tests {
             ".###..\n",
             "......\n",
             "......\n",
-        ));
+        )).unwrap();
         let mut iter = life.into_generations();
         let life = iter.next().unwrap();
         assert_eq!(life.draw('.', '#').to_string(), concat!(
