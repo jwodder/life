@@ -203,14 +203,14 @@ impl BitOr for Bounds {
             } else {
                 let width = xstart.abs_diff(xend);
                 let height = ystart.abs_diff(yend);
-                Bounds {
-                    upper_left: Coords {
+                Bounds::new_with_upper_left(
+                    height,
+                    width,
+                    Coords {
                         y: ystart,
                         x: xstart,
                     },
-                    width,
-                    height,
-                }
+                )
             }
         }
     }
@@ -367,6 +367,22 @@ mod tests {
             let b3 = b1 | b2;
             assert!(b3.is_empty());
             assert_eq!(b3, Bounds::empty());
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        #[test]
+        #[should_panic(expected = "failed to construct Bounds: width * height exceeds usize::MAX")]
+        fn area_overflow() {
+            let b1 = Bounds::new_with_upper_left(1 << 32, 5, Coords { y: 2, x: 2 });
+            let b2 = Bounds::new_with_upper_left(
+                5,
+                1 << 32,
+                Coords {
+                    y: 2,
+                    x: -(1 << 32) - 2,
+                },
+            );
+            let _ = b1 | b2;
         }
     }
 
