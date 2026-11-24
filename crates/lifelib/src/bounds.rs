@@ -133,6 +133,33 @@ impl Bounds {
     pub fn try_moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
         Bounds::try_new_with_upper_left(self.height, self.width, c.into())
     }
+
+    pub fn try_union(&self, other: Bounds) -> Result<Bounds, BoundsError> {
+        if self.is_empty() {
+            Ok(other)
+        } else if other.is_empty() {
+            Ok(*self)
+        } else {
+            let xstart = std::cmp::min(self.upper_left.x, other.upper_left.x);
+            let ystart = std::cmp::min(self.upper_left.y, other.upper_left.y);
+            let xend = std::cmp::max(self.xend(), other.xend());
+            let yend = std::cmp::max(self.yend(), other.yend());
+            if xstart >= xend || ystart >= yend {
+                Ok(Bounds::empty())
+            } else {
+                let width = xstart.abs_diff(xend);
+                let height = ystart.abs_diff(yend);
+                Bounds::try_new_with_upper_left(
+                    height,
+                    width,
+                    Coords {
+                        y: ystart,
+                        x: xstart,
+                    },
+                )
+            }
+        }
+    }
 }
 
 impl IntoIterator for Bounds {
@@ -189,29 +216,9 @@ impl BitOr for Bounds {
     type Output = Bounds;
 
     fn bitor(self, other: Bounds) -> Bounds {
-        if self.is_empty() {
-            other
-        } else if other.is_empty() {
-            self
-        } else {
-            let xstart = std::cmp::min(self.upper_left.x, other.upper_left.x);
-            let ystart = std::cmp::min(self.upper_left.y, other.upper_left.y);
-            let xend = std::cmp::max(self.xend(), other.xend());
-            let yend = std::cmp::max(self.yend(), other.yend());
-            if xstart >= xend || ystart >= yend {
-                Bounds::empty()
-            } else {
-                let width = xstart.abs_diff(xend);
-                let height = ystart.abs_diff(yend);
-                Bounds::new_with_upper_left(
-                    height,
-                    width,
-                    Coords {
-                        y: ystart,
-                        x: xstart,
-                    },
-                )
-            }
+        match self.try_union(other) {
+            Ok(b) => b,
+            Err(e) => panic!("failed to construct Bounds: {e}"),
         }
     }
 }
