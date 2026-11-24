@@ -13,6 +13,7 @@ const BLACK: Rgb<u8> = Rgb([0, 0, 0]);
 pub struct ImageBuilder {
     cell_size: NonZeroU32,
     live_color: Rgb<u8>,
+    dead_color: Rgb<u8>,
     gutter: u32,
     gutter_color: Rgb<u8>,
     margin: u32,
@@ -27,6 +28,7 @@ impl ImageBuilder {
         ImageBuilder {
             cell_size,
             live_color: BLACK,
+            dead_color: WHITE,
             gutter: 0,
             gutter_color: WHITE,
             margin: 0,
@@ -41,6 +43,11 @@ impl ImageBuilder {
 
     pub fn live_color(mut self, color: Rgb<u8>) -> Self {
         self.live_color = color;
+        self
+    }
+
+    pub fn dead_color(mut self, color: Rgb<u8>) -> Self {
+        self.dead_color = color;
         self
     }
 
@@ -101,7 +108,7 @@ impl ImageBuilder {
             .checked_mul(2)
             .and_then(|m| m.checked_add(inner_height))
             .ok_or(RenderError::TooLarge)?;
-        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| WHITE);
+        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| self.dead_color);
         let ul = life.upper_left();
         for c in life.iter_live() {
             let xstart = match u32::try_from(c.x.abs_diff(ul.x)) {
@@ -118,7 +125,7 @@ impl ImageBuilder {
                 }
             }
         }
-        if self.gutter > 0 && self.gutter_color != WHITE {
+        if self.gutter > 0 && self.gutter_color != self.dead_color {
             for row in 1..pat_height {
                 let offset = row * guttered_size - self.gutter;
                 for y in offset..offset.saturating_add(self.gutter) {
@@ -136,7 +143,7 @@ impl ImageBuilder {
                 }
             }
         }
-        if self.margin > 0 && self.margin_color != WHITE {
+        if self.margin > 0 && self.margin_color != self.dead_color {
             for y in 0..self.margin {
                 for x in 0..img_width {
                     img.put_pixel(x, y, self.margin_color);
@@ -280,6 +287,22 @@ mod tests {
         assert_eq!(
             imgdata,
             include_str!("testdata/margin_gutter.ppm").trim_end_matches('\n')
+        );
+    }
+
+    #[test]
+    fn dead_margin_gutter() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .dead_color(Rgb([0, 0xFF, 0xFF]))
+            .margin(2)
+            .gutter(1);
+        let img = painter.render(&life).unwrap();
+        let imgdata = img2ppm(img);
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/dead_margin_gutter.ppm").trim_end_matches('\n')
         );
     }
 }
