@@ -23,7 +23,7 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
     ```text
     rle-document  =  *(hash-line / blank-line) header pattern
 
-    hash-line     =  "#" LETTER 1*SP text NL
+    hash-line     =  "#" LETTER SP text NL
                         ; a "# line"
 
     text          =  *char-no-nl
@@ -171,8 +171,6 @@ RLE documents emitted by `lifelib` adhere to the following additional
 constraints:
 
 - Lines are terminated by LF, including the last line.
-
-- `#` lines have exactly one (1) `SP` character after the `<LETTER>` element.
 
 - In the header line, there is exactly one (1) `SP` character on either side of
   each `=` character and another `SP` character after the comma.  There is no

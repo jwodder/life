@@ -27,9 +27,9 @@ The following is an exact specification of the [plaintext file format][] for
   the line is a human-readable comment.
 
 - If the first comment line in a plaintext document begins with `!Name:`
-  followed by one or more space (U+0020) characters, then the remainder of the
-  line (not including the line terminator) specifies the name of the pattern.
-  Names may be empty.
+  followed a space (U+0020) character, then the remainder of the line (not
+  including the line terminator) specifies the name of the pattern.  Names may
+  begin with one or more space characters, and they may be empty.
 
 - A *pattern drawing* is an ASCII drawing of the Game of Life pattern described
   by the document.  The drawing consists of zero or more lines that specify
@@ -85,9 +85,6 @@ Plaintext documents emitted by `lifelib` adhere to the following additional
 constraints:
 
 - Lines are terminated by LF, including the last line.
-
-- If the pattern has a name, there will be exactly one (1) space character
-  between `!Name:` and the name.
 
 - All lines of the pattern drawing are the same length.
 
