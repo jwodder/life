@@ -1,6 +1,6 @@
 use super::util::split_at_newline;
 use crate::{
-    Pattern, State,
+    BoundsError, Pattern, State,
     utilities::{Line, ParseLineError, Run, RunKind},
 };
 use life_utils::{Scanner, ScannerError};
@@ -91,8 +91,7 @@ impl FromStr for Rle {
             _ => return Err(RleError::NoData),
         };
         let (width, height) = parse_header(header)?;
-        // TODO: Gracefully handle overly-large pattern sizes:
-        let mut pattern = Pattern::new(height, width);
+        let mut pattern = Pattern::try_new(height, width)?;
         let mut y = 0isize;
         let mut x = 0isize;
         for run in parse_runs(data) {
@@ -159,6 +158,9 @@ pub enum RleError {
     /// Returned if a number in the header or data exceeded [`usize::MAX`]
     #[error("numeric value exceeds integer bounds")]
     NumericOverflow(#[from] ParseIntError),
+
+    #[error("pattern dimensions are too large")]
+    Bounds(#[from] BoundsError),
 
     /// Returned if whitespace is encountered after an RLE count
     #[error("space after RLE count")]
