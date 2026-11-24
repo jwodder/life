@@ -111,3 +111,22 @@ fn margin() {
         .success();
     assert_gif_files_eq(&Path::new(DATA_DIR).join("margin.gif"), &outfile);
 }
+
+#[test]
+fn all_colors() {
+    let outfile = NamedTempFile::new("glider.gif").unwrap();
+    cargo_bin_cmd!("evolve")
+        .arg("--edges=wrapxy")
+        .arg("-m2")
+        .arg("-M60FF60")
+        .arg("-g1")
+        .arg("-Gcccccc")
+        .arg("-Cred")
+        .arg("-D00FFFF")
+        .arg("28")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_gif_files_eq(&Path::new(DATA_DIR).join("all_colors.gif"), &outfile);
+}

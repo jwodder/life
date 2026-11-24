@@ -27,6 +27,13 @@ struct Arguments {
     #[arg(short = 's', long, default_value = "5", value_name = "INT")]
     cell_size: NonZeroU32,
 
+    /// Set the color of dead cells.
+    ///
+    /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
+    /// or a CSS color name.
+    #[arg(short = 'D', long, default_value = "#FFFFFF", value_name = "COLOR")]
+    dead_color: csscolorparser::Color,
+
     /// Set the time between each frame transition as an integer number of
     /// milliseconds
     #[arg(short, long, default_value = "500", value_name = "MILLISECONDS")]
@@ -112,9 +119,11 @@ struct Arguments {
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
     let [r, g, b, _] = args.live_color.to_rgba8();
+    let [dr, dg, db, _] = args.dead_color.to_rgba8();
     let mut builder = ImageBuilder::new()
         .cell_size(args.cell_size)
         .live_color([r, g, b].into())
+        .dead_color([dr, dg, db].into())
         .gutter(args.gutter)
         .margin(args.margin);
     if let Some(c) = args.gutter_color {

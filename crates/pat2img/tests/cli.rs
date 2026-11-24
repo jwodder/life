@@ -112,3 +112,20 @@ fn margin() {
         .success();
     assert_png_files_eq(&Path::new(DATA_DIR).join("margin.png"), &outfile);
 }
+
+#[test]
+fn all_colors() {
+    let outfile = NamedTempFile::new("glider.png").unwrap();
+    cargo_bin_cmd!("pat2img")
+        .arg("-Cred")
+        .arg("--dead-color=00FFFF")
+        .arg("-m2")
+        .arg("--margin-color=60FF60")
+        .arg("-g1")
+        .arg("--gutter-color=CCCCCC")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_png_files_eq(&Path::new(DATA_DIR).join("all_colors.png"), &outfile);
+}

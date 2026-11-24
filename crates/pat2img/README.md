@@ -34,6 +34,9 @@ without leading `#`) or as [CSS color names][].
 - `-s INT`, `--cell-size INT` — Set the height & width of the cell squares to
   the given number of pixels [default: 5]
 
+- `-D COLOR`, `--dead-color COLOR` — Set the color of dead cells [default:
+  `#FFFFFF`]
+
 - `-g INT`, `--gutter INT` — Insert the given number of pixels as padding
   between adjacent cell squares [default: 0]
 

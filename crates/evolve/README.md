@@ -40,6 +40,9 @@ without leading `#`) or as [CSS color names][].
 - `-s INT`, `--cell-size INT` — Set the height & width of the cell squares to
   the given number of pixels [default: 5]
 
+- `-D COLOR`, `--dead-color COLOR` — Set the color of dead cells [default:
+  `#FFFFFF`]
+
 - `-d MS`, `--delay MS` — Set the time between each frame transition as an
   integer number of milliseconds
 
