@@ -1,5 +1,5 @@
 //! Utility types (mostly iterators)
-use crate::{Bounds, Coords, Pattern, State};
+use crate::{Bounds, BoundsError, Coords, Pattern, State};
 use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
@@ -251,6 +251,46 @@ impl Iterator for Generations {
 }
 
 impl FusedIterator for Generations {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TryGenerations(InnerTryGenerations);
+
+impl TryGenerations {
+    pub(crate) fn new(p: Pattern) -> TryGenerations {
+        TryGenerations(InnerTryGenerations::Step(p))
+    }
+}
+
+impl Iterator for TryGenerations {
+    type Item = Result<Pattern, BoundsError>;
+
+    fn next(&mut self) -> Option<Result<Pattern, BoundsError>> {
+        match std::mem::replace(&mut self.0, InnerTryGenerations::Done) {
+            InnerTryGenerations::Step(p1) => {
+                match p1.try_step() {
+                    Ok(p2) => {
+                        self.0 = InnerTryGenerations::Step(p2);
+                    }
+                    Err(e) => {
+                        self.0 = InnerTryGenerations::Error(e);
+                    }
+                }
+                Some(Ok(p1))
+            }
+            InnerTryGenerations::Error(e) => Some(Err(e)),
+            InnerTryGenerations::Done => None,
+        }
+    }
+}
+
+impl FusedIterator for TryGenerations {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum InnerTryGenerations {
+    Step(Pattern),
+    Error(BoundsError),
+    Done,
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Draw<'a> {

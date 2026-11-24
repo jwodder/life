@@ -1,6 +1,6 @@
 use crate::{
     Bounds, BoundsError, Coords, Edges, State,
-    utilities::{Draw, Enumerate, Generations, IterCoords, IterLive, RunLengths},
+    utilities::{Draw, Enumerate, Generations, IterCoords, IterLive, RunLengths, TryGenerations},
 };
 use bit_vec::BitVec;
 use std::ops::Range;
@@ -187,6 +187,10 @@ impl Pattern {
 
     pub fn into_generations(self) -> Generations {
         Generations(self)
+    }
+
+    pub fn into_try_generations(self) -> TryGenerations {
+        TryGenerations::new(self)
     }
 
     pub fn population(&self) -> u64 {
