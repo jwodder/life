@@ -98,3 +98,17 @@ fn size10_gutter2() {
         .success();
     assert_png_files_eq(&Path::new(DATA_DIR).join("size10_gutter2.png"), &outfile);
 }
+
+#[test]
+fn margin() {
+    let outfile = NamedTempFile::new("glider.png").unwrap();
+    cargo_bin_cmd!("pat2img")
+        .arg("--margin")
+        .arg("2")
+        .arg("--margin-color=60FF60")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_png_files_eq(&Path::new(DATA_DIR).join("margin.png"), &outfile);
+}

@@ -96,3 +96,18 @@ fn grow30_styled() {
         &outfile,
     );
 }
+
+#[test]
+fn margin() {
+    let outfile = NamedTempFile::new("glider.gif").unwrap();
+    cargo_bin_cmd!("evolve")
+        .arg("--edges=wrapxy")
+        .arg("-m2")
+        .arg("-M60FF60")
+        .arg("28")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(outfile.path())
+        .assert()
+        .success();
+    assert_gif_files_eq(&Path::new(DATA_DIR).join("margin.gif"), &outfile);
+}

@@ -28,18 +28,25 @@ The image format of the output file is determined automatically based on
 Options
 -------
 
+`COLOR` arguments can be specified as "`#rrggbb`" hex RGB strings (with or
+without leading `#`) or as [CSS color names][].
+
 - `-s INT`, `--cell-size INT` — Set the height & width of the cell squares to
   the given number of pixels [default: 5]
 
 - `-g INT`, `--gutter INT` — Insert the given number of pixels as padding
   between adjacent cell squares [default: 0]
 
-- `--gutter-color COLOR` — Set the color of the gutter.  `COLOR` can be a hex
-  RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color name][].
-  [default: `#FFFFFF`]
+- `-G COLOR`, `--gutter-color COLOR` — Set the color of the gutter [default:
+  `#FFFFFF`]
 
-- `-C COLOR`, `--live-color COLOR` — Set the color of live cells.  `COLOR` can
-  be a hex RGB string "`#rrggbb`" (with or without leading `#`) or a [CSS color
-  name][].  [default: `#000000`]
+- `-C COLOR`, `--live-color COLOR` — Set the color of live cells [default:
+  `#000000`]
 
-[CSS color name]: https://www.w3.org/TR/css-color-4/#named-colors
+- `-m INT`, `--margin INT` — Add a margin `INT` pixels thick around the image
+  [default: 0]
+
+- `-M COLOR`, `--margin-color COLOR` — Set the color of the margin [default:
+  `#FFFFFF`]
+
+[CSS color names]: https://www.w3.org/TR/css-color-4/#named-colors
