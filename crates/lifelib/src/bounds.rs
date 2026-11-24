@@ -129,6 +129,10 @@ impl Bounds {
     pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Bounds {
         Bounds::new_with_upper_left(self.height, self.width, c.into())
     }
+
+    pub fn try_moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
+        Bounds::try_new_with_upper_left(self.height, self.width, c.into())
+    }
 }
 
 impl IntoIterator for Bounds {
