@@ -140,6 +140,13 @@ impl Pattern {
     /// or [`Edges::GrowXY`] and growing the pattern by the necessary amount
     /// would cause a bounds overflow
     pub fn step(&self) -> Pattern {
+        match self.try_step() {
+            Ok(p) => p,
+            Err(e) => panic!("failed to calculate next step of pattern: {e}"),
+        }
+    }
+
+    pub fn try_step(&self) -> Result<Pattern, BoundsError> {
         let mut next_state = self.clone();
         let yrange = grow_range(self.bounds.yrange(), self.edges.grows_y());
         let xrange = grow_range(self.bounds.xrange(), self.edges.grows_x());
@@ -157,7 +164,7 @@ impl Pattern {
                 let c = Coords { y, x };
                 match alive {
                     3 => {
-                        next_state.ensure_contains(c);
+                        next_state.ensure_contains(c)?;
                         next_state.birth(c);
                     }
                     4 => (),
@@ -165,14 +172,17 @@ impl Pattern {
                 }
             }
         }
-        next_state
+        Ok(next_state)
     }
 
-    fn ensure_contains<C: Into<Coords>>(&mut self, c: C) {
-        let new_bounds = self.bounds | Bounds::new_with_upper_left(1, 1, c.into());
+    fn ensure_contains<C: Into<Coords>>(&mut self, c: C) -> Result<(), BoundsError> {
+        let new_bounds = self
+            .bounds
+            .try_union(Bounds::try_new_with_upper_left(1, 1, c.into())?)?;
         if new_bounds != self.bounds {
             *self = self.resize(new_bounds);
         }
+        Ok(())
     }
 
     pub fn into_generations(self) -> Generations {
