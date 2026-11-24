@@ -23,7 +23,7 @@ struct Arguments {
     name: Option<Line>,
 
     /// Probability of a given cell being alive, as a percentage from 0 to 100
-    #[arg(short, long, default_value = "10", value_name = "PERCENTAGE")]
+    #[arg(short, long, default_value = "25", value_name = "PERCENTAGE")]
     probabilty: Percent,
 
     /// Dimensions of the pattern to generate

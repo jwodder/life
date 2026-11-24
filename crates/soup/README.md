@@ -17,7 +17,7 @@ Usage
 `soup` takes a size in the form `WIDTHxHEIGHT` (e.g., `6x12`) and generates a
 random pattern of that size in which each cell has an independent probability
 `p` of being alive; `p` is given by the `-p`/`--probability` option and
-defaults to 10%.
+defaults to 25%.
 
 The resulting pattern is written to `<outfile>`, the file extension of which
 must be either "`.cells`" (to produce a [plaintext][] file) or "`.rle`" (to
@@ -36,4 +36,4 @@ Options
 
 - `-p PERCENTAGE`, `--probability PERCENTAGE` — Set the probability of a given
   cell being alive.  `PERCENTAGE` must be a floating-point percentage value
-  from 0 to 100. [default: 10]
+  from 0 to 100. [default: 25]
