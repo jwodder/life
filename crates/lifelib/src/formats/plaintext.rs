@@ -67,7 +67,7 @@ impl FromStr for Plaintext {
                         comm.strip_prefix("Name: "),
                     ) {
                         (true, Some(n)) => {
-                            name = Some(n.trim_start_matches(' ').parse::<Line>()?);
+                            name = Some(n.parse::<Line>()?);
                         }
                         _ => comments.push(comm.parse::<Line>()?),
                     }
@@ -326,6 +326,16 @@ mod tests {
         let pt = s.parse::<Plaintext>().unwrap();
         assert_eq!(pt.name, None);
         assert_eq!(pt.comments, ["Glider"]);
+        assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
+        assert_eq!(pt.to_string(), s);
+    }
+
+    #[test]
+    fn name_starts_with_space() {
+        let s = "!Name:   Glider\n!\n.O.\n..O\nOOO\n";
+        let pt = s.parse::<Plaintext>().unwrap();
+        assert_eq!(pt.name.as_ref().unwrap(), "  Glider");
+        assert_eq!(pt.comments, [""]);
         assert_eq!(pt.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
         assert_eq!(pt.to_string(), s);
     }

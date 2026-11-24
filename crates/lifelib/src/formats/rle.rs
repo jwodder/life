@@ -278,11 +278,9 @@ impl<'a> CommentParser<'a> {
             };
             let ty = line.chars().next().ok_or(RleError::NoType)?;
             let ty = Letter::try_from(ty)?;
-            let rest = &line[1..];
-            let text = rest.trim_start_matches(' ');
-            if std::ptr::eq(rest, text) {
+            let Some(text) = line[1..].strip_prefix(' ') else {
                 return Err(RleError::NoSpaceAfterType(char::from(ty)));
-            }
+            };
             self.0 = rem;
             return Ok(Some((ty, text.parse::<Line>()?)));
         }
@@ -559,10 +557,10 @@ mod tests {
         let rle = s.parse::<Rle>().unwrap();
         assert_eq!(
             rle.comments,
-            [(Letter::COMMENT_TYPE, "".parse::<Line>().unwrap())]
+            [(Letter::COMMENT_TYPE, " ".parse::<Line>().unwrap())]
         );
         assert_eq!(rle.pattern.draw('.', 'O').to_string(), ".O.\n..O\nOOO");
-        assert_eq!(rle.to_string(), "#C \nx = 3, y = 3\nbo$2bo$3o!\n");
+        assert_eq!(rle.to_string(), s);
     }
 
     #[test]
