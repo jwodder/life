@@ -15,6 +15,8 @@ pub struct ImageBuilder {
     live_color: Rgb<u8>,
     gutter: u32,
     gutter_color: Rgb<u8>,
+    margin: u32,
+    margin_color: Rgb<u8>,
 }
 
 impl ImageBuilder {
@@ -27,6 +29,8 @@ impl ImageBuilder {
             live_color: BLACK,
             gutter: 0,
             gutter_color: WHITE,
+            margin: 0,
+            margin_color: WHITE,
         }
     }
 
@@ -50,6 +54,16 @@ impl ImageBuilder {
         self
     }
 
+    pub fn margin(mut self, margin: u32) -> Self {
+        self.margin = margin;
+        self
+    }
+
+    pub fn margin_color(mut self, color: Rgb<u8>) -> Self {
+        self.margin_color = color;
+        self
+    }
+
     /// # Errors
     ///
     /// Returns `Err(RenderError::TooLarge)` if the width or height of the
@@ -69,23 +83,33 @@ impl ImageBuilder {
         let guttered_size = cell_size
             .checked_add(self.gutter)
             .ok_or(RenderError::TooLarge)?;
-        let img_width = guttered_size
+        let inner_width = guttered_size
             .checked_mul(pat_width)
             .and_then(|w| w.checked_sub(self.gutter))
             .ok_or(RenderError::TooLarge)?;
-        let img_height = guttered_size
+        let inner_height = guttered_size
             .checked_mul(pat_height)
             .and_then(|h| h.checked_sub(self.gutter))
+            .ok_or(RenderError::TooLarge)?;
+        let img_width = self
+            .margin
+            .checked_mul(2)
+            .and_then(|m| m.checked_add(inner_width))
+            .ok_or(RenderError::TooLarge)?;
+        let img_height = self
+            .margin
+            .checked_mul(2)
+            .and_then(|m| m.checked_add(inner_height))
             .ok_or(RenderError::TooLarge)?;
         let mut img = RgbImage::from_fn(img_width, img_height, |_, _| WHITE);
         let ul = life.upper_left();
         for c in life.iter_live() {
             let xstart = match u32::try_from(c.x.abs_diff(ul.x)) {
-                Ok(x) => x * guttered_size,
+                Ok(x) => x * guttered_size + self.margin,
                 _ => unreachable!("width fit in a u32, so x should too"),
             };
             let ystart = match u32::try_from(c.y.abs_diff(ul.y)) {
-                Ok(y) => y * guttered_size,
+                Ok(y) => y * guttered_size + self.margin,
                 _ => unreachable!("height fit in a u32, so y should too"),
             };
             for i in 0..cell_size {
@@ -98,17 +122,31 @@ impl ImageBuilder {
             for row in 1..pat_height {
                 let offset = row * guttered_size - self.gutter;
                 for y in offset..offset.saturating_add(self.gutter) {
-                    for x in 0..img_width {
-                        img.put_pixel(x, y, self.gutter_color);
+                    for x in 0..inner_width {
+                        img.put_pixel(x + self.margin, y + self.margin, self.gutter_color);
                     }
                 }
             }
             for column in 1..pat_width {
                 let offset = column * guttered_size - self.gutter;
                 for x in offset..offset.saturating_add(self.gutter) {
-                    for y in 0..img_height {
-                        img.put_pixel(x, y, self.gutter_color);
+                    for y in 0..inner_height {
+                        img.put_pixel(x + self.margin, y + self.margin, self.gutter_color);
                     }
+                }
+            }
+        }
+        if self.margin > 0 && self.margin_color != WHITE {
+            for y in 0..self.margin {
+                for x in 0..img_width {
+                    img.put_pixel(x, y, self.margin_color);
+                    img.put_pixel(x, y + inner_height + self.margin, self.margin_color);
+                }
+            }
+            for x in 0..self.margin {
+                for y in 0..img_height {
+                    img.put_pixel(x, y, self.margin_color);
+                    img.put_pixel(x + inner_width + self.margin, y, self.margin_color);
                 }
             }
         }
@@ -210,6 +248,38 @@ mod tests {
         assert_eq!(
             imgdata,
             include_str!("testdata/size25_gutter5.ppm").trim_end_matches('\n')
+        );
+    }
+
+    #[test]
+    fn margin() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .margin(2)
+            .margin_color(Rgb([0x60, 0xFF, 0x60]));
+        let img = painter.render(&life).unwrap();
+        let imgdata = img2ppm(img);
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/margin.ppm").trim_end_matches('\n')
+        );
+    }
+
+    #[test]
+    fn margin_gutter() {
+        let life = PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n");
+        let painter = ImageBuilder::new()
+            .cell_size(NonZeroU32::new(5).unwrap())
+            .margin(2)
+            .margin_color(Rgb([0x60, 0xFF, 0x60]))
+            .gutter(1)
+            .gutter_color(Rgb([0xCC, 0xCC, 0xCC]));
+        let img = painter.render(&life).unwrap();
+        let imgdata = img2ppm(img);
+        assert_eq!(
+            imgdata,
+            include_str!("testdata/margin_gutter.ppm").trim_end_matches('\n')
         );
     }
 }
