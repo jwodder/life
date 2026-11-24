@@ -437,8 +437,8 @@ mod tests {
 pub enum BoundsError {
     #[error("width * height exceeds usize::MAX")]
     AreaOverflow,
-    #[error("maximum y-coordinate exceeds isize::MAX")]
+    #[error("y-coordinate upper bound exceeds isize::MAX")]
     MaxYOverflow,
-    #[error("maximum x-coordinate exceeds isize::MAX")]
+    #[error("x-coordinate upper bound exceeds isize::MAX")]
     MaxXOverflow,
 }
