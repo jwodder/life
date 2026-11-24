@@ -72,7 +72,7 @@ struct Arguments {
     ///
     /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
     /// or a CSS color name.
-    #[arg(long, value_name = "COLOR")]
+    #[arg(short = 'G', long, value_name = "COLOR")]
     gutter_color: Option<csscolorparser::Color>,
 
     /// Set the color of live cells.
@@ -81,6 +81,17 @@ struct Arguments {
     /// or a CSS color name.
     #[arg(short = 'C', long, default_value = "#000000", value_name = "COLOR")]
     live_color: csscolorparser::Color,
+
+    /// Add a margin `INT` pixels thick around the image
+    #[arg(short, long, default_value_t = 0, value_name = "INT")]
+    margin: u32,
+
+    /// Set the color of the margin.
+    ///
+    /// `COLOR` can be a hex RGB string `#rrggbb` (with or without leading `#`)
+    /// or a CSS color name.
+    #[arg(short = 'M', long, value_name = "COLOR")]
+    margin_color: Option<csscolorparser::Color>,
 
     /// Number of generations to compute, including the initial generation
     generations: NonZeroUsize,
@@ -104,10 +115,15 @@ fn main() -> anyhow::Result<()> {
     let mut builder = ImageBuilder::new()
         .cell_size(args.cell_size)
         .live_color([r, g, b].into())
-        .gutter(args.gutter);
+        .gutter(args.gutter)
+        .margin(args.margin);
     if let Some(c) = args.gutter_color {
         let [r, g, b, _] = c.to_rgba8();
         builder = builder.gutter_color([r, g, b].into());
+    }
+    if let Some(c) = args.margin_color {
+        let [r, g, b, _] = c.to_rgba8();
+        builder = builder.margin_color([r, g, b].into());
     }
     let doc = match args.infile {
         stdin @ InputArg::Stdin => {
