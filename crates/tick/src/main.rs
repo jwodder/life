@@ -4,10 +4,12 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
+use either::Either;
 use lifelib::{
     Edges, Pattern,
     document::{Document, FormatChoice},
     formats::Format,
+    sync_bounds,
 };
 use patharg::InputArg;
 use std::path::{Path, PathBuf};
@@ -80,6 +82,13 @@ struct Arguments {
         value_name = "NUMBERS"
     )]
     ticks: TickSet,
+
+    /// Adjust the bounds of the output patterns so that they are all equal and
+    /// enclose all live cells between them.
+    ///
+    /// This only has an effect when `--edges` is set to a "grow" value.
+    #[arg(short = 'S', long)]
+    sync_bounds: bool,
 
     /// A file containing a Game of Life pattern.
     ///
@@ -166,15 +175,22 @@ fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to read pattern from {}", p.display()))?,
     };
     let pattern = doc.pattern.with_edges(args.edges);
-    for (i, pat) in pattern
+    let patterns = pattern
         .into_generations()
         .take(maxtick.saturating_add(1))
         .enumerate()
-    {
-        if args.ticks.contains(i) {
-            let outfile = PathBuf::from(String::from(args.outfile.render(i)));
-            saver.save(pat, &outfile, i)?;
-        }
+        .filter(|(i, _)| args.ticks.contains(*i));
+    let patterns =
+        if args.sync_bounds && matches!(args.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY) {
+            let (indices, pats): (Vec<_>, Vec<_>) = patterns.unzip();
+            let pats = sync_bounds(&pats);
+            Either::Left(std::iter::zip(indices, pats))
+        } else {
+            Either::Right(patterns)
+        };
+    for (i, pat) in patterns {
+        let outfile = PathBuf::from(String::from(args.outfile.render(i)));
+        saver.save(pat, &outfile, i)?;
     }
     Ok(())
 }

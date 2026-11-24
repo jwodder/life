@@ -1621,6 +1621,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "clap",
+ "either",
  "fs-err",
  "life-utils",
  "lifelib",

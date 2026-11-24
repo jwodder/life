@@ -77,6 +77,10 @@ Options
 
     - `growxy`: The universe's x- and y-axes will both be extended as necessary
 
+- `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output files.
+  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
+  contain newlines.
+
 - `-n NUMBERS`, `--number NUMBERS` — Specify the number(s) of ticks to advance
   the input pattern by in order to produce the output.  `NUMBERS` must consist
   of one or more nonnegative integers and/or hyphenated inclusive ranges of
@@ -84,9 +88,9 @@ Options
   specified, multiple outputs are produced, one for each specified tick number
   in the input pattern's history.  [default: 1]
 
-- `-N TEXT`, `--name TEXT` — Set the pattern name to embed in the output files.
-  `TEXT` may contain [tick placeholders](#tick-placeholders) but may not
-  contain newlines.
+- `-S`, `--sync-bounds` — Adjust the bounds of the output patterns so that they
+  are all equal and enclose all live cells between them.  This only has an
+  effect when `--edges` is set to a "grow" value.
 
 Tick Placeholders
 -----------------
