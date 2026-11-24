@@ -1,6 +1,9 @@
 use super::util::split_at_newline;
 use crate::utilities::{Line, ParseLineError};
-use crate::{Pattern, Run, RunKind, State};
+use crate::{
+    Pattern, State,
+    utilities::{Run, RunKind},
+};
 use life_utils::{Scanner, ScannerError};
 use std::fmt;
 use std::iter::FusedIterator;

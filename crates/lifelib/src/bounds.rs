@@ -1,0 +1,419 @@
+use crate::{Coords, utilities::IterCoords};
+use std::ops::{BitAnd, BitOr, Range};
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Bounds {
+    pub(crate) upper_left: Coords,
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+}
+
+impl Bounds {
+    pub fn new(height: usize, width: usize) -> Bounds {
+        Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
+    }
+
+    /// # Panics
+    ///
+    /// Panics if any of the following are true:
+    ///
+    /// - `width * height` exceeds [`usize::MAX`]
+    /// - `upper_left.y + height` exceeds [`isize::MAX`]
+    /// - `upper_left.x + width` exceeds [`isize::MAX`]
+    pub fn new_with_upper_left(height: usize, width: usize, upper_left: Coords) -> Bounds {
+        if height == 0 || width == 0 {
+            return Bounds::empty();
+        }
+        assert!(
+            width.checked_mul(height).is_some(),
+            "width * height exceeds usize::MAX"
+        );
+        assert!(
+            upper_left.y.checked_add_unsigned(height).is_some(),
+            "maximum y-coordinate exceeds isize::MAX"
+        );
+        assert!(
+            upper_left.x.checked_add_unsigned(width).is_some(),
+            "maximum x-coordinate exceeds isize::MAX"
+        );
+        Bounds {
+            height,
+            width,
+            upper_left,
+        }
+    }
+
+    pub fn empty() -> Bounds {
+        Bounds {
+            upper_left: Coords { y: 0, x: 0 },
+            width: 0,
+            height: 0,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.width == 0 || self.height == 0
+    }
+
+    pub fn contains<C: Into<Coords>>(&self, c: C) -> bool {
+        let c = c.into();
+        self.xrange().contains(&c.x) && self.yrange().contains(&c.y)
+    }
+
+    pub(crate) fn index<C: Into<Coords>>(&self, c: C) -> Option<usize> {
+        let c = c.into();
+        if self.contains(c) {
+            let y = c.y.abs_diff(self.upper_left.y);
+            let x = c.x.abs_diff(self.upper_left.x);
+            y.checked_mul(self.width)?.checked_add(x)
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn unindex(&self, i: usize) -> Option<Coords> {
+        (i < (self.height * self.width)).then(|| {
+            let y = self.upper_left.y.strict_add_unsigned(i / self.width);
+            let x = self.upper_left.x.strict_add_unsigned(i % self.width);
+            Coords { y, x }
+        })
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn upper_left(&self) -> Coords {
+        self.upper_left
+    }
+
+    pub(crate) fn yend(&self) -> isize {
+        self.upper_left.y.strict_add_unsigned(self.height)
+    }
+
+    pub(crate) fn xend(&self) -> isize {
+        self.upper_left.x.strict_add_unsigned(self.width)
+    }
+
+    // Note that this coordinate is *outside* the interior of the box
+    pub fn lower_right(&self) -> Coords {
+        Coords {
+            y: self.yend(),
+            x: self.xend(),
+        }
+    }
+
+    pub fn yrange(&self) -> Range<isize> {
+        self.upper_left.y..self.yend()
+    }
+
+    pub fn xrange(&self) -> Range<isize> {
+        self.upper_left.x..self.xend()
+    }
+
+    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Bounds {
+        Bounds::new_with_upper_left(self.height, self.width, c.into())
+    }
+}
+
+impl IntoIterator for Bounds {
+    type Item = Coords;
+    type IntoIter = IterCoords;
+
+    fn into_iter(self) -> IterCoords {
+        IterCoords::new(self)
+    }
+}
+
+impl BitAnd for Bounds {
+    type Output = Bounds;
+
+    fn bitand(self, other: Bounds) -> Bounds {
+        let xstart = std::cmp::max(self.upper_left.x, other.upper_left.x);
+        let ystart = std::cmp::max(self.upper_left.y, other.upper_left.y);
+        let xend = std::cmp::min(self.xend(), other.xend());
+        let yend = std::cmp::min(self.yend(), other.yend());
+        if xstart >= xend || ystart >= yend {
+            Bounds::empty()
+        } else {
+            let width = xstart.abs_diff(xend);
+            let height = ystart.abs_diff(yend);
+            Bounds {
+                upper_left: Coords {
+                    y: ystart,
+                    x: xstart,
+                },
+                width,
+                height,
+            }
+        }
+    }
+}
+
+impl BitAnd<&Bounds> for Bounds {
+    type Output = Bounds;
+
+    fn bitand(self, other: &Bounds) -> Bounds {
+        self & *other
+    }
+}
+
+impl BitAnd<&Bounds> for &Bounds {
+    type Output = Bounds;
+
+    fn bitand(self, other: &Bounds) -> Bounds {
+        *self & *other
+    }
+}
+
+impl BitOr for Bounds {
+    type Output = Bounds;
+
+    fn bitor(self, other: Bounds) -> Bounds {
+        if self.is_empty() {
+            other
+        } else if other.is_empty() {
+            self
+        } else {
+            let xstart = std::cmp::min(self.upper_left.x, other.upper_left.x);
+            let ystart = std::cmp::min(self.upper_left.y, other.upper_left.y);
+            let xend = std::cmp::max(self.xend(), other.xend());
+            let yend = std::cmp::max(self.yend(), other.yend());
+            if xstart >= xend || ystart >= yend {
+                Bounds::empty()
+            } else {
+                let width = xstart.abs_diff(xend);
+                let height = ystart.abs_diff(yend);
+                Bounds {
+                    upper_left: Coords {
+                        y: ystart,
+                        x: xstart,
+                    },
+                    width,
+                    height,
+                }
+            }
+        }
+    }
+}
+
+impl BitOr<&Bounds> for Bounds {
+    type Output = Bounds;
+
+    fn bitor(self, other: &Bounds) -> Bounds {
+        self | *other
+    }
+}
+
+impl BitOr<&Bounds> for &Bounds {
+    type Output = Bounds;
+
+    fn bitor(self, other: &Bounds) -> Bounds {
+        *self | *other
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn iter_empty() {
+        let bounds = Bounds::new(0, 0);
+        let mut iter = bounds.into_iter();
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn iter3x2() {
+        let bounds = Bounds::new(3, 2);
+        let mut iter = bounds.into_iter();
+        assert_eq!(iter.size_hint(), (6, Some(6)));
+        assert_eq!(iter.next(), Some(Coords { y: 0, x: 0 }));
+        assert_eq!(iter.size_hint(), (5, Some(5)));
+        assert_eq!(iter.next(), Some(Coords { y: 0, x: 1 }));
+        assert_eq!(iter.size_hint(), (4, Some(4)));
+        assert_eq!(iter.next(), Some(Coords { y: 1, x: 0 }));
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert_eq!(iter.next(), Some(Coords { y: 1, x: 1 }));
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+        assert_eq!(iter.next(), Some(Coords { y: 2, x: 0 }));
+        assert_eq!(iter.size_hint(), (1, Some(1)));
+        assert_eq!(iter.next(), Some(Coords { y: 2, x: 1 }));
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn union_overlapping() {
+        // .........
+        // .#####...
+        // .###XX##.
+        // .###XX##.
+        // ....####.
+        // ....####.
+        // .........
+        let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
+        let b3 = b1 | b2;
+        assert_eq!(b3.width(), 7);
+        assert_eq!(b3.height(), 5);
+        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+        assert_eq!(b3.lower_right(), Coords { y: 6, x: 8 });
+    }
+
+    #[test]
+    fn union_contained() {
+        // .......
+        // .#####.
+        // .##XX#.
+        // .##XX#.
+        // .#####.
+        // .......
+        let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
+        let b3 = b1 | b2;
+        assert_eq!(b3, b1);
+    }
+
+    #[test]
+    fn union_adjacent() {
+        // .........
+        // .###OOOO.
+        // .###OOOO.
+        // .........
+        let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+        let b3 = b1 | b2;
+        assert_eq!(b3.width(), 7);
+        assert_eq!(b3.height(), 2);
+        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+        assert_eq!(b3.lower_right(), Coords { y: 3, x: 8 });
+    }
+
+    #[test]
+    fn union_non_overlapping() {
+        // .............
+        // .........###.
+        // .........###.
+        // .........###.
+        // .............
+        // .####........
+        // .####........
+        // .............
+        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+        let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
+        let b3 = b1 | b2;
+        assert_eq!(b3.width(), 11);
+        assert_eq!(b3.height(), 6);
+        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+        assert_eq!(b3.lower_right(), Coords { y: 7, x: 12 });
+    }
+
+    #[test]
+    fn union_empty_and_nonempty() {
+        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+        let b2 = Bounds::empty();
+        let b3 = b1 | b2;
+        assert!(!b3.is_empty());
+        assert_eq!(b3, b1);
+    }
+
+    #[test]
+    fn union_empty_and_empty() {
+        let b1 = Bounds::empty();
+        let b2 = Bounds::empty();
+        let b3 = b1 | b2;
+        assert!(b3.is_empty());
+        assert_eq!(b3, Bounds::empty());
+    }
+
+    #[test]
+    fn intersection_overlapping() {
+        // .........
+        // .#####...
+        // .###XX##.
+        // .###XX##.
+        // ....####.
+        // ....####.
+        // .........
+        let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
+        let b3 = b1 & b2;
+        assert_eq!(b3.width(), 2);
+        assert_eq!(b3.height(), 2);
+        assert_eq!(b3.upper_left(), Coords { y: 2, x: 4 });
+        assert_eq!(b3.lower_right(), Coords { y: 4, x: 6 });
+    }
+
+    #[test]
+    fn intersection_contained() {
+        // .......
+        // .#####.
+        // .##XX#.
+        // .##XX#.
+        // .#####.
+        // .......
+        let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
+        let b3 = b1 & b2;
+        assert_eq!(b3, b2);
+    }
+
+    #[test]
+    fn intersection_adjacent() {
+        // .........
+        // .###OOOO.
+        // .###OOOO.
+        // .........
+        let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
+        let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+        let b3 = b1 & b2;
+        assert!(b3.is_empty());
+        assert_eq!(b3, Bounds::empty());
+    }
+
+    #[test]
+    fn intersection_non_overlapping() {
+        // .............
+        // .........###.
+        // .........###.
+        // .........###.
+        // .............
+        // .####........
+        // .####........
+        // .............
+        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+        let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
+        let b3 = b1 & b2;
+        assert!(b3.is_empty());
+        assert_eq!(b3, Bounds::empty());
+    }
+
+    #[test]
+    fn intersection_empty_and_nonempty() {
+        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+        let b2 = Bounds::empty();
+        let b3 = b1 & b2;
+        assert!(b3.is_empty());
+        assert_eq!(b3, Bounds::empty());
+    }
+
+    #[test]
+    fn intersection_empty_and_empty() {
+        let b1 = Bounds::empty();
+        let b2 = Bounds::empty();
+        let b3 = b1 & b2;
+        assert!(b3.is_empty());
+        assert_eq!(b3, Bounds::empty());
+    }
+}
