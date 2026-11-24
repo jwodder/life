@@ -362,3 +362,40 @@ fn create_dirs() {
             .join("1.cells"),
     );
 }
+
+#[test]
+fn sync_bounds() {
+    let tmpdir = TempDir::new().unwrap();
+    cargo_bin_cmd!("tick")
+        .arg("-n")
+        .arg("0-10")
+        .arg("--sync-bounds")
+        .arg("--edges=growxy")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(tmpdir.path().join("glider-sync-%02d.cells"))
+        .assert()
+        .success();
+    let filenames = listdir(tmpdir.path());
+    assert_eq!(
+        filenames,
+        [
+            "glider-sync-00.cells",
+            "glider-sync-01.cells",
+            "glider-sync-02.cells",
+            "glider-sync-03.cells",
+            "glider-sync-04.cells",
+            "glider-sync-05.cells",
+            "glider-sync-06.cells",
+            "glider-sync-07.cells",
+            "glider-sync-08.cells",
+            "glider-sync-09.cells",
+            "glider-sync-10.cells",
+        ]
+    );
+    for fname in filenames {
+        assert_str_files_eq(
+            &Path::new(DATA_DIR).join(&fname),
+            &tmpdir.path().join(fname),
+        );
+    }
+}
