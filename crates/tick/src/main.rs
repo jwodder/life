@@ -4,7 +4,6 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use either::Either;
 use lifelib::{Document, Edges, FormatChoice, Pattern, formats::Format, sync_bounds};
 use patharg::InputArg;
 use std::path::{Path, PathBuf};
@@ -113,6 +112,7 @@ impl Arguments {
                 name: self.name.take(),
                 comments: std::mem::take(&mut self.comment),
                 format,
+                outfile: self.outfile.clone(),
             })
         } else {
             anyhow::bail!("output path does not have a supported file extension");
@@ -125,10 +125,12 @@ struct Saver {
     name: Option<TickTemplate>,
     comments: Vec<TickTemplate>,
     format: Format,
+    outfile: TickTemplate,
 }
 
 impl Saver {
-    fn save(&self, pattern: Pattern, path: &Path, index: usize) -> anyhow::Result<()> {
+    fn save(&self, index: usize, pattern: Pattern) -> anyhow::Result<()> {
+        let path = PathBuf::from(String::from(self.outfile.render(index)));
         if let Some(parent) = path.parent()
             && parent != Path::new("")
         {
@@ -143,8 +145,60 @@ impl Saver {
                 .collect(),
             pattern,
         };
-        doc.dump_to_file(path, FormatChoice::Fixed(self.format))
+        doc.dump_to_file(&path, FormatChoice::Fixed(self.format))
             .with_context(|| format!("failed to write pattern to {}", path.display()))?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum PostProcessor {
+    SyncBounds {
+        indices: Vec<usize>,
+        patterns: Vec<Pattern>,
+        saver: Saver,
+    },
+    Nil(Saver),
+}
+
+impl PostProcessor {
+    fn syncer(saver: Saver) -> PostProcessor {
+        PostProcessor::SyncBounds {
+            indices: Vec::new(),
+            patterns: Vec::new(),
+            saver,
+        }
+    }
+
+    fn nil(saver: Saver) -> PostProcessor {
+        PostProcessor::Nil(saver)
+    }
+
+    fn process(&mut self, index: usize, pattern: Pattern) -> anyhow::Result<()> {
+        match self {
+            PostProcessor::SyncBounds {
+                indices, patterns, ..
+            } => {
+                indices.push(index);
+                patterns.push(pattern);
+            }
+            PostProcessor::Nil(saver) => saver.save(index, pattern)?,
+        }
+        Ok(())
+    }
+
+    fn finalize(self) -> anyhow::Result<()> {
+        if let PostProcessor::SyncBounds {
+            indices,
+            patterns,
+            saver,
+        } = self
+        {
+            let patterns = sync_bounds(&patterns);
+            for (i, p) in std::iter::zip(indices, patterns) {
+                saver.save(i, p)?;
+            }
+        }
         Ok(())
     }
 }
@@ -169,23 +223,24 @@ fn main() -> anyhow::Result<()> {
         InputArg::Path(p) => Document::load_from_file(&p, FormatChoice::Autodetect)
             .with_context(|| format!("failed to read pattern from {}", p.display()))?,
     };
-    let pattern = doc.pattern.with_edges(args.edges);
-    let patterns = pattern
-        .into_generations()
+    let mut postproc =
+        if args.sync_bounds && matches!(args.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY) {
+            PostProcessor::syncer(saver)
+        } else {
+            PostProcessor::nil(saver)
+        };
+    for (i, p) in doc
+        .pattern
+        .with_edges(args.edges)
+        .into_try_generations()
         .take(maxtick.saturating_add(1))
         .enumerate()
-        .filter(|(i, _)| args.ticks.contains(*i));
-    let patterns =
-        if args.sync_bounds && matches!(args.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY) {
-            let (indices, pats): (Vec<_>, Vec<_>) = patterns.unzip();
-            let pats = sync_bounds(&pats);
-            Either::Left(std::iter::zip(indices, pats))
-        } else {
-            Either::Right(patterns)
-        };
-    for (i, pat) in patterns {
-        let outfile = PathBuf::from(String::from(args.outfile.render(i)));
-        saver.save(pat, &outfile, i)?;
+    {
+        let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
+        if args.ticks.contains(i) {
+            postproc.process(i, p)?;
+        }
     }
+    postproc.finalize()?;
     Ok(())
 }
