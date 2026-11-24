@@ -108,56 +108,32 @@ impl ImageBuilder {
             .checked_mul(2)
             .and_then(|m| m.checked_add(inner_height))
             .ok_or(RenderError::TooLarge)?;
-        let mut img = RgbImage::from_fn(img_width, img_height, |_, _| self.dead_color);
         let ul = life.upper_left();
-        for c in life.iter_live() {
-            let xstart = match u32::try_from(c.x.abs_diff(ul.x)) {
-                Ok(x) => x * guttered_size + self.margin,
-                _ => unreachable!("width fit in a u32, so x should too"),
-            };
-            let ystart = match u32::try_from(c.y.abs_diff(ul.y)) {
-                Ok(y) => y * guttered_size + self.margin,
-                _ => unreachable!("height fit in a u32, so y should too"),
-            };
-            for i in 0..cell_size {
-                for j in 0..cell_size {
-                    img.put_pixel(xstart + i, ystart + j, self.live_color);
-                }
-            }
-        }
-        if self.gutter > 0 && self.gutter_color != self.dead_color {
-            for row in 1..pat_height {
-                let offset = row * guttered_size - self.gutter;
-                for y in offset..offset.saturating_add(self.gutter) {
-                    for x in 0..inner_width {
-                        img.put_pixel(x + self.margin, y + self.margin, self.gutter_color);
+        Ok(RgbImage::from_fn(img_width, img_height, |x, y| {
+            if (self.margin..(img_width - self.margin)).contains(&x)
+                && (self.margin..(img_height - self.margin)).contains(&y)
+            {
+                let x = x - self.margin;
+                let y = y - self.margin;
+                if x % guttered_size >= cell_size || y % guttered_size >= cell_size {
+                    self.gutter_color
+                } else {
+                    let x = isize::try_from(x / guttered_size)
+                        .expect("cell coordinate should fit back in an isize")
+                        + ul.x;
+                    let y = isize::try_from(y / guttered_size)
+                        .expect("cell coordinate should fit back in an isize")
+                        + ul.y;
+                    if life.is_live((y, x)) {
+                        self.live_color
+                    } else {
+                        self.dead_color
                     }
                 }
+            } else {
+                self.margin_color
             }
-            for column in 1..pat_width {
-                let offset = column * guttered_size - self.gutter;
-                for x in offset..offset.saturating_add(self.gutter) {
-                    for y in 0..inner_height {
-                        img.put_pixel(x + self.margin, y + self.margin, self.gutter_color);
-                    }
-                }
-            }
-        }
-        if self.margin > 0 && self.margin_color != self.dead_color {
-            for y in 0..self.margin {
-                for x in 0..img_width {
-                    img.put_pixel(x, y, self.margin_color);
-                    img.put_pixel(x, y + inner_height + self.margin, self.margin_color);
-                }
-            }
-            for x in 0..self.margin {
-                for y in 0..img_height {
-                    img.put_pixel(x, y, self.margin_color);
-                    img.put_pixel(x + inner_width + self.margin, y, self.margin_color);
-                }
-            }
-        }
-        Ok(img)
+        }))
     }
 }
 
