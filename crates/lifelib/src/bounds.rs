@@ -232,207 +232,6 @@ impl BitOr<&Bounds> for &Bounds {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn iter_empty() {
-        let bounds = Bounds::new(0, 0);
-        let mut iter = bounds.into_iter();
-        assert_eq!(iter.size_hint(), (0, Some(0)));
-        assert_eq!(iter.next(), None);
-        assert_eq!(iter.size_hint(), (0, Some(0)));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn iter3x2() {
-        let bounds = Bounds::new(3, 2);
-        let mut iter = bounds.into_iter();
-        assert_eq!(iter.size_hint(), (6, Some(6)));
-        assert_eq!(iter.next(), Some(Coords { y: 0, x: 0 }));
-        assert_eq!(iter.size_hint(), (5, Some(5)));
-        assert_eq!(iter.next(), Some(Coords { y: 0, x: 1 }));
-        assert_eq!(iter.size_hint(), (4, Some(4)));
-        assert_eq!(iter.next(), Some(Coords { y: 1, x: 0 }));
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert_eq!(iter.next(), Some(Coords { y: 1, x: 1 }));
-        assert_eq!(iter.size_hint(), (2, Some(2)));
-        assert_eq!(iter.next(), Some(Coords { y: 2, x: 0 }));
-        assert_eq!(iter.size_hint(), (1, Some(1)));
-        assert_eq!(iter.next(), Some(Coords { y: 2, x: 1 }));
-        assert_eq!(iter.size_hint(), (0, Some(0)));
-        assert_eq!(iter.next(), None);
-        assert_eq!(iter.size_hint(), (0, Some(0)));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn union_overlapping() {
-        // .........
-        // .#####...
-        // .###XX##.
-        // .###XX##.
-        // ....####.
-        // ....####.
-        // .........
-        let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
-        let b3 = b1 | b2;
-        assert_eq!(b3.width(), 7);
-        assert_eq!(b3.height(), 5);
-        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
-        assert_eq!(b3.lower_right(), Coords { y: 6, x: 8 });
-    }
-
-    #[test]
-    fn union_contained() {
-        // .......
-        // .#####.
-        // .##XX#.
-        // .##XX#.
-        // .#####.
-        // .......
-        let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
-        let b3 = b1 | b2;
-        assert_eq!(b3, b1);
-    }
-
-    #[test]
-    fn union_adjacent() {
-        // .........
-        // .###OOOO.
-        // .###OOOO.
-        // .........
-        let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
-        let b3 = b1 | b2;
-        assert_eq!(b3.width(), 7);
-        assert_eq!(b3.height(), 2);
-        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
-        assert_eq!(b3.lower_right(), Coords { y: 3, x: 8 });
-    }
-
-    #[test]
-    fn union_non_overlapping() {
-        // .............
-        // .........###.
-        // .........###.
-        // .........###.
-        // .............
-        // .####........
-        // .####........
-        // .............
-        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
-        let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
-        let b3 = b1 | b2;
-        assert_eq!(b3.width(), 11);
-        assert_eq!(b3.height(), 6);
-        assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
-        assert_eq!(b3.lower_right(), Coords { y: 7, x: 12 });
-    }
-
-    #[test]
-    fn union_empty_and_nonempty() {
-        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
-        let b2 = Bounds::empty();
-        let b3 = b1 | b2;
-        assert!(!b3.is_empty());
-        assert_eq!(b3, b1);
-    }
-
-    #[test]
-    fn union_empty_and_empty() {
-        let b1 = Bounds::empty();
-        let b2 = Bounds::empty();
-        let b3 = b1 | b2;
-        assert!(b3.is_empty());
-        assert_eq!(b3, Bounds::empty());
-    }
-
-    #[test]
-    fn intersection_overlapping() {
-        // .........
-        // .#####...
-        // .###XX##.
-        // .###XX##.
-        // ....####.
-        // ....####.
-        // .........
-        let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
-        let b3 = b1 & b2;
-        assert_eq!(b3.width(), 2);
-        assert_eq!(b3.height(), 2);
-        assert_eq!(b3.upper_left(), Coords { y: 2, x: 4 });
-        assert_eq!(b3.lower_right(), Coords { y: 4, x: 6 });
-    }
-
-    #[test]
-    fn intersection_contained() {
-        // .......
-        // .#####.
-        // .##XX#.
-        // .##XX#.
-        // .#####.
-        // .......
-        let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
-        let b3 = b1 & b2;
-        assert_eq!(b3, b2);
-    }
-
-    #[test]
-    fn intersection_adjacent() {
-        // .........
-        // .###OOOO.
-        // .###OOOO.
-        // .........
-        let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
-        let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
-        let b3 = b1 & b2;
-        assert!(b3.is_empty());
-        assert_eq!(b3, Bounds::empty());
-    }
-
-    #[test]
-    fn intersection_non_overlapping() {
-        // .............
-        // .........###.
-        // .........###.
-        // .........###.
-        // .............
-        // .####........
-        // .####........
-        // .............
-        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
-        let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
-        let b3 = b1 & b2;
-        assert!(b3.is_empty());
-        assert_eq!(b3, Bounds::empty());
-    }
-
-    #[test]
-    fn intersection_empty_and_nonempty() {
-        let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
-        let b2 = Bounds::empty();
-        let b3 = b1 & b2;
-        assert!(b3.is_empty());
-        assert_eq!(b3, Bounds::empty());
-    }
-
-    #[test]
-    fn intersection_empty_and_empty() {
-        let b1 = Bounds::empty();
-        let b2 = Bounds::empty();
-        let b3 = b1 & b2;
-        assert!(b3.is_empty());
-        assert_eq!(b3, Bounds::empty());
-    }
-}
-
 #[derive(Clone, Copy, Debug, Hash, Eq, Error, PartialEq)]
 pub enum BoundsError {
     #[error("width * height exceeds usize::MAX")]
@@ -441,4 +240,217 @@ pub enum BoundsError {
     MaxYOverflow,
     #[error("x-coordinate upper bound exceeds isize::MAX")]
     MaxXOverflow,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod iter {
+        use super::*;
+
+        #[test]
+        fn empty() {
+            let bounds = Bounds::new(0, 0);
+            let mut iter = bounds.into_iter();
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+        }
+
+        #[test]
+        fn three_by_two() {
+            let bounds = Bounds::new(3, 2);
+            let mut iter = bounds.into_iter();
+            assert_eq!(iter.size_hint(), (6, Some(6)));
+            assert_eq!(iter.next(), Some(Coords { y: 0, x: 0 }));
+            assert_eq!(iter.size_hint(), (5, Some(5)));
+            assert_eq!(iter.next(), Some(Coords { y: 0, x: 1 }));
+            assert_eq!(iter.size_hint(), (4, Some(4)));
+            assert_eq!(iter.next(), Some(Coords { y: 1, x: 0 }));
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert_eq!(iter.next(), Some(Coords { y: 1, x: 1 }));
+            assert_eq!(iter.size_hint(), (2, Some(2)));
+            assert_eq!(iter.next(), Some(Coords { y: 2, x: 0 }));
+            assert_eq!(iter.size_hint(), (1, Some(1)));
+            assert_eq!(iter.next(), Some(Coords { y: 2, x: 1 }));
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+            assert_eq!(iter.size_hint(), (0, Some(0)));
+            assert_eq!(iter.next(), None);
+        }
+    }
+
+    mod union {
+        use super::*;
+
+        #[test]
+        fn overlapping() {
+            // .........
+            // .#####...
+            // .###XX##.
+            // .###XX##.
+            // ....####.
+            // ....####.
+            // .........
+            let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
+            let b3 = b1 | b2;
+            assert_eq!(b3.width(), 7);
+            assert_eq!(b3.height(), 5);
+            assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+            assert_eq!(b3.lower_right(), Coords { y: 6, x: 8 });
+        }
+
+        #[test]
+        fn contained() {
+            // .......
+            // .#####.
+            // .##XX#.
+            // .##XX#.
+            // .#####.
+            // .......
+            let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
+            let b3 = b1 | b2;
+            assert_eq!(b3, b1);
+        }
+
+        #[test]
+        fn adjacent() {
+            // .........
+            // .###OOOO.
+            // .###OOOO.
+            // .........
+            let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+            let b3 = b1 | b2;
+            assert_eq!(b3.width(), 7);
+            assert_eq!(b3.height(), 2);
+            assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+            assert_eq!(b3.lower_right(), Coords { y: 3, x: 8 });
+        }
+
+        #[test]
+        fn non_overlapping() {
+            // .............
+            // .........###.
+            // .........###.
+            // .........###.
+            // .............
+            // .####........
+            // .####........
+            // .............
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
+            let b3 = b1 | b2;
+            assert_eq!(b3.width(), 11);
+            assert_eq!(b3.height(), 6);
+            assert_eq!(b3.upper_left(), Coords { y: 1, x: 1 });
+            assert_eq!(b3.lower_right(), Coords { y: 7, x: 12 });
+        }
+
+        #[test]
+        fn empty_and_nonempty() {
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::empty();
+            let b3 = b1 | b2;
+            assert!(!b3.is_empty());
+            assert_eq!(b3, b1);
+        }
+
+        #[test]
+        fn empty_and_empty() {
+            let b1 = Bounds::empty();
+            let b2 = Bounds::empty();
+            let b3 = b1 | b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+    }
+
+    mod intersection {
+        use super::*;
+
+        #[test]
+        fn overlapping() {
+            // .........
+            // .#####...
+            // .###XX##.
+            // .###XX##.
+            // ....####.
+            // ....####.
+            // .........
+            let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
+            let b3 = b1 & b2;
+            assert_eq!(b3.width(), 2);
+            assert_eq!(b3.height(), 2);
+            assert_eq!(b3.upper_left(), Coords { y: 2, x: 4 });
+            assert_eq!(b3.lower_right(), Coords { y: 4, x: 6 });
+        }
+
+        #[test]
+        fn contained() {
+            // .......
+            // .#####.
+            // .##XX#.
+            // .##XX#.
+            // .#####.
+            // .......
+            let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
+            let b3 = b1 & b2;
+            assert_eq!(b3, b2);
+        }
+
+        #[test]
+        fn adjacent() {
+            // .........
+            // .###OOOO.
+            // .###OOOO.
+            // .........
+            let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
+        fn non_overlapping() {
+            // .............
+            // .........###.
+            // .........###.
+            // .........###.
+            // .............
+            // .####........
+            // .####........
+            // .............
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
+        fn empty_and_nonempty() {
+            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b2 = Bounds::empty();
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+
+        #[test]
+        fn empty_and_empty() {
+            let b1 = Bounds::empty();
+            let b2 = Bounds::empty();
+            let b3 = b1 & b2;
+            assert!(b3.is_empty());
+            assert_eq!(b3, Bounds::empty());
+        }
+    }
 }
