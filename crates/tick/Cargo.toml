@@ -11,7 +11,6 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-either = "1.19.0"
 fs-err.workspace = true
 life-utils = { path = "../life-utils" }
 lifelib = { path = "../lifelib" }

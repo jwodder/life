@@ -144,12 +144,17 @@ fn main() -> anyhow::Result<()> {
         InputArg::Path(p) => Document::load_from_file(&p, FormatChoice::Autodetect)
             .with_context(|| format!("failed to read pattern from {}", p.display()))?,
     };
-    let mut states = doc
+    let mut states = Vec::with_capacity(args.generations.get());
+    for (i, p) in doc
         .pattern
         .with_edges(args.edges)
-        .into_generations()
+        .into_try_generations()
+        .enumerate()
         .take(args.generations.get())
-        .collect::<Vec<_>>();
+    {
+        let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
+        states.push(p);
+    }
     states = sync_bounds(&states);
     let delay = Delay::from_numer_denom_ms(args.delay.get(), 1);
     let fp = BufWriter::new(
