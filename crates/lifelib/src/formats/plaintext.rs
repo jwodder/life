@@ -1,6 +1,6 @@
 use super::util::ascii_lines;
 use crate::{
-    Pattern, PatternBuilder,
+    BoundsError, Pattern, PatternBuilder,
     utilities::{Line, ParseLineError},
 };
 use std::fmt;
@@ -87,8 +87,7 @@ impl FromStr for Plaintext {
                         ch => return Err(PlaintextError::InvalidChar(ch)),
                     }
                 }
-                // TODO: Handle numeric overflow:
-                y += 1;
+                y = y.saturating_add(1);
             }
         }
         // Ensure that trailing dead rows count towards the height:
@@ -97,7 +96,7 @@ impl FromStr for Plaintext {
         Ok(Plaintext {
             name,
             comments,
-            pattern: builder.build(),
+            pattern: builder.build()?,
         })
     }
 }
@@ -122,6 +121,9 @@ pub enum PlaintextError {
 
     #[error("plaintext drawing line exceeded maximum allowed length")]
     LineTooLong,
+
+    #[error("dimensions of plaintext drawing are too large")]
+    Bounds(#[from] BoundsError),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -301,7 +303,9 @@ mod tests {
         let pt = Plaintext {
             name: Some("".parse::<Line>().unwrap()),
             comments: vec!["".parse::<Line>().unwrap()],
-            pattern: PatternParser::dead_chars(" .").parse(".#.\n..#\n###\n"),
+            pattern: PatternParser::dead_chars(" .")
+                .parse(".#.\n..#\n###\n")
+                .unwrap(),
         };
         assert_eq!(pt.to_string(), "!Name: \n!\n.O.\n..O\nOOO\n");
     }

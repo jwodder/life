@@ -1,5 +1,5 @@
 use crate::{
-    Bounds, Coords, Edges, State,
+    Bounds, BoundsError, Coords, Edges, State,
     utilities::{Draw, Enumerate, Generations, IterCoords, IterLive, RunLengths},
 };
 use bit_vec::BitVec;
@@ -18,13 +18,20 @@ impl Pattern {
     /// Panics if either `width` or `height` exceeds [`isize::MAX`] or if
     /// `width * height` exceeds [`usize::MAX`]
     pub fn new(height: usize, width: usize) -> Pattern {
-        let bounds = Bounds::new(height, width);
+        match Pattern::try_new(height, width) {
+            Ok(p) => p,
+            Err(e) => panic!("failed to construct Pattern: {e}"),
+        }
+    }
+
+    pub fn try_new(height: usize, width: usize) -> Result<Pattern, BoundsError> {
+        let bounds = Bounds::try_new(height, width)?;
         let cells = BitVec::from_elem(height * width, false);
-        Pattern {
+        Ok(Pattern {
             bounds,
             edges: Edges::default(),
             cells,
-        }
+        })
     }
 
     pub fn bounds(&self) -> Bounds {
@@ -568,7 +575,8 @@ mod tests {
                     "..#....#.#...\n",
                     "....##..#....\n",
                     "....##.......\n",
-                ));
+                ))
+                .unwrap();
             let life2 = life.step();
             assert_eq!(life2.height(), 12);
             assert_eq!(life2.width(), 13);
@@ -703,7 +711,7 @@ mod tests {
             ".###..\n",
             "......\n",
             "......\n",
-        ));
+        )).unwrap();
         let mut iter = life.into_generations();
         let life = iter.next().unwrap();
         assert_eq!(life.draw('.', '#').to_string(), concat!(

@@ -1,5 +1,6 @@
 use crate::{Coords, utilities::IterCoords};
 use std::ops::{BitAnd, BitOr, Range};
+use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Bounds {
@@ -13,6 +14,10 @@ impl Bounds {
         Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
     }
 
+    pub fn try_new(height: usize, width: usize) -> Result<Bounds, BoundsError> {
+        Bounds::try_new_with_upper_left(height, width, Coords { y: 0, x: 0 })
+    }
+
     /// # Panics
     ///
     /// Panics if any of the following are true:
@@ -21,25 +26,31 @@ impl Bounds {
     /// - `upper_left.y + height` exceeds [`isize::MAX`]
     /// - `upper_left.x + width` exceeds [`isize::MAX`]
     pub fn new_with_upper_left(height: usize, width: usize, upper_left: Coords) -> Bounds {
-        if height == 0 || width == 0 {
-            return Bounds::empty();
+        match Bounds::try_new_with_upper_left(height, width, upper_left) {
+            Ok(b) => b,
+            Err(e) => panic!("failed to construct Bounds: {e}"),
         }
-        assert!(
-            width.checked_mul(height).is_some(),
-            "width * height exceeds usize::MAX"
-        );
-        assert!(
-            upper_left.y.checked_add_unsigned(height).is_some(),
-            "maximum y-coordinate exceeds isize::MAX"
-        );
-        assert!(
-            upper_left.x.checked_add_unsigned(width).is_some(),
-            "maximum x-coordinate exceeds isize::MAX"
-        );
-        Bounds {
-            height,
-            width,
-            upper_left,
+    }
+
+    pub fn try_new_with_upper_left(
+        height: usize,
+        width: usize,
+        upper_left: Coords,
+    ) -> Result<Bounds, BoundsError> {
+        if height == 0 || width == 0 {
+            Ok(Bounds::empty())
+        } else if width.checked_mul(height).is_none() {
+            Err(BoundsError::AreaOverflow)
+        } else if upper_left.y.checked_add_unsigned(height).is_none() {
+            Err(BoundsError::MaxYOverflow)
+        } else if upper_left.x.checked_add_unsigned(width).is_none() {
+            Err(BoundsError::MaxXOverflow)
+        } else {
+            Ok(Bounds {
+                height,
+                width,
+                upper_left,
+            })
         }
     }
 
@@ -117,6 +128,10 @@ impl Bounds {
 
     pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Bounds {
         Bounds::new_with_upper_left(self.height, self.width, c.into())
+    }
+
+    pub fn try_moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
+        Bounds::try_new_with_upper_left(self.height, self.width, c.into())
     }
 }
 
@@ -416,4 +431,14 @@ mod tests {
         assert!(b3.is_empty());
         assert_eq!(b3, Bounds::empty());
     }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, Error, PartialEq)]
+pub enum BoundsError {
+    #[error("width * height exceeds usize::MAX")]
+    AreaOverflow,
+    #[error("y-coordinate upper bound exceeds isize::MAX")]
+    MaxYOverflow,
+    #[error("x-coordinate upper bound exceeds isize::MAX")]
+    MaxXOverflow,
 }

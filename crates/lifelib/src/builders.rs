@@ -1,4 +1,4 @@
-use crate::{Coords, Edges, Pattern, State};
+use crate::{BoundsError, Coords, Edges, Pattern, State};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PatternBuilder {
@@ -70,12 +70,12 @@ impl PatternBuilder {
         }
     }
 
-    pub fn build(self) -> Pattern {
-        let mut pat = Pattern::new(self.height, self.width).with_edges(self.edges);
+    pub fn build(self) -> Result<Pattern, BoundsError> {
+        let mut pat = Pattern::try_new(self.height, self.width)?.with_edges(self.edges);
         for c in self.live {
             pat.birth(c);
         }
-        pat
+        Ok(pat)
     }
 }
 
@@ -139,7 +139,7 @@ impl<'a> PatternParser<'a> {
     /// use lifelib::PatternParser;
     ///
     /// let parser = PatternParser::dead_chars(" .");
-    /// let life = parser.parse(".#?\n..#\n###\n");
+    /// let life = parser.parse(".#?\n..#\n###\n").unwrap();
     /// assert!(!life.is_live((0, 0)));
     /// assert!(life.is_live((0, 1)));
     /// assert!(life.is_live((0, 2)));
@@ -165,7 +165,7 @@ impl<'a> PatternParser<'a> {
     /// use lifelib::PatternParser;
     ///
     /// let parser = PatternParser::live_chars("+#");
-    /// let life = parser.parse(".#?\n..#\n###\n");
+    /// let life = parser.parse(".#?\n..#\n###\n").unwrap();
     /// assert!(!life.is_live((0, 0)));
     /// assert!(life.is_live((0, 1)));
     /// assert!(!life.is_live((0, 2)));
@@ -238,21 +238,20 @@ impl<'a> PatternParser<'a> {
     /// longest input line (stopping after `max_height` lines, if set) or the
     /// value passed to [`PatternParser::max_width()`] (if any), whichever is
     /// smaller.
-    pub fn parse(&self, s: &str) -> Pattern {
+    pub fn parse(&self, s: &str) -> Result<Pattern, BoundsError> {
         let mut builder = PatternBuilder::new()
             .edges(self.edges)
             .min_height(self.min_height)
             .min_width(self.min_width)
             .max_height(self.max_height)
             .max_width(self.max_width);
+        // TODO: Document behavior for large input
         for (y, line) in s.lines().enumerate().take(self.max_height) {
             // Ensure that trailing dead rows count towards the height:
             builder = builder.min_height(y + 1);
             for (x, ch) in line.chars().enumerate().take(self.max_width) {
                 // Ensure that trailing dead cells count towards the width:
                 builder = builder.min_width(x + 1);
-                // TODO: Return Err on large input?
-                // TODO: Document behavior for large input
                 if self.cell_parser.parse(ch).is_live()
                     && let Ok(yi) = isize::try_from(y)
                     && let Ok(xi) = isize::try_from(x)
@@ -274,7 +273,7 @@ mod tests {
         #[test]
         fn test_empty_builder() {
             let builder = PatternBuilder::new();
-            let life = builder.build();
+            let life = builder.build().unwrap();
             assert_eq!(life.height(), 0);
             assert_eq!(life.width(), 0);
             assert_eq!(life.draw('.', '#').to_string(), "");
@@ -283,7 +282,7 @@ mod tests {
         #[test]
         fn test_empty_builder_min_height() {
             let builder = PatternBuilder::new().min_height(1);
-            let life = builder.build();
+            let life = builder.build().unwrap();
             // The height is zero because the width was zero, so both dimensions
             // are zeroed.
             assert_eq!(life.height(), 0);
@@ -298,7 +297,7 @@ mod tests {
         #[test]
         fn test_parse1() {
             let parser = PatternParser::dead_chars(" .");
-            let life = parser.parse(".#.\n..#\n###\n");
+            let life = parser.parse(".#.\n..#\n###\n").unwrap();
             assert_eq!(life.height(), 3);
             assert_eq!(life.width(), 3);
             assert_eq!(
@@ -316,7 +315,7 @@ mod tests {
         #[test]
         fn test_parse1_live_chars() {
             let parser = PatternParser::live_chars("+#");
-            let life = parser.parse(".#.\n..#\n###\n");
+            let life = parser.parse(".#.\n..#\n###\n").unwrap();
             assert_eq!(life.height(), 3);
             assert_eq!(life.width(), 3);
             assert_eq!(
@@ -334,7 +333,7 @@ mod tests {
         #[test]
         fn test_parse2() {
             let parser = PatternParser::dead_chars(" .");
-            let life = parser.parse(".....\n..#..\n...#.\n.###.\n.....");
+            let life = parser.parse(".....\n..#..\n...#.\n.###.\n.....").unwrap();
             assert_eq!(life.height(), 5);
             assert_eq!(life.width(), 5);
             assert_eq!(
@@ -352,7 +351,7 @@ mod tests {
         #[test]
         fn test_parse2_ragged() {
             let parser = PatternParser::dead_chars(" .");
-            let life = parser.parse("\n..#\n...#\n.###\n");
+            let life = parser.parse("\n..#\n...#\n.###\n").unwrap();
             assert_eq!(life.height(), 4);
             assert_eq!(life.width(), 4);
             assert_eq!(
@@ -370,7 +369,7 @@ mod tests {
         #[test]
         fn test_parse2_ragged_min_size() {
             let parser = PatternParser::dead_chars(" .").min_width(5).min_height(5);
-            let life = parser.parse("\n..#\n...#\n.###\n");
+            let life = parser.parse("\n..#\n...#\n.###\n").unwrap();
             assert_eq!(life.height(), 5);
             assert_eq!(life.width(), 5);
             assert_eq!(
@@ -392,7 +391,7 @@ mod tests {
                 .min_height(5)
                 .max_height(5)
                 .max_width(5);
-            let life = parser.parse(" +\n   +\n++  +++\n");
+            let life = parser.parse(" +\n   +\n++  +++\n").unwrap();
             assert_eq!(life.height(), 5);
             assert_eq!(life.width(), 5);
             assert_eq!(
@@ -410,7 +409,7 @@ mod tests {
         #[test]
         fn test_parse4() {
             let parser = PatternParser::dead_chars(" .").max_height(3);
-            let life = parser.parse(" +\n   +\n++  +++\n+ + + + + + +\n");
+            let life = parser.parse(" +\n   +\n++  +++\n+ + + + + + +\n").unwrap();
             assert_eq!(life.height(), 3);
             assert_eq!(life.width(), 7);
             assert_eq!(
@@ -439,7 +438,7 @@ mod tests {
                 ".OOOO\n",
                 "O....O\n",
                 "OO..OO\n",
-            ));
+            )).unwrap();
             assert_eq!(life.height(), 7);
             assert_eq!(life.width(), 6);
             assert_eq!(life.draw('.', 'O').to_string(), concat!(

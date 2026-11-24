@@ -97,7 +97,7 @@ enum ParsePercentError {
 
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let mut pattern = Pattern::new(args.size.height, args.size.width);
+    let mut pattern = Pattern::try_new(args.size.height, args.size.width)?;
     let dist =
         Bernoulli::new(args.probabilty.0 / 100.0).expect("probability should be between 0 and 1");
     let mut rng = rand::rng();
