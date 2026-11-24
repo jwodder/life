@@ -1,6 +1,8 @@
 use super::util::ascii_lines;
-use crate::utilities::{Line, ParseLineError};
-use crate::{Pattern, PatternBuilder};
+use crate::{
+    Pattern, PatternBuilder,
+    utilities::{Line, ParseLineError},
+};
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
