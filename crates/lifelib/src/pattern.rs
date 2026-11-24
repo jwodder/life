@@ -4,6 +4,7 @@ use crate::{
 };
 use bit_vec::BitVec;
 use std::ops::Range;
+use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pattern {
@@ -146,10 +147,10 @@ impl Pattern {
         }
     }
 
-    pub fn try_step(&self) -> Result<Pattern, BoundsError> {
+    pub fn try_step(&self) -> Result<Pattern, StepError> {
         let mut next_state = self.clone();
-        let yrange = grow_range(self.bounds.yrange(), self.edges.grows_y());
-        let xrange = grow_range(self.bounds.xrange(), self.edges.grows_x());
+        let yrange = grow_range(self.bounds.yrange(), self.edges.grows_y())?;
+        let xrange = grow_range(self.bounds.xrange(), self.edges.grows_x())?;
         for y in yrange.clone() {
             let yrng = adjacent(yrange.clone(), y, self.edges.wraps_y());
             for x in xrange.clone() {
@@ -223,6 +224,14 @@ impl Pattern {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub enum StepError {
+    #[error("numeric overflow while growing pattern bounds")]
+    Overflow,
+    #[error("overflow while growing pattern bounds")]
+    Bounds(#[from] BoundsError),
+}
+
 fn adjacent(range: Range<isize>, i: isize, wrap: bool) -> Vec<isize> {
     let mut vals = Vec::with_capacity(3);
     let mut a = i.checked_sub(1).filter(|&a| a >= range.start);
@@ -243,13 +252,14 @@ fn adjacent(range: Range<isize>, i: isize, wrap: bool) -> Vec<isize> {
     vals
 }
 
-fn grow_range(mut range: Range<isize>, grow: bool) -> Range<isize> {
+fn grow_range(range: Range<isize>, grow: bool) -> Result<Range<isize>, StepError> {
     if grow {
-        // TODO: Handle numeric overflow
-        range.start -= 1;
-        range.end += 1;
+        let start = range.start.checked_sub(1).ok_or(StepError::Overflow)?;
+        let end = range.end.checked_add(1).ok_or(StepError::Overflow)?;
+        Ok(start..end)
+    } else {
+        Ok(range)
     }
-    range
 }
 
 #[cfg(test)]

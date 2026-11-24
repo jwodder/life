@@ -1,5 +1,5 @@
 //! Utility types (mostly iterators)
-use crate::{Bounds, BoundsError, Coords, Pattern, State};
+use crate::{Bounds, Coords, Pattern, State, StepError};
 use bit_vec::BitVec;
 use std::fmt::{self, Write};
 use std::iter::FusedIterator;
@@ -262,9 +262,9 @@ impl TryGenerations {
 }
 
 impl Iterator for TryGenerations {
-    type Item = Result<Pattern, BoundsError>;
+    type Item = Result<Pattern, StepError>;
 
-    fn next(&mut self) -> Option<Result<Pattern, BoundsError>> {
+    fn next(&mut self) -> Option<Result<Pattern, StepError>> {
         match std::mem::replace(&mut self.0, InnerTryGenerations::Done) {
             InnerTryGenerations::Step(p1) => {
                 match p1.try_step() {
@@ -288,7 +288,7 @@ impl FusedIterator for TryGenerations {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum InnerTryGenerations {
     Step(Pattern),
-    Error(BoundsError),
+    Error(StepError),
     Done,
 }
 
