@@ -1,5 +1,7 @@
-use crate::utilities::*;
-use crate::{Bounds, Coords, Edges, State};
+use crate::{
+    Bounds, Coords, Edges, State,
+    utilities::{Draw, Enumerate, Generations, IterCoords, IterLive, RunLengths},
+};
 use bit_vec::BitVec;
 use std::ops::Range;
 

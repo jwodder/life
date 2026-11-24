@@ -1,14 +1,15 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 mod bounds;
 mod builders;
-pub mod document;
+mod document;
 pub mod formats;
 pub mod image;
 mod pattern;
 mod state;
-pub use crate::bounds::*;
 pub mod utilities;
+pub use crate::bounds::*;
 pub use crate::builders::*;
+pub use crate::document::*;
 pub use crate::pattern::*;
 pub use crate::state::*;
 use strum::{Display, EnumString};

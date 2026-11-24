@@ -5,12 +5,7 @@ use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
 use either::Either;
-use lifelib::{
-    Edges, Pattern,
-    document::{Document, FormatChoice},
-    formats::Format,
-    sync_bounds,
-};
+use lifelib::{Document, Edges, FormatChoice, Pattern, formats::Format, sync_bounds};
 use patharg::InputArg;
 use std::path::{Path, PathBuf};
 

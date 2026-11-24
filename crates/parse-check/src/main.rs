@@ -1,4 +1,4 @@
-use lifelib::document::{Document, FormatChoice};
+use lifelib::{Document, FormatChoice};
 use std::process::ExitCode;
 
 fn main() -> ExitCode {

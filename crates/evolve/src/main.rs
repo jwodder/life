@@ -1,8 +1,7 @@
 use anyhow::Context;
 use clap::Parser;
 use lifelib::{
-    Edges,
-    document::{Document, FormatChoice},
+    Document, Edges, FormatChoice,
     image::{
         ImageBuilder,
         image::{

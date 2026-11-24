@@ -1,8 +1,8 @@
-use crate::Pattern;
-use crate::formats::{
-    Format, Letter, Plaintext, PlaintextError, PlaintextRef, Rle, RleError, RleRef,
+use crate::{
+    Pattern,
+    formats::{Format, Letter, Plaintext, PlaintextError, PlaintextRef, Rle, RleError, RleRef},
+    utilities::Line,
 };
-use crate::utilities::Line;
 use std::fmt;
 use std::io::{BufWriter, Write};
 use std::path::Path;

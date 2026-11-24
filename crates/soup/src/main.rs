@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use lifelib::{Pattern, document::Document, formats::Format, utilities::Line};
+use lifelib::{Document, Pattern, formats::Format, utilities::Line};
 use patharg::OutputArg;
 use rand::distr::{Bernoulli, Distribution};
 use std::io::Write;

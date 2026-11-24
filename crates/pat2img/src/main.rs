@@ -1,9 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use lifelib::{
-    document::{Document, FormatChoice},
-    image::ImageBuilder,
-};
+use lifelib::{Document, FormatChoice, image::ImageBuilder};
 use patharg::InputArg;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
