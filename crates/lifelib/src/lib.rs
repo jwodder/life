@@ -268,6 +268,10 @@ impl Bounds {
     pub fn xrange(&self) -> Range<isize> {
         self.upper_left.x..self.xend()
     }
+
+    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Bounds {
+        Bounds::new_with_upper_left(self.height, self.width, c.into())
+    }
 }
 
 impl IntoIterator for Bounds {
@@ -558,6 +562,20 @@ impl Pattern {
             cells,
             bounds,
             edges: self.edges,
+        }
+    }
+
+    pub fn with_upper_left<C: Into<Coords>>(mut self, c: C) -> Pattern {
+        self.bounds = self.bounds.moved_to(c);
+        self
+    }
+
+    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Pattern {
+        let bounds = self.bounds.moved_to(c);
+        Pattern {
+            bounds,
+            edges: self.edges,
+            cells: self.cells.clone(),
         }
     }
 }
