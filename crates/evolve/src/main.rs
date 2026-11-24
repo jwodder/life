@@ -152,11 +152,11 @@ fn main() -> anyhow::Result<()> {
     let mut enc = GifEncoder::new(fp);
     enc.set_repeat(Repeat::Infinite)
         .context("failed to set repeat")?;
-    enc.encode_frames(states.into_iter().map(|p| {
-        #[allow(clippy::unwrap_used)]
-        let img = builder.render(&p).unwrap();
+    for p in states {
+        let img = builder.render(&p).context("failed to render frame")?;
         let img = RgbaImage::from(DynamicImage::from(img));
-        Frame::from_parts(img, 0, 0, delay)
-    }))?;
+        let frame = Frame::from_parts(img, 0, 0, delay);
+        enc.encode_frame(frame).context("failed to encode frame")?;
+    }
     Ok(())
 }
