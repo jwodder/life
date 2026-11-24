@@ -169,20 +169,8 @@ impl Pattern {
     }
 
     fn ensure_contains<C: Into<Coords>>(&mut self, c: C) {
-        let c = c.into();
-        let top = greater_by(c.y, self.bounds.upper_left.y);
-        let left = greater_by(c.x, self.bounds.upper_left.x);
-        // TODO: Only panic when strictly necessary:
-        let bottom = greater_by(self.bounds.yend().strict_sub(1), c.y);
-        let right = greater_by(self.bounds.xend().strict_sub(1), c.x);
-        if top > 0 || left > 0 || bottom > 0 || right > 0 {
-            let new_ul = Coords {
-                y: self.bounds.upper_left.y.strict_sub_unsigned(top),
-                x: self.bounds.upper_left.x.strict_sub_unsigned(left),
-            };
-            let new_height = self.bounds.height.strict_add(top).strict_add(bottom);
-            let new_width = self.bounds.width.strict_add(left).strict_add(right);
-            let new_bounds = Bounds::new_with_upper_left(new_height, new_width, new_ul);
+        let new_bounds = self.bounds | Bounds::new_with_upper_left(1, 1, c.into());
+        if new_bounds != self.bounds {
             *self = self.resize(new_bounds);
         }
     }
@@ -248,14 +236,6 @@ fn grow_range(mut range: Range<isize>, grow: bool) -> Range<isize> {
         range.end += 1;
     }
     range
-}
-
-fn greater_by(lesser: isize, greater: isize) -> usize {
-    if lesser < greater {
-        lesser.abs_diff(greater)
-    } else {
-        0
-    }
 }
 
 #[cfg(test)]
