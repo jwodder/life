@@ -209,18 +209,13 @@ impl Pattern {
         }
     }
 
-    pub fn with_upper_left<C: Into<Coords>>(mut self, c: C) -> Pattern {
-        self.bounds = self.bounds.moved_to(c);
-        self
-    }
-
-    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Pattern {
-        let bounds = self.bounds.moved_to(c);
-        Pattern {
+    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Result<Pattern, BoundsError> {
+        let bounds = self.bounds.moved_to(c)?;
+        Ok(Pattern {
             bounds,
             edges: self.edges,
             cells: self.cells.clone(),
-        }
+        })
     }
 }
 

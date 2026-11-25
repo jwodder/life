@@ -155,7 +155,7 @@ fn main() -> anyhow::Result<()> {
         let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
         states.push(p);
     }
-    states = sync_bounds(&states);
+    states = sync_bounds(&states).context("failed to synchronize bounds")?;
     let delay = Delay::from_numer_denom_ms(args.delay.get(), 1);
     let fp = BufWriter::new(
         args.outfile

@@ -10,6 +10,10 @@ pub struct Bounds {
 }
 
 impl Bounds {
+    /// # Panics
+    ///
+    /// Panics if either `width` or `height` exceeds [`isize::MAX`] or if
+    /// `width * height` exceeds [`usize::MAX`]
     pub fn new(height: usize, width: usize) -> Bounds {
         Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
     }
@@ -126,11 +130,7 @@ impl Bounds {
         self.upper_left.x..self.xend()
     }
 
-    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Bounds {
-        Bounds::new_with_upper_left(self.height, self.width, c.into())
-    }
-
-    pub fn try_moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
+    pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
         Bounds::try_new_with_upper_left(self.height, self.width, c.into())
     }
 

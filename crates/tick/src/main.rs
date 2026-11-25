@@ -215,7 +215,7 @@ impl PostProcessor {
             saver,
         } = self
         {
-            let patterns = sync_bounds(&patterns);
+            let patterns = sync_bounds(&patterns).context("failed to synchronize bounds")?;
             for (i, p) in std::iter::zip(indices, patterns) {
                 saver.save(i, p)?;
             }
