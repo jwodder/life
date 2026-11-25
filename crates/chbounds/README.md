@@ -29,10 +29,11 @@ number as an option argument causes that many rows or columns of dead cells to
 be added to the pattern, while a negative number causes the number's absolute
 value of rows or columns to be removed from the edges of the pattern.
 
-The resulting pattern is written to `<outfile>`, the file extension of which
-must be either "`.cells`" (to produce a plaintext file) or "`.rle`" (to
-produce a Run Length Encoded file).  Alternatively, `<outfile>` may be `-`
-or omitted to write plaintext to standard output.
+The resulting pattern (along with any comments from the original input file) is
+written to `<outfile>`, the file extension of which must be either "`.cells`"
+(to produce a plaintext file) or "`.rle`" (to produce a Run Length Encoded
+file).  Alternatively, `<outfile>` may be `-` or omitted to write plaintext to
+standard output.
 
 Options
 -------
