@@ -71,12 +71,14 @@ impl Edges {
     }
 }
 
-pub fn sync_bounds(patterns: &[Pattern]) -> Vec<Pattern> {
+pub fn sync_bounds(patterns: &[Pattern]) -> Result<Vec<Pattern>, BoundsError> {
     let Some((p0, rest)) = patterns.split_first() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
-    let bounds = rest.iter().fold(p0.bounds(), |b, p| b | p.bounds());
-    patterns.iter().map(|p| p.resize(bounds)).collect()
+    let bounds = rest
+        .iter()
+        .try_fold(p0.bounds(), |b, p| b.try_union(p.bounds()))?;
+    Ok(patterns.iter().map(|p| p.resize(bounds)).collect())
 }
 
 #[cfg(test)]
