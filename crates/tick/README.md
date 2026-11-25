@@ -88,6 +88,13 @@ Options
   specified, multiple outputs are produced, one for each specified tick number
   in the input pattern's history.  [default: 1]
 
+- `-R "LETTER TEXT"`, `--rle-comment "LETTER TEXT"` — Embed a hash line with
+  the given type letter and text in any RLE output files.  The argument must
+  consist of an optional '#', an ASCII letter, a space, and then text; you will
+  likely have to quote the entire string to protect it from your shell.  `TEXT`
+  may contain [tick placeholders](#tick-placeholders) but may not contain
+  newlines.  This option may be specified multiple times.
+
 - `-S`, `--sync-bounds` — Adjust the bounds of the output patterns so that they
   are all equal and enclose all live cells between them.  This only has an
   effect when `--edges` is set to a "grow" value.
@@ -95,10 +102,10 @@ Options
 Tick Placeholders
 -----------------
 
-Output paths, `--comment` arguments, and `--name` arguments are templates that
-can contain any number of printf-style `%d` placeholders, which are replaced by
-the tick number when generating an output file.  The format of such
-placeholders is:
+Output paths, `--comment` arguments, `--rle-comment` arguments, and `--name`
+arguments are templates that can contain any number of printf-style `%d`
+placeholders, which are replaced by the tick number when generating an output
+file.  The format of such placeholders is:
 
 ```text
 %[<flag>][<width>][.<precision>]d
