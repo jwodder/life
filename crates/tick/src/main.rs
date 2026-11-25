@@ -143,6 +143,7 @@ impl Saver {
                 .iter()
                 .map(|tmplt| tmplt.render(index))
                 .collect(),
+            rle_comments: Vec::new(),
             pattern,
         };
         doc.dump_to_file(&path, FormatChoice::Fixed(self.format))

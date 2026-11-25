@@ -109,6 +109,7 @@ fn main() -> anyhow::Result<()> {
     let doc = Document {
         name: args.name,
         comments: args.comment,
+        rle_comments: Vec::new(),
         pattern,
     };
     let format = match args.outfile {

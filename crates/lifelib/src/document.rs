@@ -16,28 +16,16 @@ pub struct Document {
     /// Comments on the pattern
     pub comments: Vec<Line>,
 
+    /// Additional RLE #-lines to include when converting to RLE.  Lines with
+    /// type [`Letter::NAME_TYPE`], [`Letter::COMMENT_TYPE`], or
+    /// [`Letter::ALT_COMMENT_TYPE`] should not be present here.
+    pub rle_comments: Vec<(Letter, Line)>,
+
     /// The pattern itself
     pub pattern: Pattern,
 }
 
 impl Document {
-    pub fn from_rle_lossy(rle: Rle) -> Document {
-        let mut name = None;
-        let mut comments = Vec::new();
-        for (ty, value) in rle.comments {
-            if ty == Letter::NAME_TYPE && name.is_none() {
-                name = Some(value);
-            } else if ty == Letter::COMMENT_TYPE || ty == Letter::ALT_COMMENT_TYPE {
-                comments.push(value);
-            }
-        }
-        Document {
-            name,
-            comments,
-            pattern: rle.pattern,
-        }
-    }
-
     pub fn display(&self, format: Format) -> DisplayDocument<'_> {
         DisplayDocument { doc: self, format }
     }
@@ -51,7 +39,7 @@ impl Document {
         };
         match format {
             Format::Plaintext => Ok(s.parse::<Plaintext>()?.into()),
-            Format::Rle => Ok(Document::from_rle_lossy(s.parse::<Rle>()?)),
+            Format::Rle => Ok(s.parse::<Rle>()?.into()),
         }
     }
 
@@ -68,7 +56,7 @@ impl Document {
         let s = std::fs::read_to_string(p)?;
         match format {
             Format::Plaintext => Ok(s.parse::<Plaintext>()?.into()),
-            Format::Rle => Ok(Document::from_rle_lossy(s.parse::<Rle>()?)),
+            Format::Rle => Ok(s.parse::<Rle>()?.into()),
         }
     }
 
@@ -85,10 +73,11 @@ impl Document {
         Ok(())
     }
 
-    fn rle_comments(&self) -> Vec<(Letter, Line)> {
+    fn make_rle_comments(&self) -> Vec<(Letter, Line)> {
         let mut comments = Vec::with_capacity(
             self.comments
                 .len()
+                .saturating_add(self.rle_comments.len())
                 .saturating_add(usize::from(self.name.is_some())),
         );
         if let Some(name) = self.name.clone() {
@@ -100,6 +89,7 @@ impl Document {
                 .cloned()
                 .map(|c| (Letter::COMMENT_TYPE, c)),
         );
+        comments.extend(self.rle_comments.clone());
         comments
     }
 }
@@ -109,6 +99,7 @@ impl From<Plaintext> for Document {
         Document {
             name: value.name,
             comments: value.comments,
+            rle_comments: Vec::new(),
             pattern: value.pattern,
         }
     }
@@ -124,10 +115,33 @@ impl From<Document> for Plaintext {
     }
 }
 
+impl From<Rle> for Document {
+    fn from(rle: Rle) -> Document {
+        let mut name = None;
+        let mut comments = Vec::new();
+        let mut rle_comments = Vec::new();
+        for (ty, value) in rle.comments {
+            if ty == Letter::NAME_TYPE && name.is_none() {
+                name = Some(value);
+            } else if ty == Letter::COMMENT_TYPE || ty == Letter::ALT_COMMENT_TYPE {
+                comments.push(value);
+            } else {
+                rle_comments.push((ty, value));
+            }
+        }
+        Document {
+            name,
+            comments,
+            rle_comments,
+            pattern: rle.pattern,
+        }
+    }
+}
+
 impl From<Document> for Rle {
     fn from(value: Document) -> Rle {
         Rle {
-            comments: value.rle_comments(),
+            comments: value.make_rle_comments(),
             pattern: value.pattern,
         }
     }
@@ -151,7 +165,7 @@ impl fmt::Display for DisplayDocument<'_> {
                 write!(f, "{ptref}")
             }
             Format::Rle => {
-                let comments = self.doc.rle_comments();
+                let comments = self.doc.make_rle_comments();
                 let rleref = RleRef {
                     comments: &comments,
                     pattern: &self.doc.pattern,
