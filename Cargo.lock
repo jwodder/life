@@ -295,6 +295,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "chbounds"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "lifelib",
+ "patharg",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
