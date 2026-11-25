@@ -18,6 +18,8 @@ The packages are:
 
 - Programs:
 
+    - [`chbounds`][] — Pad & crop Game of Life patterns
+
     - [`evolve`][] — Create GIFs of pattern generations
 
     - [`tick`][] — Advance Game of Life patterns
@@ -35,6 +37,7 @@ anything here at your own risk.
 
 [workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [Conway's Game of Life]: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
+[`chbounds`]: https://github.com/jwodder/life/tree/master/crates/chbounds
 [`evolve`]: https://github.com/jwodder/life/tree/master/crates/evolve
 [`life-utils`]: https://github.com/jwodder/life/tree/master/crates/life-utils
 [`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib

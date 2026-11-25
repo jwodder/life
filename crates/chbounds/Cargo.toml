@@ -1,0 +1,18 @@
+[package]
+name = "chbounds"
+edition.workspace = true
+rust-version.workspace = true
+description = "Pad & crop Game of Life patterns"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+lifelib = { path = "../lifelib" }
+patharg.workspace = true
+
+[lints]
+workspace = true
