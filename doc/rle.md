@@ -93,6 +93,10 @@ format][RLE] for [Conway's Game of Life][] patterns as recognized by `lifelib`.
       first one as the name, and the others are effectively ignored.
     - `C` — The `<text>` element is a comment.
     - `c` — Same as `C`, but not recommended.
+    - `O` — The `<text>` element specifies the owner of the pattern, or when
+      and by whom the file was created.  If an RLE document contains multiple
+      `#` lines of type `O`, `lifelib` only uses the first one as the owner,
+      and the others are effectively ignored.
 
 - The header line in an RLE document (defined by the `<header>` rule in the
   ABNF) specifies the width and height of the pattern described by the

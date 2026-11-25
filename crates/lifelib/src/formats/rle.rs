@@ -32,27 +32,49 @@ pub struct Rle {
 impl Rle {
     /// Returns the text of the first `#` line of type `'N'`, if any.
     pub fn get_name(&self) -> Option<&Line> {
-        self.comments
-            .iter()
-            .find_map(|(ty, text)| (*ty == Letter::NAME_TYPE).then_some(text))
+        self.get_first_comment(Letter::NAME_TYPE)
     }
 
     /// Set the text of the first `#` line of type `'N'` to `name` and remove
     /// all other `'N'` comments.  If there is no `'N'`-comment, one is added.
     pub fn set_name(&mut self, name: Line) {
-        let mut value = Some(name);
-        self.comments.retain_mut(|(ty, text)| {
-            if *ty != Letter::NAME_TYPE {
+        self.set_only_comment(Letter::NAME_TYPE, name);
+    }
+
+    /// Returns the text of the first `#` line of type `'O'`, if any.
+    pub fn get_owner(&self) -> Option<&Line> {
+        // The name "owner" is taken from XLife's manpage.
+        self.get_first_comment(Letter::OWNER_TYPE)
+    }
+
+    /// Set the text of the first `#` line of type `'O'` to `owner` and remove
+    /// all other `'O'` comments.  If there is no `'O'`-comment, one is added.
+    pub fn set_owner(&mut self, owner: Line) {
+        self.set_only_comment(Letter::OWNER_TYPE, owner);
+    }
+
+    pub fn get_first_comment(&self, ty: Letter) -> Option<&Line> {
+        self.comments
+            .iter()
+            .find_map(|(ty2, text)| (*ty2 == ty).then_some(text))
+    }
+
+    /// Set the text of the first `#` line of type `ty` to `text` and remove
+    /// all other `ty` comments.  If there is no `ty`-comment, one is added.
+    pub fn set_only_comment(&mut self, ty: Letter, text: Line) {
+        let mut value = Some(text);
+        self.comments.retain_mut(|(cty, ctext)| {
+            if *cty != ty {
                 true
             } else if let Some(n) = value.take() {
-                *text = n;
+                *ctext = n;
                 true
             } else {
                 false
             }
         });
-        if let Some(n) = value.take() {
-            self.comments.push((Letter::NAME_TYPE, n));
+        if let Some(v) = value.take() {
+            self.comments.push((ty, v));
         }
     }
 
@@ -192,6 +214,7 @@ impl Letter {
     pub const NAME_TYPE: Letter = Letter('N');
     pub const COMMENT_TYPE: Letter = Letter('C');
     pub const ALT_COMMENT_TYPE: Letter = Letter('c');
+    pub const OWNER_TYPE: Letter = Letter('O');
 }
 
 impl From<Letter> for char {
