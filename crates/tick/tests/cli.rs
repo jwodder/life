@@ -399,3 +399,32 @@ fn sync_bounds() {
         );
     }
 }
+
+#[test]
+fn rle_comment() {
+    let tmpdir = TempDir::new().unwrap();
+    cargo_bin_cmd!("tick")
+        .arg("-n")
+        .arg("2-4")
+        .arg("-R")
+        .arg("#O tick -n %d")
+        .arg(Path::new(DATA_DIR).join("glider.cells"))
+        .arg(tmpdir.path().join("glider-%d-owned.rle"))
+        .assert()
+        .success();
+    let filenames = listdir(tmpdir.path());
+    assert_eq!(
+        filenames,
+        [
+            "glider-2-owned.rle",
+            "glider-3-owned.rle",
+            "glider-4-owned.rle"
+        ]
+    );
+    for fname in filenames {
+        assert_str_files_eq(
+            &Path::new(DATA_DIR).join(&fname),
+            &tmpdir.path().join(fname),
+        );
+    }
+}

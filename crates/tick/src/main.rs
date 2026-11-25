@@ -4,7 +4,11 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use lifelib::{Document, Edges, FormatChoice, Pattern, formats::Format, sync_bounds};
+use lifelib::{
+    Document, Edges, FormatChoice, Pattern,
+    formats::{Format, Letter},
+    sync_bounds,
+};
 use patharg::InputArg;
 use std::path::{Path, PathBuf};
 
@@ -16,7 +20,7 @@ use std::path::{Path, PathBuf};
 struct Arguments {
     /// Embed the given comment in the output file.
     ///
-    /// The name may contain `%d` placeholders which will be replaced by the
+    /// The text may contain `%d` placeholders which will be replaced by the
     /// tick number.
     ///
     /// This option may be specified multiple times.
@@ -77,6 +81,16 @@ struct Arguments {
     )]
     ticks: TickSet,
 
+    /// Embed the given hash line in RLE output files.
+    ///
+    /// The argument must consist of an optional '#', an ASCII letter, a space,
+    /// and then text.  The text may contain `%d` placeholders which will be
+    /// replaced by the tick number.
+    ///
+    /// This option may be specified multiple times.
+    #[arg(short = 'R', long, value_name = "LETTER TEXT", value_parser = parse_rle_comment_arg)]
+    rle_comment: Vec<(Letter, TickTemplate)>,
+
     /// Adjust the bounds of the output patterns so that they are all equal and
     /// enclose all live cells between them.
     ///
@@ -111,6 +125,7 @@ impl Arguments {
             Ok(Saver {
                 name: self.name.take(),
                 comments: std::mem::take(&mut self.comment),
+                rle_comments: std::mem::take(&mut self.rle_comment),
                 format,
                 outfile: self.outfile.clone(),
             })
@@ -124,6 +139,7 @@ impl Arguments {
 struct Saver {
     name: Option<TickTemplate>,
     comments: Vec<TickTemplate>,
+    rle_comments: Vec<(Letter, TickTemplate)>,
     format: Format,
     outfile: TickTemplate,
 }
@@ -143,7 +159,11 @@ impl Saver {
                 .iter()
                 .map(|tmplt| tmplt.render(index))
                 .collect(),
-            rle_comments: Vec::new(),
+            rle_comments: self
+                .rle_comments
+                .iter()
+                .map(|(ty, tmplt)| (*ty, tmplt.render(index)))
+                .collect(),
             pattern,
         };
         doc.dump_to_file(&path, FormatChoice::Fixed(self.format))
@@ -244,4 +264,17 @@ fn main() -> anyhow::Result<()> {
     }
     postproc.finalize()?;
     Ok(())
+}
+
+fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, TickTemplate)> {
+    let s = s.strip_prefix('#').unwrap_or(s);
+    let Some(ch) = s.chars().next() else {
+        anyhow::bail!("empty string");
+    };
+    let ty = Letter::try_from(ch)?;
+    let Some(text) = s[1..].strip_prefix(' ') else {
+        anyhow::bail!("no space after type letter");
+    };
+    let tmplt = text.parse::<TickTemplate>()?;
+    Ok((ty, tmplt))
 }
