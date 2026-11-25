@@ -1,6 +1,10 @@
 use anyhow::Context;
 use clap::Parser;
-use lifelib::{Document, Pattern, formats::Format, utilities::Line};
+use lifelib::{
+    Document, Pattern,
+    formats::{Format, Letter},
+    utilities::Line,
+};
 use patharg::OutputArg;
 use rand::distr::{Bernoulli, Distribution};
 use std::io::Write;
@@ -25,6 +29,15 @@ struct Arguments {
     /// Probability of a given cell being alive, as a percentage from 0 to 100
     #[arg(short, long, default_value = "25", value_name = "PERCENTAGE")]
     probabilty: Percent,
+
+    /// Embed the given hash line in an RLE output file.
+    ///
+    /// The argument must consist of an optional '#', an ASCII letter, a space,
+    /// and then text.
+    ///
+    /// This option may be specified multiple times.
+    #[arg(short = 'R', long, value_name = "LETTER TEXT", value_parser = parse_rle_comment_arg)]
+    rle_comment: Vec<(Letter, Line)>,
 
     /// Dimensions of the pattern to generate
     #[arg(value_name = "WIDTHxHEIGHT")]
@@ -109,7 +122,7 @@ fn main() -> anyhow::Result<()> {
     let doc = Document {
         name: args.name,
         comments: args.comment,
-        rle_comments: Vec::new(),
+        rle_comments: args.rle_comment,
         pattern,
     };
     let format = match args.outfile {
@@ -125,4 +138,17 @@ fn main() -> anyhow::Result<()> {
     write!(&mut fp, "{}", doc.display(format)).context("failed to write to output file")?;
     fp.flush().context("failed to write to output file")?;
     Ok(())
+}
+
+fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, Line)> {
+    let s = s.strip_prefix('#').unwrap_or(s);
+    let Some(ch) = s.chars().next() else {
+        anyhow::bail!("empty string");
+    };
+    let ty = Letter::try_from(ch)?;
+    let Some(text) = s[1..].strip_prefix(' ') else {
+        anyhow::bail!("no space after type letter");
+    };
+    let line = text.parse::<Line>()?;
+    Ok((ty, line))
 }

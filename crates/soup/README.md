@@ -37,3 +37,9 @@ Options
 - `-p PERCENTAGE`, `--probability PERCENTAGE` — Set the probability of a given
   cell being alive.  `PERCENTAGE` must be a floating-point percentage value
   from 0 to 100. [default: 25]
+
+- `-R "LETTER TEXT"`, `--rle-comment "LETTER TEXT"` — Embed a hash line with
+  the given type letter and text in an RLE output file.  The argument must
+  consist of an optional '#', an ASCII letter, a space, and then text; you will
+  likely have to quote the entire string to protect it from your shell.  `TEXT`
+  may not contain newlines.  This option may be specified multiple times.
