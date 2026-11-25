@@ -94,6 +94,14 @@ impl Document {
     }
 }
 
+impl std::str::FromStr for Document {
+    type Err = ParseDocumentError;
+
+    fn from_str(s: &str) -> Result<Document, ParseDocumentError> {
+        Document::load_from_str(s, FormatChoice::Autodetect)
+    }
+}
+
 impl From<Plaintext> for Document {
     fn from(value: Plaintext) -> Document {
         Document {
