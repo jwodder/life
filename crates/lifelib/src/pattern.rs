@@ -225,6 +225,48 @@ impl Pattern {
             cells: self.cells.clone(),
         })
     }
+
+    pub fn bounding_box(&self) -> Bounds {
+        let Coords {
+            y: mut top,
+            x: mut left,
+        } = self.upper_left();
+        let Coords {
+            y: mut bottom,
+            x: mut right,
+        } = self.bounds().lower_right();
+        let Some(min_y) = (top..bottom).find(|&y| (left..right).any(|x| self.is_live((y, x))))
+        else {
+            return Bounds::ZERO;
+        };
+        top = min_y;
+        let Some(min_x) =
+            (left..right).find(|&x| (top..bottom).rev().any(|y| self.is_live((y, x))))
+        else {
+            return Bounds::ZERO;
+        };
+        left = min_x;
+        let Some(max_y) = (top..bottom)
+            .rev()
+            .find(|&y| (left..right).rev().any(|x| self.is_live((y, x))))
+        else {
+            return Bounds::ZERO;
+        };
+        bottom = max_y + 1;
+        let Some(max_x) = (left..right)
+            .rev()
+            .find(|&x| (top..bottom).rev().any(|y| self.is_live((y, x))))
+        else {
+            return Bounds::ZERO;
+        };
+        right = max_x + 1;
+        let height = top.abs_diff(bottom);
+        let width = left.abs_diff(right);
+        match Bounds::try_new_with_upper_left(height, width, Coords { y: top, x: left }) {
+            Ok(b) => b,
+            Err(_) => unreachable!("Bounds within a Bounds must be valid"),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -774,5 +816,196 @@ mod tests {
             "...##.\n",
             "...#..",
         ));
+    }
+
+    mod bounding_box {
+        use super::*;
+
+        #[test]
+        fn empty() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b, Bounds::ZERO);
+        }
+
+        #[test]
+        fn r#box() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    "..#####..\n",
+                    "..#...#..\n",
+                    "..#...#..\n",
+                    "..#####..\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 4);
+            assert_eq!(b.width(), 5);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 2 });
+        }
+
+        #[test]
+        fn corners() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    "..#...#..\n",
+                    ".........\n",
+                    ".........\n",
+                    "..#...#..\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 4);
+            assert_eq!(b.width(), 5);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 2 });
+        }
+
+        #[test]
+        fn main_corners() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    "..#......\n",
+                    ".........\n",
+                    ".........\n",
+                    "......#..\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 4);
+            assert_eq!(b.width(), 5);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 2 });
+        }
+
+        #[test]
+        fn alt_corners() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    "......#..\n",
+                    ".........\n",
+                    ".........\n",
+                    "..#......\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 4);
+            assert_eq!(b.width(), 5);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 2 });
+        }
+
+        #[test]
+        fn diamond() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    ".....#...\n",
+                    ".........\n",
+                    ".#.....#.\n",
+                    ".........\n",
+                    "...#.....\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 5);
+            assert_eq!(b.width(), 7);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 1 });
+        }
+
+        #[test]
+        fn vertical_line() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    "...#.....\n",
+                    "...#.....\n",
+                    ".........\n",
+                    ".........\n",
+                    "...#.....\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 5);
+            assert_eq!(b.width(), 1);
+            assert_eq!(b.upper_left(), Coords { y: 2, x: 3 });
+        }
+
+        #[test]
+        fn horizontal_line() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    "..#...##.\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 1);
+            assert_eq!(b.width(), 6);
+            assert_eq!(b.upper_left(), Coords { y: 6, x: 2 });
+        }
+
+        #[test]
+        fn singleton() {
+            let pattern = PatternParser::dead_chars(" .")
+                .parse(concat!(
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    "....#....\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                    ".........\n",
+                ))
+                .unwrap();
+            let b = pattern.bounding_box();
+            assert_eq!(b.height(), 1);
+            assert_eq!(b.width(), 1);
+            assert_eq!(b.upper_left(), Coords { y: 4, x: 4 });
+        }
     }
 }
