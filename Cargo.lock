@@ -1524,10 +1524,14 @@ name = "soup"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "assert_cmd",
+ "assert_fs",
+ "assert_matches",
  "clap",
  "lifelib",
  "patharg",
  "rand 0.10.4",
+ "rstest",
  "thiserror",
 ]
 

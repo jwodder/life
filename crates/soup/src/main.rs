@@ -152,3 +152,109 @@ fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, Line)> {
     let line = text.parse::<Line>()?;
     Ok((ty, line))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod size {
+        use super::*;
+        use assert_matches::assert_matches;
+        use rstest::rstest;
+
+        #[rstest]
+        #[case("1x1", 1, 1)]
+        #[case("0x1", 0, 1)]
+        #[case("0x0", 0, 0)]
+        #[case("23x42", 23, 42)]
+        #[case("42x23", 42, 23)]
+        #[case("042x0023", 42, 23)]
+        fn plain(#[case] s: &str, #[case] width: usize, #[case] height: usize) {
+            let sz = s.parse::<Size>().unwrap();
+            assert_eq!(sz.width, width);
+            assert_eq!(sz.height, height);
+        }
+
+        #[test]
+        fn negative_width() {
+            let e = "-5x7".parse::<Size>().unwrap_err();
+            assert_matches!(e, ParseSizeError::ParseInt(_));
+            assert_eq!(e.to_string(), "invalid number");
+        }
+
+        #[test]
+        fn negative_height() {
+            let e = "5x-7".parse::<Size>().unwrap_err();
+            assert_matches!(e, ParseSizeError::ParseInt(_));
+            assert_eq!(e.to_string(), "invalid number");
+        }
+
+        #[test]
+        fn one_number() {
+            let e = "42".parse::<Size>().unwrap_err();
+            assert_eq!(e, ParseSizeError::Invalid);
+            assert_eq!(e.to_string(), "not in WIDTHxHEIGHT format");
+        }
+
+        #[test]
+        fn spaced() {
+            let e = "42 23".parse::<Size>().unwrap_err();
+            assert_eq!(e, ParseSizeError::Invalid);
+            assert_eq!(e.to_string(), "not in WIDTHxHEIGHT format");
+        }
+
+        #[test]
+        fn treble() {
+            let e = "42x23x17".parse::<Size>().unwrap_err();
+            assert_matches!(e, ParseSizeError::ParseInt(_));
+            assert_eq!(e.to_string(), "invalid number");
+        }
+
+        #[test]
+        fn literal() {
+            let e = "WIDTHxHEIGHT".parse::<Size>().unwrap_err();
+            assert_matches!(e, ParseSizeError::ParseInt(_));
+            assert_eq!(e.to_string(), "invalid number");
+        }
+    }
+
+    mod percent {
+        use super::*;
+        use rstest::rstest;
+
+        #[rstest]
+        #[case("0", 0.0)]
+        #[case("0.1", 0.1)]
+        #[case("1", 1.0)]
+        #[case("12.34", 12.34)]
+        #[case("23", 23.0)]
+        #[case("100", 100.0)]
+        fn plain(#[case] s: &str, #[case] value: f64) {
+            let pct = s.parse::<Percent>().unwrap();
+            assert_eq!(pct, Percent(value));
+        }
+
+        #[rstest]
+        #[case("nan")]
+        #[case("NaN")]
+        #[case("inf")]
+        #[case("-inf")]
+        #[case("infinity")]
+        #[case("+Infinity")]
+        fn not_finite(#[case] s: &str) {
+            let e = s.parse::<Percent>().unwrap_err();
+            assert_eq!(e, ParsePercentError::NotFinite);
+            assert_eq!(e.to_string(), "invalid percentage");
+        }
+
+        #[rstest]
+        #[case("-23")]
+        #[case("100.5")]
+        #[case("123")]
+        fn out_of_range(#[case] s: &str) {
+            let e = s.parse::<Percent>().unwrap_err();
+            assert_eq!(e, ParsePercentError::OutOfRange);
+            assert_eq!(e.to_string(), "percentage must be from 0 to 100");
+        }
+    }
+}
