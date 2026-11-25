@@ -35,6 +35,14 @@ impl Pattern {
         })
     }
 
+    pub fn new_with_bounds(bounds: Bounds) -> Pattern {
+        Pattern {
+            bounds,
+            edges: Edges::default(),
+            cells: BitVec::from_elem(bounds.height * bounds.width, false),
+        }
+    }
+
     pub fn bounds(&self) -> Bounds {
         self.bounds
     }
