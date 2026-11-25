@@ -14,21 +14,21 @@ struct Arguments {
     ///
     /// This overrides any bottom padding amounts set by --uniform or
     /// --vertical.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     bottom: Option<isize>,
 
     /// Add/remove <INT> columns to/from the left and right sides of the
     /// pattern
     ///
     /// This overrides any horizontal padding amounts set by --uniform.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     horizontal: Option<isize>,
 
     /// Add/remove <INT> columns to/from the left side of the pattern
     ///
     /// This overrides any left padding amounts set by --uniform or
     /// --horizontal.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     left: Option<isize>,
 
     /// Crop the pattern to its bounding box.
@@ -41,23 +41,23 @@ struct Arguments {
     ///
     /// This overrides any right padding amounts set by --uniform or
     /// --horizontal.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     right: Option<isize>,
 
     /// Add/remove <INT> rows to/from the top of the pattern
     ///
     /// This overrides any top padding amounts set by --uniform or --vertical.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     top: Option<isize>,
 
     /// Add/remove <INT> cells on all fours sides of the pattern
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     uniform: Option<isize>,
 
     /// Add/remove <INT> columns to/from the top and bottom of the pattern
     ///
     /// This overrides any vertical padding amounts set by --uniform.
-    #[arg(long, value_name = "INT")]
+    #[arg(long, allow_negative_numbers = true, value_name = "INT")]
     vertical: Option<isize>,
 
     /// A file containing a Game of Life pattern.
