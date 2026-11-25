@@ -225,3 +225,33 @@ pub enum DumpDocumentError {
     #[error("error writing to file")]
     Io(#[from] std::io::Error),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rle_comment_roundabout() {
+        let doc = concat!(
+            "#O Richard K. Guy, 1969\n",
+            "#c Not discovered by Conway\n",
+            "#N Glider\n",
+            "#C https://conwaylife.com/wiki/Glider\n",
+            "x = 7, y = 7\n",
+            "2$3bo$4bo$2b3o!\n",
+        )
+        .parse::<Document>()
+        .unwrap();
+        assert_eq!(
+            doc.display(Format::Rle).to_string(),
+            concat!(
+                "#N Glider\n",
+                "#C Not discovered by Conway\n",
+                "#C https://conwaylife.com/wiki/Glider\n",
+                "#O Richard K. Guy, 1969\n",
+                "x = 7, y = 7\n",
+                "2$3bo$4bo$2b3o!\n",
+            )
+        );
+    }
+}
