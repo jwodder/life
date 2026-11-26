@@ -1,0 +1,8 @@
+imgopts := '-s10 -g2 -m2 -Gsilver -Msilver'
+
+# Generate a nice PNG of the Glider
+glider:
+    cargo build -r -p chbounds
+    cargo build -r -p pat2img
+    cargo run -q -r -p chbounds -- --uniform 2 glider.cells \
+        | cargo run -q -r -p pat2img -- {{imgopts}} - glider.png
