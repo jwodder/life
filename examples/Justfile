@@ -17,3 +17,10 @@ soupsplosion:
         {{imgopts}} \
         100 \
         soupsplosion.cells soupsplosion.gif
+
+# Animate a wickstretcher
+wickstretcher:
+    cargo build -r -p chbounds
+    cargo build -r -p evolve
+    cargo run -q -r -p chbounds -- --uniform 1 wickstretcher.rle \
+        | cargo run -q -r -p evolve -- --edges growxy --delay 100 50 - wickstretcher.gif
