@@ -10,7 +10,7 @@ use std::io::Write;
 
 pub trait DocumentExt: Sized {
     fn load_from_input(infile: InputArg) -> anyhow::Result<Self>;
-    fn dump_to_output(&self, outfile: OutputArg) -> anyhow::Result<()>;
+    fn dump_to_output(&self, outfile: OutputArg, fc: FormatChoice) -> anyhow::Result<()>;
 }
 
 impl DocumentExt for Document {
@@ -28,12 +28,15 @@ impl DocumentExt for Document {
         }
     }
 
-    fn dump_to_output(&self, outfile: OutputArg) -> anyhow::Result<()> {
-        let format = match outfile {
-            OutputArg::Stdout => Format::Plaintext,
-            OutputArg::Path(ref p) => Format::identify(p).ok_or_else(|| {
-                anyhow::Error::msg("output path does not have a supported file extension")
-            })?,
+    fn dump_to_output(&self, outfile: OutputArg, fc: FormatChoice) -> anyhow::Result<()> {
+        let format = match (fc, &outfile) {
+            (FormatChoice::Fixed(f), _) => f,
+            (FormatChoice::Autodetect, OutputArg::Stdout) => Format::Plaintext,
+            (FormatChoice::Autodetect, OutputArg::Path(p)) => {
+                Format::identify(p).ok_or_else(|| {
+                    anyhow::Error::msg("output path does not have a supported file extension")
+                })?
+            }
         };
         let mut fp = outfile.create().context("failed to open output file")?;
         write!(&mut fp, "{}", self.display(format)).context("failed to write to output file")?;

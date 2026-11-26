@@ -1,0 +1,19 @@
+[package]
+name = "repattern"
+edition.workspace = true
+rust-version.workspace = true
+description = "Convert Game of Life patterns between file formats"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+cmdutils = { path = "../cmdutils" }
+lifelib = { path = "../lifelib" }
+patharg.workspace = true
+
+[lints]
+workspace = true
