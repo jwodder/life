@@ -1,5 +1,5 @@
 use clap::Args;
-use lifelib::image::ImageBuilder;
+use lifelib::image::{ImageBuilder, image::Rgb};
 use std::num::NonZeroU32;
 
 #[derive(Args, Clone, Debug, PartialEq)]
@@ -49,22 +49,23 @@ pub struct Painter {
 
 impl Painter {
     pub fn build(&self) -> ImageBuilder {
-        let [r, g, b, _] = self.live_color.to_rgba8();
-        let [dr, dg, db, _] = self.dead_color.to_rgba8();
         let mut builder = ImageBuilder::new()
             .cell_size(self.cell_size)
-            .live_color([r, g, b].into())
-            .dead_color([dr, dg, db].into())
+            .live_color(color2rgb(self.live_color))
+            .dead_color(color2rgb(self.dead_color))
             .gutter(self.gutter)
             .margin(self.margin);
         if let Some(c) = self.gutter_color {
-            let [r, g, b, _] = c.to_rgba8();
-            builder = builder.gutter_color([r, g, b].into());
+            builder = builder.gutter_color(color2rgb(c));
         }
         if let Some(c) = self.margin_color {
-            let [r, g, b, _] = c.to_rgba8();
-            builder = builder.margin_color([r, g, b].into());
+            builder = builder.margin_color(color2rgb(c));
         }
         builder
     }
+}
+
+fn color2rgb(c: csscolorparser::Color) -> Rgb<u8> {
+    let [r, g, b, _] = c.to_rgba8();
+    Rgb([r, g, b])
 }
