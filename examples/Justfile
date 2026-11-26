@@ -6,3 +6,14 @@ glider:
     cargo build -r -p pat2img
     cargo run -q -r -p chbounds -- --uniform 2 glider.cells \
         | cargo run -q -r -p pat2img -- {{imgopts}} - glider.png
+
+# Animate some soup
+soupsplosion:
+    cargo build -r -p soup
+    cargo build -r -p evolve
+    cargo run -q -r -p soup -- 20x20 soupsplosion.cells
+    cargo run -q -r -p evolve -- \
+        --edges growxy \
+        {{imgopts}} \
+        100 \
+        soupsplosion.cells soupsplosion.gif
