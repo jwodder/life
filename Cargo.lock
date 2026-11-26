@@ -300,6 +300,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
+ "cmdutils",
  "lifelib",
  "patharg",
 ]
@@ -343,6 +344,17 @@ name = "clap_lex"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
+
+[[package]]
+name = "cmdutils"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "csscolorparser",
+ "lifelib",
+ "patharg",
+]
 
 [[package]]
 name = "color_quant"
@@ -473,7 +485,7 @@ dependencies = [
  "assert_cmd",
  "assert_fs",
  "clap",
- "csscolorparser",
+ "cmdutils",
  "itertools 0.15.0",
  "lifelib",
  "patharg",
@@ -985,7 +997,7 @@ dependencies = [
  "assert_cmd",
  "assert_fs",
  "clap",
- "csscolorparser",
+ "cmdutils",
  "lifelib",
  "patharg",
 ]
@@ -1538,6 +1550,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "clap",
+ "cmdutils",
  "lifelib",
  "patharg",
  "rand 0.10.4",
@@ -1657,6 +1670,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "clap",
+ "cmdutils",
  "fs-err",
  "life-utils",
  "lifelib",

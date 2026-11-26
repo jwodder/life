@@ -1,13 +1,8 @@
-use anyhow::Context;
 use clap::Parser;
-use lifelib::{
-    Document, Pattern,
-    formats::{Format, Letter},
-    utilities::Line,
-};
+use cmdutils::DocumentExt;
+use lifelib::{Document, Pattern, formats::Letter, utilities::Line};
 use patharg::OutputArg;
 use rand::distr::{Bernoulli, Distribution};
-use std::io::Write;
 use thiserror::Error;
 
 /// Generate a random Game of Life pattern
@@ -125,18 +120,7 @@ fn main() -> anyhow::Result<()> {
         rle_comments: args.rle_comment,
         pattern,
     };
-    let format = match args.outfile {
-        OutputArg::Stdout => Format::Plaintext,
-        OutputArg::Path(ref p) => Format::identify(p).ok_or_else(|| {
-            anyhow::Error::msg("output path does not have a supported file extension")
-        })?,
-    };
-    let mut fp = args
-        .outfile
-        .create()
-        .context("failed to open output file")?;
-    write!(&mut fp, "{}", doc.display(format)).context("failed to write to output file")?;
-    fp.flush().context("failed to write to output file")?;
+    doc.dump_to_output(args.outfile)?;
     Ok(())
 }
 
