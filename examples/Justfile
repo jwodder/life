@@ -14,6 +14,7 @@ soupsplosion:
     cargo run -q -r -p soup -- 20x20 soupsplosion.cells
     cargo run -q -r -p evolve -- \
         --edges growxy \
+        --delay 100 \
         {{imgopts}} \
         100 \
         soupsplosion.cells soupsplosion.gif
