@@ -4,6 +4,7 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
+use cmdutils::DocumentExt;
 use lifelib::{
     Document, Edges, FormatChoice, Pattern,
     formats::{Format, Letter},
@@ -233,17 +234,7 @@ fn main() -> anyhow::Result<()> {
     }
     let saver = args.saver()?;
     let maxtick = args.ticks.maxvalue();
-    let doc = match args.infile {
-        stdin @ InputArg::Stdin => {
-            let docstr = stdin
-                .read_to_string()
-                .context("failed to read pattern from standard input")?;
-            Document::load_from_str(&docstr, FormatChoice::Autodetect)
-                .context("failed to parse input pattern")?
-        }
-        InputArg::Path(p) => Document::load_from_file(&p, FormatChoice::Autodetect)
-            .with_context(|| format!("failed to read pattern from {}", p.display()))?,
-    };
+    let doc = Document::load_from_input(args.infile)?;
     let mut postproc =
         if args.sync_bounds && matches!(args.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY) {
             PostProcessor::syncer(saver)

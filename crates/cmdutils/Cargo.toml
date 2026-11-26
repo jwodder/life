@@ -1,0 +1,22 @@
+[package]
+name = "cmdutils"
+edition.workspace = true
+rust-version.workspace = true
+description = "Common utilities for life commands"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+clap = { workspace = true, optional = true }
+csscolorparser = { workspace = true, optional = true }
+lifelib = { path = "../lifelib" }
+patharg.workspace = true
+
+[features]
+painter = ["dep:clap", "dep:csscolorparser", "lifelib/image-formats"]
+
+[lints]
+workspace = true

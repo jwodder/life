@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+cmdutils = { path = "../cmdutils" }
 fs-err.workspace = true
 life-utils = { path = "../life-utils" }
 lifelib = { path = "../lifelib" }

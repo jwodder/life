@@ -1,8 +1,8 @@
 use anyhow::Context;
 use clap::Parser;
-use lifelib::{Document, FormatChoice, Padding, formats::Format};
+use cmdutils::DocumentExt;
+use lifelib::{Document, Padding};
 use patharg::{InputArg, OutputArg};
-use std::io::Write;
 
 /// Pad & crop Game of Life patterns
 ///
@@ -81,17 +81,7 @@ struct Arguments {
 
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let mut doc = match args.infile {
-        stdin @ InputArg::Stdin => {
-            let docstr = stdin
-                .read_to_string()
-                .context("failed to read pattern from standard input")?;
-            Document::load_from_str(&docstr, FormatChoice::Autodetect)
-                .context("failed to parse input pattern")?
-        }
-        InputArg::Path(p) => Document::load_from_file(&p, FormatChoice::Autodetect)
-            .with_context(|| format!("failed to read pattern from {}", p.display()))?,
-    };
+    let mut doc = Document::load_from_input(args.infile)?;
     let mut bounds = if args.minimize {
         doc.pattern.bounding_box()
     } else {
@@ -122,17 +112,6 @@ fn main() -> anyhow::Result<()> {
         .padded(padding)
         .context("failed to computed padded dimensions")?;
     doc.pattern = doc.pattern.resize(bounds);
-    let format = match args.outfile {
-        OutputArg::Stdout => Format::Plaintext,
-        OutputArg::Path(ref p) => Format::identify(p).ok_or_else(|| {
-            anyhow::Error::msg("output path does not have a supported file extension")
-        })?,
-    };
-    let mut fp = args
-        .outfile
-        .create()
-        .context("failed to open output file")?;
-    write!(&mut fp, "{}", doc.display(format)).context("failed to write to output file")?;
-    fp.flush().context("failed to write to output file")?;
+    doc.dump_to_output(args.outfile)?;
     Ok(())
 }

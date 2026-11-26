@@ -11,8 +11,8 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-csscolorparser.workspace = true
-lifelib = { path = "../lifelib", features = ["image", "image-formats"] }
+cmdutils = { path = "../cmdutils", features = ["painter"] }
+lifelib = { path = "../lifelib", features = ["image"] }
 patharg.workspace = true
 
 [dev-dependencies]
