@@ -21,6 +21,8 @@ pub struct Coords {
 }
 
 impl Coords {
+    pub const ORIGIN: Coords = Coords { y: 0, x: 0 };
+
     pub fn new(y: isize, x: isize) -> Coords {
         Coords { y, x }
     }
