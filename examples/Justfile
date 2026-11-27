@@ -12,16 +12,11 @@ soupsplosion:
     cargo build -r -p soup
     cargo build -r -p evolve
     cargo run -q -r -p soup -- 20x20 soupsplosion.cells
-    cargo run -q -r -p evolve -- \
-        --edges growxy \
-        --delay 100 \
-        {{imgopts}} \
-        100 \
-        soupsplosion.cells soupsplosion.gif
+    cargo run -q -r -p evolve -- --edges growxy --delay 10 {{imgopts}} 100 soupsplosion.cells soupsplosion.gif
 
 # Animate a wickstretcher
 wickstretcher:
     cargo build -r -p chbounds
     cargo build -r -p evolve
     cargo run -q -r -p chbounds -- --uniform 1 wickstretcher.rle \
-        | cargo run -q -r -p evolve -- --edges growxy --delay 100 50 - wickstretcher.gif
+        | cargo run -q -r -p evolve -- --edges growxy --delay 10 50 - wickstretcher.gif
