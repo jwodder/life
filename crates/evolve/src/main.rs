@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use cmdutils::{DocumentExt, Painter};
+use cmdutils::{DocumentExt, Painter, io_exit};
 use lifelib::{
     Document, Edges,
     image::image::{
@@ -18,7 +18,7 @@ use std::num::{NonZeroU32, NonZeroUsize};
 /// See <https://github.com/jwodder/life/tree/master/crates/evolve> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     #[command(flatten)]
     painter: Painter,
 
@@ -74,39 +74,44 @@ struct Arguments {
     outfile: OutputArg,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Arguments::parse();
-    let builder = args.painter.build();
-    let doc = Document::load_from_input(args.infile)?;
-    let mut states = Vec::with_capacity(args.generations.get());
-    for (i, p) in doc
-        .pattern
-        .with_edges(args.edges)
-        .into_try_generations()
-        .enumerate()
-        .take(args.generations.get())
-    {
-        let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
-        states.push(p);
+impl Command {
+    fn run(self) -> anyhow::Result<()> {
+        let builder = self.painter.build();
+        let doc = Document::load_from_input(self.infile)?;
+        let mut states = Vec::with_capacity(self.generations.get());
+        for (i, p) in doc
+            .pattern
+            .with_edges(self.edges)
+            .into_try_generations()
+            .enumerate()
+            .take(self.generations.get())
+        {
+            let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
+            states.push(p);
+        }
+        states = sync_bounds(&states).context("failed to synchronize bounds")?;
+        let Some(msdelay) = self.delay.get().checked_mul(10) else {
+            anyhow::bail!("numeric overflow while computing frame delay");
+        };
+        let delay = Delay::from_numer_denom_ms(msdelay, 1);
+        let fp = BufWriter::new(
+            self.outfile
+                .create()
+                .context("failed to open output file")?,
+        );
+        let mut enc = GifEncoder::new(fp);
+        enc.set_repeat(Repeat::Infinite)
+            .context("failed to set repeat")?;
+        for p in states {
+            let img = builder.render(&p).context("failed to render frame")?;
+            let img = RgbaImage::from(DynamicImage::from(img));
+            let frame = Frame::from_parts(img, 0, 0, delay);
+            enc.encode_frame(frame).context("failed to encode frame")?;
+        }
+        Ok(())
     }
-    states = sync_bounds(&states).context("failed to synchronize bounds")?;
-    let Some(msdelay) = args.delay.get().checked_mul(10) else {
-        anyhow::bail!("numeric overflow while computing frame delay");
-    };
-    let delay = Delay::from_numer_denom_ms(msdelay, 1);
-    let fp = BufWriter::new(
-        args.outfile
-            .create()
-            .context("failed to open output file")?,
-    );
-    let mut enc = GifEncoder::new(fp);
-    enc.set_repeat(Repeat::Infinite)
-        .context("failed to set repeat")?;
-    for p in states {
-        let img = builder.render(&p).context("failed to render frame")?;
-        let img = RgbaImage::from(DynamicImage::from(img));
-        let frame = Frame::from_parts(img, 0, 0, delay);
-        enc.encode_frame(frame).context("failed to encode frame")?;
-    }
-    Ok(())
+}
+
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }

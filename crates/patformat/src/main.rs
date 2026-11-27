@@ -1,5 +1,5 @@
 use clap::Parser;
-use cmdutils::DocumentExt;
+use cmdutils::{DocumentExt, io_exit};
 use lifelib::{
     Document, FormatChoice,
     formats::{Format, Letter},
@@ -12,7 +12,7 @@ use patharg::{InputArg, OutputArg};
 /// See <https://github.com/jwodder/life/tree/master/crates/patformat> for more
 /// information.
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     /// Remove all comments and hash lines from the input file
     #[arg(short = 'C', long)]
     clear_comments: bool,
@@ -63,25 +63,30 @@ struct Arguments {
     outfile: OutputArg,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Arguments::parse();
-    let mut doc = Document::load_from_input(args.infile)?;
-    if args.clear_comments {
-        doc.name = None;
-        doc.comments.clear();
-        doc.rle_comments.clear();
+impl Command {
+    fn run(self) -> anyhow::Result<()> {
+        let mut doc = Document::load_from_input(self.infile)?;
+        if self.clear_comments {
+            doc.name = None;
+            doc.comments.clear();
+            doc.rle_comments.clear();
+        }
+        if let Some(n) = self.name {
+            doc.name = Some(n);
+        }
+        doc.comments.extend(self.comment);
+        doc.rle_comments.extend(self.rle_comment);
+        doc.dump_to_output(
+            self.outfile,
+            self.format
+                .map_or(FormatChoice::Autodetect, FormatChoice::Fixed),
+        )?;
+        Ok(())
     }
-    if let Some(n) = args.name {
-        doc.name = Some(n);
-    }
-    doc.comments.extend(args.comment);
-    doc.rle_comments.extend(args.rle_comment);
-    doc.dump_to_output(
-        args.outfile,
-        args.format
-            .map_or(FormatChoice::Autodetect, FormatChoice::Fixed),
-    )?;
-    Ok(())
+}
+
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }
 
 fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, Line)> {

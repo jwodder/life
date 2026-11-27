@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use cmdutils::{DocumentExt, Painter};
+use cmdutils::{DocumentExt, Painter, io_exit};
 use lifelib::Document;
 use patharg::InputArg;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 /// See <https://github.com/jwodder/life/tree/master/crates/pat2img> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     #[command(flatten)]
     painter: Painter,
 
@@ -29,14 +29,19 @@ struct Arguments {
     outfile: PathBuf,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Arguments::parse();
-    let builder = args.painter.build();
-    let doc = Document::load_from_input(args.infile)?;
-    builder
-        .render(&doc.pattern)
-        .context("failed to render image")?
-        .save(&args.outfile)
-        .with_context(|| format!("failed to write image to {}", args.outfile.display()))?;
-    Ok(())
+impl Command {
+    fn run(self) -> anyhow::Result<()> {
+        let builder = self.painter.build();
+        let doc = Document::load_from_input(self.infile)?;
+        builder
+            .render(&doc.pattern)
+            .context("failed to render image")?
+            .save(&self.outfile)
+            .with_context(|| format!("failed to write image to {}", self.outfile.display()))?;
+        Ok(())
+    }
+}
+
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }
