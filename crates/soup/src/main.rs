@@ -1,6 +1,6 @@
 use clap::Parser;
 use cmdutils::DocumentExt;
-use lifelib::{Document, Pattern, formats::Letter, utilities::Line};
+use lifelib::{Document, FormatChoice, Pattern, formats::Letter, utilities::Line};
 use patharg::OutputArg;
 use rand::distr::{Bernoulli, Distribution};
 use thiserror::Error;
@@ -120,7 +120,7 @@ fn main() -> anyhow::Result<()> {
         rle_comments: args.rle_comment,
         pattern,
     };
-    doc.dump_to_output(args.outfile)?;
+    doc.dump_to_output(args.outfile, FormatChoice::Autodetect)?;
     Ok(())
 }
 

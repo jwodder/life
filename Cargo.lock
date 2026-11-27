@@ -1003,6 +1003,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "patformat"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "assert_fs",
+ "clap",
+ "cmdutils",
+ "lifelib",
+ "patharg",
+ "pretty_assertions",
+]
+
+[[package]]
 name = "patharg"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

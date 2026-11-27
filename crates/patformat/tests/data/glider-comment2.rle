@@ -1,0 +1,7 @@
+#N Glider
+#C Very famous.
+#C Goes nyoooom.
+#C (But only at one fourth the speed of light)
+#O Richard K. Guy, 1969
+x = 7, y = 7
+2$3bo$4bo$2b3o!

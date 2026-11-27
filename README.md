@@ -31,6 +31,9 @@ The packages are:
 
     - [`pat2img`][] — Render patterns as images
 
+    - [`patformat`][] — Convert pattern files between file formats, optionally
+      adjusting comments
+
     - [`soup`][] — Generate a random pattern
 
 This workspace as a whole is a hobby project for personal experimentation &
@@ -46,5 +49,6 @@ anything here at your own risk.
 [`lifelib`]: https://github.com/jwodder/life/tree/master/crates/lifelib
 [`parse-check`]: https://github.com/jwodder/life/tree/master/crates/parse-check
 [`pat2img`]: https://github.com/jwodder/life/tree/master/crates/pat2img
+[`patformat`]: https://github.com/jwodder/life/tree/master/crates/patformat
 [`soup`]: https://github.com/jwodder/life/tree/master/crates/soup
 [`tick`]: https://github.com/jwodder/life/tree/master/crates/tick

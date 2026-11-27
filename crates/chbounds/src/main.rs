@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::Parser;
 use cmdutils::DocumentExt;
-use lifelib::{Document, Padding};
+use lifelib::{Document, FormatChoice, Padding};
 use patharg::{InputArg, OutputArg};
 
 /// Pad & crop Game of Life patterns
@@ -112,6 +112,6 @@ fn main() -> anyhow::Result<()> {
         .padded(padding)
         .context("failed to computed padded dimensions")?;
     doc.pattern = doc.pattern.resize(bounds);
-    doc.dump_to_output(args.outfile)?;
+    doc.dump_to_output(args.outfile, FormatChoice::Autodetect)?;
     Ok(())
 }
