@@ -43,8 +43,8 @@ without leading `#`) or as [CSS color names][].
 - `-D COLOR`, `--dead-color COLOR` — Set the color of dead cells [default:
   `#FFFFFF`]
 
-- `-d MS`, `--delay MS` — Set the time between each frame transition as an
-  integer number of milliseconds
+- `-d TIME`, `--delay TIME` — Set the time between each frame transition as an
+  integer number of hundredths of a second [default: 50 (500 ms)]
 
 - `-E VALUE`, `--edges VALUE` — Configure the behavior of the edges of the
   pattern's universe.  The allowed values (case insensitive) are:

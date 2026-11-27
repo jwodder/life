@@ -23,8 +23,8 @@ struct Arguments {
     painter: Painter,
 
     /// Set the time between each frame transition as an integer number of
-    /// milliseconds
-    #[arg(short, long, default_value = "500", value_name = "MILLISECONDS")]
+    /// hundredths of a second
+    #[arg(short, long, default_value = "50", value_name = "TIME")]
     delay: NonZeroU32,
 
     /// Configure the behavior of the edges of the pattern's universe.
@@ -90,7 +90,10 @@ fn main() -> anyhow::Result<()> {
         states.push(p);
     }
     states = sync_bounds(&states).context("failed to synchronize bounds")?;
-    let delay = Delay::from_numer_denom_ms(args.delay.get(), 1);
+    let Some(msdelay) = args.delay.get().checked_mul(10) else {
+        anyhow::bail!("numeric overflow while computing frame delay");
+    };
+    let delay = Delay::from_numer_denom_ms(msdelay, 1);
     let fp = BufWriter::new(
         args.outfile
             .create()
