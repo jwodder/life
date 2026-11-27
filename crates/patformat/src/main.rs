@@ -9,7 +9,11 @@ use patharg::{InputArg, OutputArg};
 /// information.
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {
-    #[arg(short, long)]
+    /// Set the output file format.
+    ///
+    /// If not specified, the output format will be determined from the output
+    /// path's file extension.
+    #[arg(short, long, value_name = "plaintext|cells|rle")]
     format: Option<Format>,
 
     /// A file containing a Game of Life pattern.
@@ -24,9 +28,10 @@ struct Arguments {
 
     /// Path at which to write the pattern.
     ///
-    /// The path's file extension must be `.cells` (to produce a plaintext
-    /// file) or `.rle` (to produce an RLE file).  Alternatively, the path may
-    /// be `-` or omitted to write plaintext to standard output.
+    /// If `--format` is not specified, then the path's file extension must be
+    /// `.cells` (to produce a plaintext file) or `.rle` (to produce an RLE
+    /// file).  Alternatively, the path may be `-` or omitted to write
+    /// to standard output (as plaintext if `--format` is not specified).
     #[arg(default_value_t)]
     outfile: OutputArg,
 }
