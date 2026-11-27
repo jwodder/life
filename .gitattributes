@@ -1,2 +1,3 @@
 *.cells eol=lf
+*.ppm eol=lf
 *.rle eol=lf
