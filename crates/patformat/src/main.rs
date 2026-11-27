@@ -23,16 +23,16 @@ struct Arguments {
     #[arg(short, long, value_name = "TEXT")]
     comment: Vec<Line>,
 
-    /// Set the pattern name to embed in the output file.
-    #[arg(short = 'N', long, value_name = "TEXT")]
-    name: Option<Line>,
-
     /// Set the output file format.
     ///
     /// If not specified, the output format will be determined from the output
-    /// path's file extension.
+    /// path's file extension, or plaintext when writing to stdout.
     #[arg(short, long, value_name = "plaintext|cells|rle")]
     format: Option<Format>,
+
+    /// Set the pattern name to embed in the output file.
+    #[arg(short = 'N', long, value_name = "TEXT")]
+    name: Option<Line>,
 
     /// Add the given hash line to an RLE output file.
     ///
