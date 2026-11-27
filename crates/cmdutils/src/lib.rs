@@ -6,7 +6,9 @@ pub use crate::painter::Painter;
 use anyhow::Context;
 use lifelib::{Document, FormatChoice, formats::Format};
 use patharg::{InputArg, OutputArg};
-use std::io::Write;
+use std::io::{Error, ErrorKind, Write, stderr};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
 pub trait DocumentExt: Sized {
     fn load_from_input(infile: InputArg) -> anyhow::Result<Self>;
@@ -42,5 +44,28 @@ impl DocumentExt for Document {
         write!(&mut fp, "{}", self.display(format)).context("failed to write to output file")?;
         fp.flush().context("failed to write to output file")?;
         Ok(())
+    }
+}
+
+pub fn io_exit(r: anyhow::Result<()>) -> ExitCode {
+    match r {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            for cause in e.chain() {
+                if let Some(ioerr) = cause.downcast_ref::<Error>()
+                    && ioerr.kind() == ErrorKind::BrokenPipe
+                {
+                    return ExitCode::SUCCESS;
+                }
+            }
+            let mut err = stderr().lock();
+            if let Some(p) = std::env::args_os().next().map(PathBuf::from)
+                && let Some(name) = p.file_name()
+            {
+                let _ = writeln!(&mut err, "{}: ", Path::new(name).display());
+            }
+            let _ = writeln!(&mut err, "{e:?}");
+            ExitCode::FAILURE
+        }
     }
 }

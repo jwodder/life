@@ -1,6 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use cmdutils::DocumentExt;
+use cmdutils::{DocumentExt, io_exit};
 use lifelib::{Document, FormatChoice, Padding};
 use patharg::{InputArg, OutputArg};
 
@@ -9,7 +9,7 @@ use patharg::{InputArg, OutputArg};
 /// See <https://github.com/jwodder/life/tree/master/crates/chbounds> for more
 /// information.
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     /// Add/remove <INT> rows to/from the bottom of the pattern
     ///
     /// This overrides any bottom padding amounts set by --uniform or
@@ -79,39 +79,44 @@ struct Arguments {
     outfile: OutputArg,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Arguments::parse();
-    let mut doc = Document::load_from_input(args.infile)?;
-    let mut bounds = if args.minimize {
-        doc.pattern.bounding_box()
-    } else {
-        doc.pattern.bounds()
-    };
-    let mut padding = Padding::uniform(args.uniform.unwrap_or_default());
-    if let Some(p) = args.vertical {
-        padding.top = p;
-        padding.bottom = p;
+impl Command {
+    fn run(self) -> anyhow::Result<()> {
+        let mut doc = Document::load_from_input(self.infile)?;
+        let mut bounds = if self.minimize {
+            doc.pattern.bounding_box()
+        } else {
+            doc.pattern.bounds()
+        };
+        let mut padding = Padding::uniform(self.uniform.unwrap_or_default());
+        if let Some(p) = self.vertical {
+            padding.top = p;
+            padding.bottom = p;
+        }
+        if let Some(p) = self.horizontal {
+            padding.left = p;
+            padding.right = p;
+        }
+        if let Some(p) = self.top {
+            padding.top = p;
+        }
+        if let Some(p) = self.left {
+            padding.left = p;
+        }
+        if let Some(p) = self.bottom {
+            padding.bottom = p;
+        }
+        if let Some(p) = self.right {
+            padding.right = p;
+        }
+        bounds = bounds
+            .padded(padding)
+            .context("failed to computed padded dimensions")?;
+        doc.pattern = doc.pattern.resize(bounds);
+        doc.dump_to_output(self.outfile, FormatChoice::Autodetect)?;
+        Ok(())
     }
-    if let Some(p) = args.horizontal {
-        padding.left = p;
-        padding.right = p;
-    }
-    if let Some(p) = args.top {
-        padding.top = p;
-    }
-    if let Some(p) = args.left {
-        padding.left = p;
-    }
-    if let Some(p) = args.bottom {
-        padding.bottom = p;
-    }
-    if let Some(p) = args.right {
-        padding.right = p;
-    }
-    bounds = bounds
-        .padded(padding)
-        .context("failed to computed padded dimensions")?;
-    doc.pattern = doc.pattern.resize(bounds);
-    doc.dump_to_output(args.outfile, FormatChoice::Autodetect)?;
-    Ok(())
+}
+
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }

@@ -4,7 +4,7 @@ use crate::tickset::TickSet;
 use crate::ticktemplate::TickTemplate;
 use anyhow::Context;
 use clap::Parser;
-use cmdutils::DocumentExt;
+use cmdutils::{DocumentExt, io_exit};
 use lifelib::{
     Document, Edges, FormatChoice, Pattern,
     formats::{Format, Letter},
@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 /// See <https://github.com/jwodder/life/tree/master/crates/tick> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     /// Embed the given comment in the output file.
     ///
     /// The text may contain `%d` placeholders which will be replaced by the
@@ -118,7 +118,39 @@ struct Arguments {
     outfile: TickTemplate,
 }
 
-impl Arguments {
+impl Command {
+    fn run(mut self) -> anyhow::Result<()> {
+        if self.outfile.is_literal() && self.ticks.is_more_than_one() {
+            eprintln!(
+                "tick: warning: multiple tick numbers selected but no placeholders included in output path"
+            );
+        }
+        let saver = self.saver()?;
+        let maxtick = self.ticks.maxvalue();
+        let doc = Document::load_from_input(self.infile)?;
+        let mut postproc = if self.sync_bounds
+            && matches!(self.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY)
+        {
+            PostProcessor::syncer(saver)
+        } else {
+            PostProcessor::nil(saver)
+        };
+        for (i, p) in doc
+            .pattern
+            .with_edges(self.edges)
+            .into_try_generations()
+            .take(maxtick.saturating_add(1))
+            .enumerate()
+        {
+            let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
+            if self.ticks.contains(i) {
+                postproc.process(i, p)?;
+            }
+        }
+        postproc.finalize()?;
+        Ok(())
+    }
+
     fn saver(&mut self) -> anyhow::Result<Saver> {
         if let Some(ext) = self.outfile.extension()
             && let Some(format) = Format::iter().find(|f| f.has_extension(ext))
@@ -225,36 +257,8 @@ impl PostProcessor {
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let mut args = Arguments::parse();
-    if args.outfile.is_literal() && args.ticks.is_more_than_one() {
-        eprintln!(
-            "tick: warning: multiple tick numbers selected but no placeholders included in output path"
-        );
-    }
-    let saver = args.saver()?;
-    let maxtick = args.ticks.maxvalue();
-    let doc = Document::load_from_input(args.infile)?;
-    let mut postproc =
-        if args.sync_bounds && matches!(args.edges, Edges::GrowX | Edges::GrowY | Edges::GrowXY) {
-            PostProcessor::syncer(saver)
-        } else {
-            PostProcessor::nil(saver)
-        };
-    for (i, p) in doc
-        .pattern
-        .with_edges(args.edges)
-        .into_try_generations()
-        .take(maxtick.saturating_add(1))
-        .enumerate()
-    {
-        let p = p.with_context(|| format!("bounds error while computing generation {i}"))?;
-        if args.ticks.contains(i) {
-            postproc.process(i, p)?;
-        }
-    }
-    postproc.finalize()?;
-    Ok(())
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }
 
 fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, TickTemplate)> {

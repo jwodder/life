@@ -1,5 +1,5 @@
 use clap::Parser;
-use cmdutils::DocumentExt;
+use cmdutils::{DocumentExt, io_exit};
 use lifelib::{Document, FormatChoice, Pattern, formats::Letter, utilities::Line};
 use patharg::OutputArg;
 use rand::distr::{Bernoulli, Distribution};
@@ -10,7 +10,7 @@ use thiserror::Error;
 /// See <https://github.com/jwodder/life/tree/master/crates/soup> for more
 /// information.
 #[derive(Clone, Debug, Parser, PartialEq)]
-struct Arguments {
+struct Command {
     /// Embed the given comment in the output file.
     ///
     /// This option may be specified multiple times.
@@ -45,6 +45,28 @@ struct Arguments {
     /// be `-` or omitted to write plaintext to standard output.
     #[arg(default_value_t)]
     outfile: OutputArg,
+}
+
+impl Command {
+    fn run(self) -> anyhow::Result<()> {
+        let mut pattern = Pattern::try_new(self.size.height, self.size.width)?;
+        let dist = Bernoulli::new(self.probabilty.0 / 100.0)
+            .expect("probability should be between 0 and 1");
+        let mut rng = rand::rng();
+        for c in pattern.iter_coords() {
+            if dist.sample(&mut rng) {
+                pattern.birth(c);
+            }
+        }
+        let doc = Document {
+            name: self.name,
+            comments: self.comment,
+            rle_comments: self.rle_comment,
+            pattern,
+        };
+        doc.dump_to_output(self.outfile, FormatChoice::Autodetect)?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -103,25 +125,8 @@ enum ParsePercentError {
     Parse(#[from] std::num::ParseFloatError),
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Arguments::parse();
-    let mut pattern = Pattern::try_new(args.size.height, args.size.width)?;
-    let dist =
-        Bernoulli::new(args.probabilty.0 / 100.0).expect("probability should be between 0 and 1");
-    let mut rng = rand::rng();
-    for c in pattern.iter_coords() {
-        if dist.sample(&mut rng) {
-            pattern.birth(c);
-        }
-    }
-    let doc = Document {
-        name: args.name,
-        comments: args.comment,
-        rle_comments: args.rle_comment,
-        pattern,
-    };
-    doc.dump_to_output(args.outfile, FormatChoice::Autodetect)?;
-    Ok(())
+fn main() -> std::process::ExitCode {
+    io_exit(Command::parse().run())
 }
 
 fn parse_rle_comment_arg(s: &str) -> anyhow::Result<(Letter, Line)> {
