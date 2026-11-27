@@ -1,5 +1,5 @@
 [package]
-name = "repattern"
+name = "patformat"
 edition.workspace = true
 rust-version.workspace = true
 description = "Convert Game of Life patterns between file formats"

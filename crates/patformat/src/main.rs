@@ -5,7 +5,7 @@ use patharg::{InputArg, OutputArg};
 
 /// Convert Game of Life patterns between file formats
 ///
-/// See <https://github.com/jwodder/life/tree/master/crates/repattern> for more
+/// See <https://github.com/jwodder/life/tree/master/crates/patformat> for more
 /// information.
 #[derive(Clone, Debug, Eq, Parser, PartialEq)]
 struct Arguments {
