@@ -1,0 +1,5 @@
+#N Featherweight spaceship
+#C Moves diagonally at speed c/4
+#O Not John Conway
+x = 7, y = 7
+2$3bo$4bo$2b3o!

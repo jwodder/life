@@ -1007,10 +1007,13 @@ name = "patformat"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "assert_cmd",
+ "assert_fs",
  "clap",
  "cmdutils",
  "lifelib",
  "patharg",
+ "pretty_assertions",
 ]
 
 [[package]]
