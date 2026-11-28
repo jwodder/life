@@ -49,7 +49,7 @@ struct Command {
 
 impl Command {
     fn run(self) -> anyhow::Result<()> {
-        let mut pattern = Pattern::try_new(self.size.height, self.size.width)?;
+        let mut pattern = Pattern::try_new(self.size.width, self.size.height)?;
         let dist = Bernoulli::new(self.probabilty.0 / 100.0)
             .expect("probability should be between 0 and 1");
         let mut rng = rand::rng();

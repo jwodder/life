@@ -18,15 +18,15 @@ impl Pattern {
     ///
     /// Panics if either `width` or `height` exceeds [`isize::MAX`] or if
     /// `width * height` exceeds [`usize::MAX`]
-    pub fn new(height: usize, width: usize) -> Pattern {
-        match Pattern::try_new(height, width) {
+    pub fn new(width: usize, height: usize) -> Pattern {
+        match Pattern::try_new(width, height) {
             Ok(p) => p,
             Err(e) => panic!("failed to construct Pattern: {e}"),
         }
     }
 
-    pub fn try_new(height: usize, width: usize) -> Result<Pattern, BoundsError> {
-        let bounds = Bounds::try_new(height, width)?;
+    pub fn try_new(width: usize, height: usize) -> Result<Pattern, BoundsError> {
+        let bounds = Bounds::try_new(width, height)?;
         let cells = BitVec::from_elem(height * width, false);
         Ok(Pattern {
             bounds,
@@ -262,7 +262,7 @@ impl Pattern {
         right = max_x + 1;
         let height = top.abs_diff(bottom);
         let width = left.abs_diff(right);
-        match Bounds::try_new_with_upper_left(height, width, Coords { y: top, x: left }) {
+        match Bounds::try_new_with_upper_left(width, height, Coords { y: top, x: left }) {
             Ok(b) => b,
             Err(_) => unreachable!("Bounds within a Bounds must be valid"),
         }
@@ -491,7 +491,7 @@ mod tests {
         #[case(Edges::WrapY, "##")]
         #[case(Edges::WrapXY, "#.")]
         fn test_step_horiz_domino(#[case] edges: Edges, #[case] after: &str) {
-            let mut life = Pattern::new(1, 2).with_edges(edges);
+            let mut life = Pattern::new(2, 1).with_edges(edges);
             life.birth((0, 0));
             let life2 = life.step();
             assert_eq!(life2.draw('.', '#').to_string(), after);
@@ -503,7 +503,7 @@ mod tests {
         #[case(Edges::WrapY, ".\n.")]
         #[case(Edges::WrapXY, "#\n.")]
         fn test_step_vert_domino(#[case] edges: Edges, #[case] after: &str) {
-            let mut life = Pattern::new(2, 1).with_edges(edges);
+            let mut life = Pattern::new(1, 2).with_edges(edges);
             life.birth((0, 0));
             let life2 = life.step();
             assert_eq!(life2.draw('.', '#').to_string(), after);
@@ -562,7 +562,7 @@ mod tests {
             // #....
             // #...#
             // ####.
-            let mut life = Pattern::new(4, 5).with_edges(Edges::GrowXY);
+            let mut life = Pattern::new(5, 4).with_edges(Edges::GrowXY);
             life.birth((0, 1));
             life.birth((0, 4));
             life.birth((1, 0));
