@@ -71,7 +71,7 @@ impl PatternBuilder {
     }
 
     pub fn build(self) -> Result<Pattern, BoundsError> {
-        let mut pat = Pattern::try_new(self.height, self.width)?.with_edges(self.edges);
+        let mut pat = Pattern::try_new(self.width, self.height)?.with_edges(self.edges);
         for c in self.live {
             pat.birth(c);
         }

@@ -113,7 +113,7 @@ impl FromStr for Rle {
             _ => return Err(RleError::NoData),
         };
         let (width, height) = parse_header(header)?;
-        let mut pattern = Pattern::try_new(height, width)?;
+        let mut pattern = Pattern::try_new(width, height)?;
         let mut y = 0isize;
         let mut x = 0isize;
         for run in parse_runs(data) {

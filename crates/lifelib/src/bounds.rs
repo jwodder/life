@@ -20,12 +20,12 @@ impl Bounds {
     ///
     /// Panics if either `width` or `height` exceeds [`isize::MAX`] or if
     /// `width * height` exceeds [`usize::MAX`]
-    pub fn new(height: usize, width: usize) -> Bounds {
-        Bounds::new_with_upper_left(height, width, Coords { y: 0, x: 0 })
+    pub fn new(width: usize, height: usize) -> Bounds {
+        Bounds::new_with_upper_left(width, height, Coords { y: 0, x: 0 })
     }
 
-    pub fn try_new(height: usize, width: usize) -> Result<Bounds, BoundsError> {
-        Bounds::try_new_with_upper_left(height, width, Coords { y: 0, x: 0 })
+    pub fn try_new(width: usize, height: usize) -> Result<Bounds, BoundsError> {
+        Bounds::try_new_with_upper_left(width, height, Coords { y: 0, x: 0 })
     }
 
     /// # Panics
@@ -35,16 +35,16 @@ impl Bounds {
     /// - `width * height` exceeds [`usize::MAX`]
     /// - `upper_left.y + height` exceeds [`isize::MAX`]
     /// - `upper_left.x + width` exceeds [`isize::MAX`]
-    pub fn new_with_upper_left(height: usize, width: usize, upper_left: Coords) -> Bounds {
-        match Bounds::try_new_with_upper_left(height, width, upper_left) {
+    pub fn new_with_upper_left(width: usize, height: usize, upper_left: Coords) -> Bounds {
+        match Bounds::try_new_with_upper_left(width, height, upper_left) {
             Ok(b) => b,
             Err(e) => panic!("failed to construct Bounds: {e}"),
         }
     }
 
     pub fn try_new_with_upper_left(
-        height: usize,
         width: usize,
+        height: usize,
         upper_left: Coords,
     ) -> Result<Bounds, BoundsError> {
         if height == 0 || width == 0 {
@@ -129,7 +129,7 @@ impl Bounds {
     }
 
     pub fn moved_to<C: Into<Coords>>(&self, c: C) -> Result<Bounds, BoundsError> {
-        Bounds::try_new_with_upper_left(self.height, self.width, c.into())
+        Bounds::try_new_with_upper_left(self.width, self.height, c.into())
     }
 
     pub fn try_union(&self, other: Bounds) -> Result<Bounds, BoundsError> {
@@ -148,8 +148,8 @@ impl Bounds {
                 let width = xstart.abs_diff(xend);
                 let height = ystart.abs_diff(yend);
                 Bounds::try_new_with_upper_left(
-                    height,
                     width,
+                    height,
                     Coords {
                         y: ystart,
                         x: xstart,
@@ -180,7 +180,7 @@ impl Bounds {
             .ok_or(PaddingError::Overflow)?;
         let height = signed_add(signed_add(self.height, pad.top)?, pad.bottom)?;
         let width = signed_add(signed_add(self.width, pad.left)?, pad.right)?;
-        Bounds::try_new_with_upper_left(height, width, Coords { y, x }).map_err(Into::into)
+        Bounds::try_new_with_upper_left(width, height, Coords { y, x }).map_err(Into::into)
     }
 }
 
@@ -377,7 +377,7 @@ mod tests {
 
         #[test]
         fn three_by_two() {
-            let bounds = Bounds::new(3, 2);
+            let bounds = Bounds::new(2, 3);
             let mut iter = bounds.into_iter();
             assert_eq!(iter.size_hint(), (6, Some(6)));
             assert_eq!(iter.next(), Some(Coords { y: 0, x: 0 }));
@@ -410,7 +410,7 @@ mod tests {
             // ....####.
             // ....####.
             // .........
-            let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+            let b1 = Bounds::new_with_upper_left(5, 3, Coords { y: 1, x: 1 });
             let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
             let b3 = b1 | b2;
             assert_eq!(b3.width(), 7);
@@ -427,7 +427,7 @@ mod tests {
             // .##XX#.
             // .#####.
             // .......
-            let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+            let b1 = Bounds::new_with_upper_left(5, 4, Coords { y: 1, x: 1 });
             let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
             let b3 = b1 | b2;
             assert_eq!(b3, b1);
@@ -439,8 +439,8 @@ mod tests {
             // .###OOOO.
             // .###OOOO.
             // .........
-            let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
-            let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+            let b1 = Bounds::new_with_upper_left(3, 2, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(4, 2, Coords { y: 1, x: 4 });
             let b3 = b1 | b2;
             assert_eq!(b3.width(), 7);
             assert_eq!(b3.height(), 2);
@@ -458,7 +458,7 @@ mod tests {
             // .####........
             // .####........
             // .............
-            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b1 = Bounds::new_with_upper_left(4, 2, Coords { y: 5, x: 1 });
             let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
             let b3 = b1 | b2;
             assert_eq!(b3.width(), 11);
@@ -469,7 +469,7 @@ mod tests {
 
         #[test]
         fn empty_and_nonempty() {
-            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b1 = Bounds::new_with_upper_left(4, 2, Coords { y: 5, x: 1 });
             let b2 = Bounds::ZERO;
             let b3 = b1 | b2;
             assert!(!b3.is_empty());
@@ -489,7 +489,7 @@ mod tests {
         #[test]
         #[should_panic(expected = "failed to construct Bounds: width * height exceeds usize::MAX")]
         fn area_overflow() {
-            let b1 = Bounds::new_with_upper_left(1 << 32, 5, Coords { y: 2, x: 2 });
+            let b1 = Bounds::new_with_upper_left(5, 1 << 32, Coords { y: 2, x: 2 });
             let b2 = Bounds::new_with_upper_left(
                 5,
                 1 << 32,
@@ -514,7 +514,7 @@ mod tests {
             // ....####.
             // ....####.
             // .........
-            let b1 = Bounds::new_with_upper_left(3, 5, Coords { y: 1, x: 1 });
+            let b1 = Bounds::new_with_upper_left(5, 3, Coords { y: 1, x: 1 });
             let b2 = Bounds::new_with_upper_left(4, 4, Coords { y: 2, x: 4 });
             let b3 = b1 & b2;
             assert_eq!(b3.width(), 2);
@@ -531,7 +531,7 @@ mod tests {
             // .##XX#.
             // .#####.
             // .......
-            let b1 = Bounds::new_with_upper_left(4, 5, Coords { y: 1, x: 1 });
+            let b1 = Bounds::new_with_upper_left(5, 4, Coords { y: 1, x: 1 });
             let b2 = Bounds::new_with_upper_left(2, 2, Coords { y: 2, x: 3 });
             let b3 = b1 & b2;
             assert_eq!(b3, b2);
@@ -543,8 +543,8 @@ mod tests {
             // .###OOOO.
             // .###OOOO.
             // .........
-            let b1 = Bounds::new_with_upper_left(2, 3, Coords { y: 1, x: 1 });
-            let b2 = Bounds::new_with_upper_left(2, 4, Coords { y: 1, x: 4 });
+            let b1 = Bounds::new_with_upper_left(3, 2, Coords { y: 1, x: 1 });
+            let b2 = Bounds::new_with_upper_left(4, 2, Coords { y: 1, x: 4 });
             let b3 = b1 & b2;
             assert!(b3.is_empty());
             assert_eq!(b3, Bounds::ZERO);
@@ -560,7 +560,7 @@ mod tests {
             // .####........
             // .####........
             // .............
-            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b1 = Bounds::new_with_upper_left(4, 2, Coords { y: 5, x: 1 });
             let b2 = Bounds::new_with_upper_left(3, 3, Coords { y: 1, x: 9 });
             let b3 = b1 & b2;
             assert!(b3.is_empty());
@@ -569,7 +569,7 @@ mod tests {
 
         #[test]
         fn empty_and_nonempty() {
-            let b1 = Bounds::new_with_upper_left(2, 4, Coords { y: 5, x: 1 });
+            let b1 = Bounds::new_with_upper_left(4, 2, Coords { y: 5, x: 1 });
             let b2 = Bounds::ZERO;
             let b3 = b1 & b2;
             assert!(b3.is_empty());
@@ -591,7 +591,7 @@ mod tests {
 
         #[test]
         fn zero() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::ZERO;
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2, b);
@@ -599,7 +599,7 @@ mod tests {
 
         #[test]
         fn top() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::top(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 8);
@@ -609,7 +609,7 @@ mod tests {
 
         #[test]
         fn negative_top() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::top(-3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 2);
@@ -619,7 +619,7 @@ mod tests {
 
         #[test]
         fn bottom() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::bottom(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 8);
@@ -629,7 +629,7 @@ mod tests {
 
         #[test]
         fn negative_bottom() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::bottom(-3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 2);
@@ -639,7 +639,7 @@ mod tests {
 
         #[test]
         fn vertical() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::vertical(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 11);
@@ -649,7 +649,7 @@ mod tests {
 
         #[test]
         fn left() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::left(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 5);
@@ -659,7 +659,7 @@ mod tests {
 
         #[test]
         fn negative_left() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::left(-3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 5);
@@ -669,7 +669,7 @@ mod tests {
 
         #[test]
         fn right() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::right(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 5);
@@ -679,7 +679,7 @@ mod tests {
 
         #[test]
         fn negative_right() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::right(-3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 5);
@@ -689,7 +689,7 @@ mod tests {
 
         #[test]
         fn horizontal() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::horizontal(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 5);
@@ -699,7 +699,7 @@ mod tests {
 
         #[test]
         fn uniform() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::uniform(3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2.height(), 11);
@@ -709,7 +709,7 @@ mod tests {
 
         #[test]
         fn negative_uniform_to_empty() {
-            let b = Bounds::new_with_upper_left(5, 7, Coords { y: 2, x: 1 });
+            let b = Bounds::new_with_upper_left(7, 5, Coords { y: 2, x: 1 });
             let p = Padding::uniform(-3);
             let b2 = b.padded(p).unwrap();
             assert_eq!(b2, Bounds::ZERO);
